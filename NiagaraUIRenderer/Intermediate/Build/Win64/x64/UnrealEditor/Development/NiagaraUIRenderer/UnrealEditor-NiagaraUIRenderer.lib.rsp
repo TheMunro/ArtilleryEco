@@ -1,0 +1,12 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-NiagaraUIRenderer.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h.obj"
+"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.obj"
+"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Default.rc2.res"
+/OUT:"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\UnrealEditor-NiagaraUIRenderer.lib"

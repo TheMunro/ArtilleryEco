@@ -1,0 +1,85 @@
+{
+    "version": "2.1.0",
+    "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+    "runs": [
+        {
+            "results": [
+                {
+                    "ruleId": "C4996",
+                    "message": {
+                        "text": "'UMaterialExpression::GetInputsView': Use FExpressionInputIterator instead or GetInput() directly. Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraUIContentBrowserExtension.cpp"
+                                },
+                                "region": {
+                                    "startLine": 108,
+                                    "startColumn": 53
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "ruleId": "C4996",
+                    "message": {
+                        "text": "'FNiagaraEmitterInstance::GetCachedEmitter': Please update your code to handle execution path for different emitter types Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraWidgetDetailCustomization.cpp"
+                                },
+                                "region": {
+                                    "startLine": 179,
+                                    "startColumn": 49
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "ruleId": "C4996",
+                    "message": {
+                        "text": "'FNiagaraEmitterInstance::GetCachedEmitterData': Please update your code to handle execution path for different emitter types Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraWidgetDetailCustomization.cpp"
+                                },
+                                "region": {
+                                    "startLine": 396,
+                                    "startColumn": 62
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+            "tool": {
+                "driver": {
+                    "name": "MSVC",
+                    "shortDescription": {
+                        "text": "Microsoft Visual C++ Compiler Warnings/Errors"
+                    },
+                    "informationUri": "https://docs.microsoft.com/cpp/error-messages/compiler-errors-1/c-cpp-build-errors"
+                }
+            }
+        }
+    ]
+}
