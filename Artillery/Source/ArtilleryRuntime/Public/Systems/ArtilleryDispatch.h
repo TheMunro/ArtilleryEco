@@ -84,7 +84,7 @@ namespace Arty
 
 class UCanonicalInputStreamECS;
 UCLASS()
-class ARTILLERYRUNTIME_API UArtilleryDispatch : public UTickableWorldSubsystem, public ISkeletonLord
+class ARTILLERYRUNTIME_API UArtilleryDispatch : public UTickableWorldSubsystem, public ICanReady, public ISkeletonLord
 {
 	GENERATED_BODY()
 
@@ -124,7 +124,7 @@ public:
 	
 	void REGISTER_ENTITY_FINAL_TICK_RESOLVER(const ActorKey& Self);
 	void REGISTER_PROJECTILE_FINAL_TICK_RESOLVER(uint32 MaximumLifespanInTicks, const FSkeletonKey& Self);
-	void REGISTER_GUN_FINAL_TICK_RESOLVER(const FGunKey& Self);
+	void REGISTER_GUN_FINAL_TICK_RESOLVER(const FGunKey& Self, const FArtilleryGun* ExistCheck);
 	void INITIATE_JUMP_TIMER(const FSkeletonKey& Self);
 
 	//Forwarding for the TickliteThread.
@@ -144,7 +144,7 @@ public:
 		ArtilleryAsyncWorldSim.ParticleSystemPointer = ReferenceToSubsystem;
 	}
 	
-	FBLet GetFBLetByObjectKey(const FSkeletonKey& Target, ArtilleryTime Now) const;
+	FBLet GetFBLetByObjectKey(FSkeletonKey Target, ArtilleryTime Now);
 
 	//Executes necessary preconfiguration for threads owned by this dispatch. Likely going to be factored into the
 	//dispatch API so that we can use stronger type guarantees throughout our codebase.
@@ -270,11 +270,11 @@ public:
 	}
 	
 	FGunKey RegisterExistingGun(const TSharedPtr<FArtilleryGun>& toBind, const ActorKey& ProbableOwner) const;
-	bool IsGunLive(FSkeletonKey Key) const;
+	bool IsGunLive(FSkeletonKey Key); 
 	bool IsActorTransformAlive(ActorKey Key) const;
 	
 	//CURRENTLY ONLY SUPPORTS GUNS AND ACTORS
-	SKLiveness IsLiveKey(const FSkeletonKey& Test) const
+	SKLiveness IsLiveKey(const FSkeletonKey& Test)
 	{
 		switch (GET_SK_TYPE(Test.Obj))
 		{
@@ -400,7 +400,10 @@ public:
 	
 	void DeregisterGameplayTags(FSkeletonKey in)
 	{
-		GameplayTagContainerToDataMapping->Remove(in);
+		if (GameplayTagContainerToDataMapping)
+		{
+			GameplayTagContainerToDataMapping->Remove(in);
+		}
 	}
 	
 	std::atomic_bool UseNetworkInput;

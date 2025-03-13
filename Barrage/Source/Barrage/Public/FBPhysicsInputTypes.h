@@ -18,3 +18,14 @@ enum PhysicsInputType
 	//w: forces (thrust applied by abilities, including jump or dash)
 	Throttle
 };
+
+enum FBShape
+{
+	Uninitialized,
+	Capsule,
+	Box,
+	Sphere,
+	Static,
+	Character,
+	Projectile
+};

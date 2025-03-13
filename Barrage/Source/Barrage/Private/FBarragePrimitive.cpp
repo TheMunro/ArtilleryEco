@@ -13,12 +13,12 @@ FBarragePrimitive::~FBarragePrimitive()
 	//Only the CleanTombs function in dispatch actually releases the shared pointer on the dispatch side
 	//but an actor might hold a shared pointer to the primitive that represents it after that primitive has been
 	//popped out of this.
-	if (GlobalBarrage != nullptr && Me != Character)
+	if (GlobalBarrage != nullptr && Me != FBShape::Character)
 	//TODO: This prevented the double free but we may now not free at all?
 	{
 		GlobalBarrage->FinalizeReleasePrimitive(KeyIntoBarrage);
 	}
-	else if (Me == Character)
+	else if (Me == FBShape::Character)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Character's last fblet is dealloc'd."));
 	}
@@ -37,7 +37,7 @@ void FBarragePrimitive::ApplyRotation(FQuat4d Rotator, FBLet Target)
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, PhysicsInputType::Rotation,CoordinateUtils::ToBarrageRotation(Rotator)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::Rotation,CoordinateUtils::ToBarrageRotation(Rotator)));
 		}
 	}
 }
@@ -181,7 +181,7 @@ void FBarragePrimitive::SetVelocity(FVector3d Velocity, FBLet Target)
 			JPH::Quat lastchance =  CoordinateUtils::ToBarrageVelocity(Velocity);
 			lastchance = lastchance.IsNaN() ? JPH::Quat::sZero() : lastchance;
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, PhysicsInputType::Velocity, lastchance));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::Velocity, lastchance));
 		}
 	}
 }
@@ -196,7 +196,7 @@ void FBarragePrimitive::SetPosition(FVector Position, FBLet Target)
 			JPH::Quat lastchance =  CoordinateUtils::ToBarrageVelocity(Position);
 			lastchance = lastchance.IsNaN() ? JPH::Quat::sZero() : lastchance;
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, PhysicsInputType::SetPosition, lastchance));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetPosition, lastchance));
 		}
 	}
 }
@@ -210,7 +210,7 @@ void FBarragePrimitive::SetGravityFactor(float GravityFactor, FBLet Target)
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, PhysicsInputType::SetGravityFactor, JPH::Quat(0, 0, GravityFactor, 0)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetGravityFactor, JPH::Quat(0, 0, GravityFactor, 0)));
 		}
 	}
 }
@@ -224,7 +224,7 @@ void FBarragePrimitive::Apply_Unsafe(FQuat4d Any, FBLet Target, PhysicsInputType
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, Type, JPH::Quat(Any.X, Any.Y, Any.Z, Any.W)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, Type, JPH::Quat(Any.X, Any.Y, Any.Z, Any.W)));
 		}
 	}
 }
@@ -237,7 +237,7 @@ void FBarragePrimitive::ApplyForce(FVector3d Force, FBLet Target, PhysicsInputTy
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, Type,CoordinateUtils::ToBarrageForce(Force)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, Type,CoordinateUtils::ToBarrageForce(Force)));
 		}
 	}
 }
@@ -251,7 +251,7 @@ void FBarragePrimitive::SpeedLimit(FBLet Target, float TargetSpeed)
 		{
 			JPH::BodyID result;
 			// if they exist... we proceed. this replaces the older faulty check.				  curry for safety.
-			if (GameSimHoldOpen->BarrageToJoltMapping->find(Target->KeyIntoBarrage, result) && Target->Me == Character) 
+			if (GameSimHoldOpen->BarrageToJoltMapping->find(Target->KeyIntoBarrage, result) && Target->Me == FBShape::Character) 
 			{
 				TSharedPtr<FBCharacterBase>* CharacterActual = GameSimHoldOpen->CharacterToJoltMapping->Find(Target->KeyIntoBarrage);
 				if (CharacterActual && *CharacterActual)
@@ -331,7 +331,7 @@ void FBarragePrimitive::SetCharacterGravity(FVector3d InVector, FBLet Target)
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target, 0, PhysicsInputType::SetCharacterGravity,CoordinateUtils::ToBarrageForce(InVector)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetCharacterGravity,CoordinateUtils::ToBarrageForce(InVector)));
 		}
 	}
 }

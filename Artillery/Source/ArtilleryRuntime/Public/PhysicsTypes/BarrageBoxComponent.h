@@ -33,15 +33,7 @@ public:
 	float OffsetCenterToMatchBoundedShapeZ = 0;
 	UBarrageBoxComponent(const FObjectInitializer& ObjectInitializer);
 	virtual void Register() override;
-
-#if UE_ENABLE_DEBUG_DRAWING
-	virtual void Draw(FPrimitiveDrawInterface* PDI, const FLinearColor& colour, uint8 DepthPrio) override
-	{
-		FVector HalfExtent = FVector(XDiam, YDiam, ZDiam) /2;
-		FBox CompanionRectangle = FBox(this->Transform.Location - HalfExtent, this->Transform.Location + HalfExtent);
-		DrawWireBox(PDI, CompanionRectangle, colour, DepthPrio);
-	}
-#endif
+	
 };
 
 //CONSTRUCTORS
@@ -58,7 +50,12 @@ inline UBarrageBoxComponent::UBarrageBoxComponent(const FObjectInitializer& Obje
 	bWantsInitializeComponent = true;
 	PrimaryComponentTick.bCanEverTick = true;
 	MyObjectKey = 0;
-	
+	bAlwaysCreatePhysicsState = false;
+	UPrimitiveComponent::SetNotifyRigidBodyCollision(false);
+	bCanEverAffectNavigation = false;
+	Super::SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	Super::SetEnableGravity(false);
+	Super::SetSimulatePhysics(false);
 }
 //KEY REGISTER, initializer, and failover.
 //----------------------------------

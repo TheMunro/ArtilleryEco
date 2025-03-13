@@ -15,7 +15,7 @@ void UArtilleryProjectileDispatch::ArtilleryTick()
 		TArray<FSkeletonKey> AnyToExpire = ExpirationDeadliner->FindAndRemoveChecked(ExpirationCounter);
 		for (FSkeletonKey Goner : AnyToExpire)
 		{
-			DeleteProjectile(Goner);
+			UArtilleryLibrary::TombstonePrimitive(Goner);
 		}
 	}
 }
@@ -23,72 +23,81 @@ void UArtilleryProjectileDispatch::ArtilleryTick()
 bool UArtilleryProjectileDispatch::RegistrationImplementation()
 {
 	// TODO: Can we find and autoload the datatable, or do
-	ProjectileDefinitions = LoadObject<UDataTable>(nullptr, TEXT("DataTable'/Game/DataTables/ProjectileDefinitions.ProjectileDefinitions'"));
+	ProjectileDefinitions = LoadObject<UDataTable>(
+		nullptr, TEXT("DataTable'/Game/DataTables/ProjectileDefinitions.ProjectileDefinitions'"));
 
 	UE_LOG(LogTemp, Warning, TEXT("ArtilleryProjectileDispatch:Subsystem: Online"));
 	ProjectileDefinitions->ForeachRow<FProjectileDefinitionRow>(
 		TEXT("UArtilleryProjectileDispatch::PostInitialize"),
 		[this](const FName& Key, const FProjectileDefinitionRow& ProjectileDefinition) mutable
-	 {
-		 UNiagaraParticleDispatch* NPD = GetWorld()->GetSubsystem<UNiagaraParticleDispatch>();
-		 check(NPD);
-		 if (UStaticMesh* StaticMeshPtr = LoadObject<UStaticMesh>(nullptr, *ProjectileDefinition.ProjectileMeshLocation))
-		 {
-			 if (!MeshAssetToMeshManagerMapping->Contains(*ProjectileDefinition.ProjectileMeshLocation))
-			 {
-				 AInstancedMeshManager* NewMeshManager = GetWorld()->SpawnActor<AInstancedMeshManager>();
-			 	if (NewMeshManager == nullptr)
-			 	{
-			 		UE_LOG(LogTemp, Error, TEXT("Could not spawn mesh manager actor. If this is during editor load, it can be ignored. Otherwise..."));
-			 	}
-				 NewMeshManager->InitializeManager();
-				 NewMeshManager->SetStaticMesh(StaticMeshPtr);
-				 NewMeshManager->SetInternalFlags(EInternalObjectFlags::Async);
-				 NewMeshManager->SwarmKineManager->SetCanEverAffectNavigation(false);
-				 NewMeshManager->SwarmKineManager->SetSimulatePhysics(false);
-				 NewMeshManager->SwarmKineManager->bNavigationRelevant = 0;
-			 	 NewMeshManager->SwarmKineManager->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
-				 NewMeshManager->SwarmKineManager->SetInternalFlags(EInternalObjectFlags::Async);
+		{
+			UNiagaraParticleDispatch* NPD = GetWorld()->GetSubsystem<UNiagaraParticleDispatch>();
+			check(NPD);
+			if (UStaticMesh* StaticMeshPtr = LoadObject<UStaticMesh>(
+				nullptr, *ProjectileDefinition.ProjectileMeshLocation))
+			{
+				if (!MeshAssetToMeshManagerMapping->Contains(*ProjectileDefinition.ProjectileMeshLocation))
+				{
+					AInstancedMeshManager* NewMeshManager = GetWorld()->SpawnActor<AInstancedMeshManager>();
+					if (NewMeshManager == nullptr)
+					{
+						UE_LOG(LogTemp, Error,
+						       TEXT(
+							       "Could not spawn mesh manager actor. If this is during editor load, it can be ignored. Otherwise..."
+						       ));
+					}
+					NewMeshManager->InitializeManager();
+					NewMeshManager->SetStaticMesh(StaticMeshPtr);
+					NewMeshManager->SetInternalFlags(EInternalObjectFlags::Async);
+					NewMeshManager->SwarmKineManager->SetCanEverAffectNavigation(false);
+					NewMeshManager->SwarmKineManager->SetSimulatePhysics(false);
+					NewMeshManager->SwarmKineManager->bNavigationRelevant = 0;
+					NewMeshManager->SwarmKineManager->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+					NewMeshManager->SwarmKineManager->SetInternalFlags(EInternalObjectFlags::Async);
 
-				 ManagerKeyToMeshManagerMapping->Add(NewMeshManager->GetMyKey(), NewMeshManager);
-				 ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
-				                                         NewMeshManager);
-				 MeshAssetToMeshManagerMapping->Add(*ProjectileDefinition.ProjectileMeshLocation, NewMeshManager);
-				 if (!ProjectileDefinition.ParticleEffectDataChannel.IsEmpty())
-				 {
-					 NPD->AddNamedNDCReference(*ProjectileDefinition.ProjectileDefinitionId,
-					                           *ProjectileDefinition.ParticleEffectDataChannel);
-				 }
-			 	
-			 	//these are standing in for a pretty messy body of more specific work we could do instead.
-			 	//basically, when you load up a new mesh, there's quite a bit of work and book-keeping that you
-			 	//need to do for instanced static mesh systems because loading a mesh from disk does one thing in editor
-			 	//and something else in non-PIE sessions. There are VERY good reasons for this, but it means you need
-			 	//a lot of specialization. Or you can just NUKE THE SITE FROM ORBIT. which seems to work. and is brainless.
-			 	//and just as performant. welp.
-			 	NewMeshManager->SwarmKineManager->OnMeshRebuild(true);
-			 	NewMeshManager->SwarmKineManager->ReregisterComponent();
-			 }
-			 else
-			 {
-			 	TWeakObjectPtr<AInstancedMeshManager>* MeshManager = MeshAssetToMeshManagerMapping->Find(*ProjectileDefinition.ProjectileMeshLocation);
-			 	if (MeshManager)
-			 	{
-			 		ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
-					                                         *MeshManager);
-			 	}
+					ManagerKeyToMeshManagerMapping->Add(NewMeshManager->GetMyKey(), NewMeshManager);
+					ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
+					                                        NewMeshManager);
+					MeshAssetToMeshManagerMapping->Add(*ProjectileDefinition.ProjectileMeshLocation, NewMeshManager);
+					if (!ProjectileDefinition.ParticleEffectDataChannel.IsEmpty())
+					{
+						NPD->AddNamedNDCReference(*ProjectileDefinition.ProjectileDefinitionId,
+						                          *ProjectileDefinition.ParticleEffectDataChannel);
+					}
+
+					//these are standing in for a pretty messy body of more specific work we could do instead.
+					//basically, when you load up a new mesh, there's quite a bit of work and book-keeping that you
+					//need to do for instanced static mesh systems because loading a mesh from disk does one thing in editor
+					//and something else in non-PIE sessions. There are VERY good reasons for this, but it means you need
+					//a lot of specialization. Or you can just NUKE THE SITE FROM ORBIT. which seems to work. and is brainless.
+					//and just as performant. welp.
+#if WITH_EDITOR
+					NewMeshManager->SwarmKineManager->OnMeshRebuild(true);
+#endif
+					NewMeshManager->SwarmKineManager->ReregisterComponent();
+				}
 				else
 				{
-					throw; // we just checked this, you monster. 
+					TWeakObjectPtr<AInstancedMeshManager>* MeshManager = MeshAssetToMeshManagerMapping->Find(
+						*ProjectileDefinition.ProjectileMeshLocation);
+					if (MeshManager)
+					{
+						ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
+						                                        *MeshManager);
+					}
+					else
+					{
+						throw; // we just checked this, you monster. 
+					}
 				}
-			 }
-		 }
-	 });
+			}
+		});
 
 	MyDispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
 	check(MyDispatch);
 	UBarrageDispatch* BarrageDispatch = GetWorld()->GetSubsystem<UBarrageDispatch>();
-	BarrageDispatch->OnBarrageContactAddedDelegate.AddUObject(this, &UArtilleryProjectileDispatch::OnBarrageContactAdded);
+	BarrageDispatch->OnBarrageContactAddedDelegate.AddUObject(
+		this, &UArtilleryProjectileDispatch::OnBarrageContactAdded);
 	UArtilleryDispatch::SelfPtr->SetProjectileDispatch(this);
 	SelfPtr = this;
 	return true;
@@ -159,7 +168,7 @@ UArtilleryProjectileDispatch::UArtilleryProjectileDispatch(): ProjectileDefiniti
 	ExpirationDeadliner = MakeShareable(new TSortedMap<int, TArray<FSkeletonKey>>());
 	ProjectileNameToMeshManagerMapping = MakeShareable(new TMap<FName, TWeakObjectPtr<AInstancedMeshManager>>());
 	MeshAssetToMeshManagerMapping = MakeShareable(new TMap<FString, TWeakObjectPtr<AInstancedMeshManager>>());
-	ProjectileToGunMapping = MakeShareable(new libcuckoo::cuckoohash_map<FSkeletonKey, FGunKey>());
+	ProjectileToGunMapping = MakeShareable(new KeyToGunMap());
 }
 
 UArtilleryProjectileDispatch::~UArtilleryProjectileDispatch()
@@ -181,9 +190,11 @@ FSkeletonKey UArtilleryProjectileDispatch::QueueProjectileInstance(const FName P
                                                                    const FGunKey& Gun, const FVector3d& StartLocation,
                                                                    const FVector3d& MuzzleVelocity, const float Scale,
                                                                    Layers::EJoltPhysicsLayer Layer,
-                                                                   TArray<FGameplayTag>* TagArray) const
+                                                                   TArray<FGameplayTag>* TagArray)
 {
-	TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(ProjectileDefinitionId);
+	if (IsReady){}
+	TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(
+		ProjectileDefinitionId);
 	if (MeshManagerPtr != nullptr && MeshManagerPtr->IsValid())
 	{
 		TWeakObjectPtr<AInstancedMeshManager> MeshManager = *MeshManagerPtr;
@@ -206,8 +217,7 @@ FSkeletonKey UArtilleryProjectileDispatch::QueueProjectileInstance(const FName P
 	return FSkeletonKey();
 }
 
-FSkeletonKey UArtilleryProjectileDispatch::CreateProjectileInstance(const FSkeletonKey& ProjectileKey,
-                                                                    const FGunKey& Gun,
+FSkeletonKey UArtilleryProjectileDispatch::CreateProjectileInstance(FSkeletonKey ProjectileKey, FGunKey Gun,
                                                                     const FName ProjectileDefinitionId,
                                                                     const FTransform& WorldTransform,
                                                                     const FVector3d& MuzzleVelocity,
@@ -216,48 +226,49 @@ FSkeletonKey UArtilleryProjectileDispatch::CreateProjectileInstance(const FSkele
                                                                     const bool IsDynamic,
                                                                     Layers::EJoltPhysicsLayer Layer,
                                                                     const bool CanExpire,
-                                                                    const int LifeInTicks) const
+                                                                    const int LifeInTicks)
 {
-	TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(ProjectileDefinitionId);
-	if (MeshManagerPtr && MeshManagerPtr->IsValid())
+	if (IsReady)
 	{
-		TWeakObjectPtr<AInstancedMeshManager> MeshManager = *MeshManagerPtr;
-		if (MeshManager.IsValid())
+		TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(
+			ProjectileDefinitionId);
+		if (MeshManagerPtr && MeshManagerPtr->IsValid())
 		{
-			FSkeletonKey NewProjectileKey = MeshManager->CreateNewInstance(
-				WorldTransform, MuzzleVelocity, Layer, Scale, ProjectileKey, IsSensor, IsDynamic);
-			ProjectileKeyToMeshManagerMapping->insert(NewProjectileKey, MeshManager);
-			ProjectileToGunMapping->insert(NewProjectileKey, Gun);
-
-			UNiagaraParticleDispatch* NPD = GetWorld()->GetSubsystem<UNiagaraParticleDispatch>();
-			check(NPD);
-			TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr = NPD->GetNDCAssetForProjectileDefinition(
-				ProjectileDefinitionId.ToString());
-			if (ProjectileNDCAssetPtr.IsValid())
+			auto MeshManager = MeshManagerPtr->Pin();
+			if (MeshManager.IsValid())
 			{
-				ParticleRecord& NewParticleRecord = NPD->RegisterKeyForProcessing(NewProjectileKey);
-				NewParticleRecord.NDCAssetPtr = ProjectileNDCAssetPtr;
-				NewParticleRecord.NDCIndex = -1;
-			}
-			if (CanExpire)
-			{
-				//TODO: revisit to provide rollback support. it'll be exactly like tombstones.
-				int ExpireTicks = LifeInTicks == -1 ? DEFAULT_LIFE_OF_PROJECTILE : LifeInTicks;
-				TArray<FSkeletonKey>* ArrayIfAny = ExpirationDeadliner->Find(ExpirationCounter + ExpireTicks);
-				if (ArrayIfAny != nullptr)
+				FSkeletonKey NewProjectileKey = MeshManager->CreateNewInstance(
+					WorldTransform, MuzzleVelocity, Layer, Scale, ProjectileKey, IsSensor, IsDynamic);
+				ProjectileKeyToMeshManagerMapping->insert_or_assign(NewProjectileKey, *MeshManagerPtr);
+				ProjectileToGunMapping->insert_or_assign(NewProjectileKey, Gun);
+				UNiagaraParticleDispatch* NPD = GetWorld()->GetSubsystem<UNiagaraParticleDispatch>();
+				check(NPD);
+				TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr = NPD->GetNDCAssetForProjectileDefinition(
+					ProjectileDefinitionId.ToString());
+				if (ProjectileNDCAssetPtr.IsValid())
 				{
-					ArrayIfAny->Add(NewProjectileKey);
+					ParticleRecord& NewParticleRecord = NPD->RegisterKeyForProcessing(NewProjectileKey);
+					NewParticleRecord.NDCAssetPtr = ProjectileNDCAssetPtr;
+					NewParticleRecord.NDCIndex = -1;
 				}
-				else
+				if (CanExpire)
 				{
-					ExpirationDeadliner->Add(ExpirationCounter+ExpireTicks, {NewProjectileKey});
+					//TODO: revisit to provide rollback support. it'll be exactly like tombstones.
+					int ExpireTicks = LifeInTicks == -1 ? DEFAULT_LIFE_OF_PROJECTILE : LifeInTicks;
+					TArray<FSkeletonKey>* ArrayIfAny = ExpirationDeadliner->Find(ExpirationCounter + ExpireTicks);
+					if (ArrayIfAny != nullptr)
+					{
+						ArrayIfAny->Add(NewProjectileKey);
+					}
+					else
+					{
+						ExpirationDeadliner->Add(ExpirationCounter + ExpireTicks, {NewProjectileKey});
+					}
 				}
+				return NewProjectileKey;
 			}
-			return NewProjectileKey;
 		}
 	}
-	UE_LOG(LogTemp, Error, TEXT("Could not find preloaded projectile instance manager with id %s"),
-	       *ProjectileDefinitionId.ToString());
 	return FSkeletonKey();
 }
 
@@ -270,11 +281,14 @@ void UArtilleryProjectileDispatch::DeleteProjectile(const FSkeletonKey Target)
 {
 	TWeakObjectPtr<AInstancedMeshManager> MeshManager;
 	ProjectileKeyToMeshManagerMapping->find(Target, MeshManager);
+	UArtilleryDispatch::SelfPtr->DeregisterGameplayTags(Target);
 	if (MeshManager.IsValid())
 	{
 		MeshManager->CleanupInstance(Target);
 		ProjectileKeyToMeshManagerMapping->erase(Target);
+		ProjectileToGunMapping->erase(Target);
 	}
+	UNiagaraParticleDispatch::SelfPtr->CleanupKey(Target);
 }
 
 TWeakObjectPtr<AInstancedMeshManager> UArtilleryProjectileDispatch::GetProjectileMeshManagerByManagerKey(
@@ -303,28 +317,51 @@ TWeakObjectPtr<USceneComponent> UArtilleryProjectileDispatch::GetSceneComponentF
 void UArtilleryProjectileDispatch::OnBarrageContactAdded(const BarrageContactEvent& ContactEvent)
 {
 	// We only care if one of the entities is a projectile
-	if (ContactEvent.IsEitherEntityAProjectile())
+	if (UBarrageDispatch::SelfPtr)
 	{
-		bool Body1_IsBullet = ContactEvent.ContactEntity1.bIsProjectile;
-		// if both are bullets, if their layers allow it, we will collide them.
-		//this is actually how antimissile works.
-		FSkeletonKey ProjectileKey = Body1_IsBullet ? ContactEvent.ContactEntity1.ContactKey : ContactEvent.ContactEntity2.ContactKey;
-		FSkeletonKey EntityHitKey = Body1_IsBullet ? ContactEvent.ContactEntity2.ContactKey : ContactEvent.ContactEntity1.ContactKey;
-
-		// Call in to this projectile's gun to handle collision logic
-		FGunKey GunKey;
-		ProjectileToGunMapping->find(ProjectileKey, GunKey);
-		if (GunKey.IsValidInstance())
+		if (ContactEvent.IsEitherEntityAProjectile())
 		{
-			TSharedPtr<FArtilleryGun> ProjectileGun = MyDispatch->GetPointerToGun(GunKey);
-			if (ProjectileGun.IsValid())
+			bool Body1_IsBullet = ContactEvent.ContactEntity1.bIsProjectile;
+			// if both are bullets, if their layers allow it, we will collide them.
+			// this is actually how antimissile works.
+			//Oh and these are FBarrageKeys
+			auto ProjectileKey = Body1_IsBullet
+				                     ? ContactEvent.ContactEntity1.ContactKey
+				                     : ContactEvent.ContactEntity2.ContactKey;
+			auto EntityHitKey = Body1_IsBullet
+				                    ? ContactEvent.ContactEntity2.ContactKey
+				                    : ContactEvent.ContactEntity1.ContactKey;
+
+			//we defer this as late as we can to minimize contention during the sim step.
+			//don't make this a ref unless you want a very bad time.
+			FBLet quickfib = UBarrageDispatch::SelfPtr->GetShapeRef(ProjectileKey);
+			bool ProbablyValid = FBarragePrimitive::IsNotNull(quickfib);
+			if (ProbablyValid)
 			{
-				ProjectileGun.Get()->ProjectileCollided(ProjectileKey);
+				FSkeletonKey KeyIntoArtillery = quickfib->KeyOutOfBarrage;
+				quickfib.Reset();
+				if (KeyIntoArtillery.IsValid())
+				{
+					FGunKey GunKey;
+					bool found = ProjectileToGunMapping->find(KeyIntoArtillery, GunKey);
+					if (found)
+					{
+						TSharedPtr<FArtilleryGun> ProjectileGun = MyDispatch->GetPointerToGun(GunKey);
+						if (ProjectileGun)
+						{
+							FSkeletonKey EntityKeyIntoArtillery = UBarrageDispatch::SelfPtr->GetShapeRef(EntityHitKey)->
+								KeyOutOfBarrage;
+							if (EntityKeyIntoArtillery.IsValid())
+							{
+								ProjectileGun.Get()->ProjectileCollided(KeyIntoArtillery, EntityKeyIntoArtillery);
+							}
+						}
+					}
+					// This works though!
+					UArtilleryLibrary::TombstonePrimitive(KeyIntoArtillery);
+				}
 			}
 		}
-
-		// TODO: make action based on projectile configuration, not just 100 health damage
-		UArtilleryLibrary::ApplyDamage(EntityHitKey, 100);
-		UArtilleryLibrary::DeleteProjectile(ProjectileKey);
 	}
 }
+

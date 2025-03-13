@@ -76,13 +76,13 @@ protected:
 
 class BARRAGE_API FWorldSimOwner
 {
-	
 	// If you want your code to compile using single or double precision write 0.0_r to get a Real value that compiles to double or float depending if JPH_DOUBLE_PRECISION is set or not.
 
 
 
 	
 public:
+	mutable bool Optimized = false;
 	//members are destructed first in, last out.
 	//https://stackoverflow.com/questions/2254263/order-of-member-constructor-and-destructor-calls
 	//BodyId is actually a freaking 4byte struct, so it's _worse_ potentially to have a pointer to it than just copy it.
@@ -104,7 +104,7 @@ public:
 		return FoundBodyID;
 	}
 
-	const unsigned int AllocationArenaSize = 100 * 1024 * 1024;
+	const unsigned int AllocationArenaSize = 512 * 1024 * 1024;
 	TSharedPtr<JPH::TempAllocatorImpl> Allocator;
 	// List of active characters in the scene so they can collide
 	//https://github.com/jrouwe/JoltPhysics/blob/e3ed3b1d33f3a0e7195fbac8b45b30f0a5c8a55b/Jolt/Physics/Character/CharacterVirtual.h#L143
@@ -253,29 +253,9 @@ public:
 	};
 
 public:
-
-	using ThreadFeed = TCircularQueue<FBPhysicsInput>;
-
-	struct FeedMap
-	{
-
-		std::thread::id That = std::thread::id();
-		TSharedPtr<ThreadFeed> Queue = nullptr;
-
-		FeedMap()
-		{
-			That = std::thread::id();
-			Queue = nullptr;
-		}
-
-		FeedMap(std::thread::id MappedThread, uint16 MaxQueueDepth)
-		{
-			That = MappedThread;
-			Queue = MakeShareable(new ThreadFeed(MaxQueueDepth));
-		}
-	};
-
-	FeedMap ThreadAcc[ALLOWED_THREADS_FOR_BARRAGE_PHYSICS];
+	using FBInputFeed = FeedMap<FBPhysicsInput>;
+	FBOutputFeed WorkerAcc[ALLOWED_THREADS_FOR_BARRAGE_PHYSICS];
+	FBInputFeed ThreadAcc[ALLOWED_THREADS_FOR_BARRAGE_PHYSICS];
 
 	TSharedPtr<JPH::JobSystemThreadPool> job_system;
 	// Create mapping table from object layer to broadphase layer
@@ -286,6 +266,9 @@ public:
 	// Note: As this is an interface, PhysicsSystem will take a reference to this so this instance needs to stay alive!
 	ObjectVsBroadPhaseLayerFilterImpl object_vs_broadphase_layer_filter;
 
+
+	
+	using InitExitFunction = std::function<void(int)>;
 	// Create class that filters object vs object layers
 	// Note: As this is an interface, PhysicsSystem will take a reference to this so this instance needs to stay alive!
 	ObjectLayerPairFilterImpl object_vs_object_layer_filter;
@@ -295,11 +278,6 @@ public:
 	// Note that this is called from a job so whatever you do here needs to be thread safe.
 	// Registering one is entirely optional.
 	TSharedPtr<JPH::ContactListener> contact_listener;
-
-	// A body activation listener gets notified when bodies activate and go to sleep
-	// Note that this is called from a job so whatever you do here needs to be thread safe.
-	// Registering one is entirely optional.
-	TSharedPtr<MyBodyActivationListener> body_activation_listener;
 
 	float DeltaTime = 0.01; //You should set this or pass it in.
 
@@ -311,6 +289,7 @@ public:
 	const unsigned int cMaxBodies = 65536;
 
 	// This determines how many mutexes to allocate to protect rigid bodies from concurrent access. Set it to 0 for the default settings.
+	// mutexes are cheap! (they aren't)
 	const unsigned int cNumBodyMutexes = 0;
 
 	// This is the max amount of body pairs that can be queued at any time (the broad phase will detect overlapping
@@ -328,8 +307,8 @@ public:
 
 	//do not move this up. see C++ standard ~ 12.6.2
 	TSharedPtr<JPH::PhysicsSystem> physics_system;
-	FWorldSimOwner(float cDeltaTime);
 
+	FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadInitializer);
 	void SphereCast(
 		double Radius,
 		double Distance,
@@ -372,7 +351,7 @@ public:
 	//Broad Phase is the first pass in the engine's cycle, and the optimization used to accelerate it breaks down as objects are added. As a result, when you have time after adding objects,
 	//you should call optimize broad phase. You should also batch object creation whenever possible, but we don't support that well yet.
 	//Generally, as we add and remove objects, we'll want to perform this, but we really don't want to run it every tick. We can either use trigger logic or a cadenced ticklite
-	void OptimizeBroadPhase();
+	bool OptimizeBroadPhase();
 
 	void FinalizeReleasePrimitive(FBarrageKey BarrageKey)
 	{
@@ -385,6 +364,7 @@ public:
 			body_interface->RemoveBody(result);
 			body_interface->DestroyBody(result);
 		}
+		BarrageToJoltMapping->erase(BarrageKey);
 	}
 	FBarrageKey GenerateBarrageKeyFromBodyId(const JPH::BodyID& Input) const;
 	FBarrageKey GenerateBarrageKeyFromBodyId(const uint32 RawIndexAndSequenceNumberInput) const;

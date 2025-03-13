@@ -28,7 +28,7 @@ THIRD_PARTY_INCLUDES_END
  * Effectively, this separates ephemeral data-driven mutations from the UObject type system without breaking type safety.
  */
 UCLASS()
-class SKELETONKEY_API UTransformDispatch : public UTickableWorldSubsystem, public ISkeletonLord
+class SKELETONKEY_API UTransformDispatch : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 	FSkeletonKey DefaultObjectKey;

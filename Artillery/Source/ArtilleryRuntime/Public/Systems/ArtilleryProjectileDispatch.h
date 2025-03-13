@@ -6,11 +6,19 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "AInstancedMeshManager.h"
 #include "FProjectileDefinitionRow.h"
+//look, it's important that you wrap both your typedefs and your lib include in these, and that the lib include always be explicit.
+//lbc is a header only lib. this has some pretty stark implications. we probably need to move ALL type defs and ALL
+//includes into a Lbc module, isolate them, and compile them.
+THIRD_PARTY_INCLUDES_START
+PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
+#include "LibCuckoo/cuckoohash_map.hh"
+typedef libcuckoo::cuckoohash_map<FSkeletonKey, TWeakObjectPtr<AInstancedMeshManager>> KeyToItemCuckooMap;
+typedef libcuckoo::cuckoohash_map<FSkeletonKey, FGunKey> KeyToGunMap;
+PRAGMA_POP_PLATFORM_DEFAULT_PACKING
+THIRD_PARTY_INCLUDES_END
 #include "ArtilleryProjectileDispatch.generated.h"
 
 class UArtilleryDispatch;
-
-typedef libcuckoo::cuckoohash_map<FSkeletonKey, TWeakObjectPtr<AInstancedMeshManager>> KeyToItemCuckooMap;
 
 /**
  * This is the Artillery subsystem that manages the lifecycle of projectiles using only SkeletonKeys rather than UE5
@@ -36,6 +44,7 @@ class ARTILLERYRUNTIME_API UArtilleryProjectileDispatch : public UTickableWorldS
 {
 	GENERATED_BODY()
 
+	using ICanReady = ITickHeavy;
 public:
 	friend class UArtilleryLibrary;
 	static inline UArtilleryProjectileDispatch* SelfPtr = nullptr;
@@ -60,7 +69,7 @@ protected:
 	TSharedPtr<KeyToItemCuckooMap> ProjectileKeyToMeshManagerMapping;
 	TSharedPtr<TMap<FName, TWeakObjectPtr<AInstancedMeshManager>>> ProjectileNameToMeshManagerMapping;
 	TSharedPtr<TMap<FString, TWeakObjectPtr<AInstancedMeshManager>>> MeshAssetToMeshManagerMapping;
-	TSharedPtr<libcuckoo::cuckoohash_map<FSkeletonKey, FGunKey>> ProjectileToGunMapping;
+	TSharedPtr<KeyToGunMap> ProjectileToGunMapping;
 
 public:
 	virtual void PostInitialize() override;
@@ -70,8 +79,8 @@ public:
 	}
 	FProjectileDefinitionRow* GetProjectileDefinitionRow(const FName ProjectileDefinitionId);
 	// TODO - Add handling for IsSensor and IsDynamic. We do not currently have anything that uses these flags, so they are not handled by the request router
-	FSkeletonKey QueueProjectileInstance(const FName ProjectileDefinitionId, const FGunKey& Gun, const FVector3d& StartLocation, const FVector3d& MuzzleVelocity, const float Scale = 1.0f, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, TArray<FGameplayTag>* TagArray = nullptr) const;
-	FSkeletonKey CreateProjectileInstance(const FSkeletonKey& ProjectileKey, const FGunKey& Gun, const FName ProjectileDefinitionId, const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const float Scale = 1.0f, const bool IsSensor = true, const bool IsDynamic = false, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, const bool CanExpire = true, const int LifeInTicks = -1) const;
+	FSkeletonKey QueueProjectileInstance(const FName ProjectileDefinitionId, const FGunKey& Gun, const FVector3d& StartLocation, const FVector3d& MuzzleVelocity, const float Scale = 1.0f, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, TArray<FGameplayTag>* TagArray = nullptr);
+	FSkeletonKey CreateProjectileInstance(FSkeletonKey ProjectileKey,  FGunKey Gun, const FName ProjectileDefinitionId, const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const float Scale = 1.0f, const bool IsSensor = true, const bool IsDynamic = false, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, const bool CanExpire = true, const int LifeInTicks = -1);
 	bool IsArtilleryProjectile(const FSkeletonKey MaybeProjectile);
 	void DeleteProjectile(const FSkeletonKey Target);
 	TWeakObjectPtr<AInstancedMeshManager> GetProjectileMeshManagerByManagerKey(const FSkeletonKey ManagerKey);

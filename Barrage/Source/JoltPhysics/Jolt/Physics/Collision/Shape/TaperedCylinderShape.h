@@ -14,6 +14,7 @@ class JPH_EXPORT TaperedCylinderShapeSettings final : public ConvexShapeSettings
 {
 	JPH_DECLARE_SERIALIZABLE_VIRTUAL(JPH_EXPORT, TaperedCylinderShapeSettings)
 
+public:
 	/// Default constructor for deserialization
 							TaperedCylinderShapeSettings() = default;
 
@@ -38,6 +39,18 @@ public:
 	/// Constructor
 							TaperedCylinderShape() : ConvexShape(EShapeSubType::TaperedCylinder) { }
 							TaperedCylinderShape(const TaperedCylinderShapeSettings &inSettings, ShapeResult &outResult);
+
+	/// Get top radius of the tapered cylinder
+	inline float			GetTopRadius() const													{ return mTopRadius; }
+
+	/// Get bottom radius of the tapered cylinder
+	inline float			GetBottomRadius() const													{ return mBottomRadius; }
+
+	/// Get convex radius of the tapered cylinder
+	inline float			GetConvexRadius() const													{ return mConvexRadius; }
+
+	/// Get half height of the tapered cylinder
+	inline float			GetHalfHeight() const													{ return 0.5f * (mTop - mBottom); }
 
 	// See Shape::GetCenterOfMass
 	virtual Vec3			GetCenterOfMass() const override										{ return Vec3(0, -0.5f * (mTop + mBottom), 0); }
@@ -64,7 +77,7 @@ public:
 	virtual void			CollidePoint(Vec3Arg inPoint, const SubShapeIDCreator &inSubShapeIDCreator, CollidePointCollector &ioCollector, const ShapeFilter &inShapeFilter = { }) const override;
 
 	// See: Shape::CollideSoftBodyVertices
-	virtual void			CollideSoftBodyVertices(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale, SoftBodyVertex *ioVertices, uint inNumVertices, float inDeltaTime, Vec3Arg inDisplacementDueToGravity, int inCollidingShapeIndex) const override;
+	virtual void			CollideSoftBodyVertices(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale, const CollideSoftBodyVertexIterator &inVertices, uint inNumVertices, int inCollidingShapeIndex) const override;
 
 	// See Shape::GetTrianglesStart
 	virtual void			GetTrianglesStart(GetTrianglesContext &ioContext, const AABox &inBox, Vec3Arg inPositionCOM, QuatArg inRotation, Vec3Arg inScale) const override;

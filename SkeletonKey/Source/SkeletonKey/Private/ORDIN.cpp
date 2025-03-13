@@ -38,16 +38,17 @@ void UOrdinatePillar::Deinitialize()
 	}
 }
 
-
-void UOrdinatePillar::REGISTERLORD(int RegisterAs, ISkeletonLord* YourThisPointer)
+//extremely crude bit of trickery to avoid the weird code gen chicanery of UE. normally, i'd diamond these or use concepts
+//but I don't really want to pull in that much template metaprogramming here and I don't want to use the UE-side custom stuff.
+void UOrdinatePillar::REGISTERLORD(int RegisterAs, ISkeletonLord* YourThisPointer, ICanReady* YourThisPointerAgain)
 {
-	if (this)
+	if (YourThisPointer)
 	{
-		Data.Subsystems.Add(ORDIN::SubsystemKey(RegisterAs, YourThisPointer));
+		Data.Subsystems.Add(ORDIN::SubsystemKey(RegisterAs, YourThisPointerAgain));
 	}
 	else if (!ORDINATION_Fallback.burnt)
 	{
-		ORDINATION_Fallback.Subsystems.Add(ORDIN::SubsystemKey(RegisterAs, YourThisPointer));
+		ORDINATION_Fallback.Subsystems.Add(ORDIN::SubsystemKey(RegisterAs, YourThisPointerAgain));
 	}
 }
 

@@ -92,7 +92,12 @@ MassProperties CompoundShape::GetMassProperties() const
 
 AABox CompoundShape::GetWorldSpaceBounds(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale) const
 {
-	if (mSubShapes.size() <= 10)
+	if (mSubShapes.empty())
+	{
+		// If there are no sub-shapes, we must return an empty box to avoid overflows in the broadphase
+		return AABox(inCenterOfMassTransform.GetTranslation(), inCenterOfMassTransform.GetTranslation());
+	}
+	else if (mSubShapes.size() <= 10)
 	{
 		AABox bounds;
 		for (const SubShape &shape : mSubShapes)
@@ -262,12 +267,12 @@ void CompoundShape::DrawGetSupportingFace(DebugRenderer *inRenderer, RMat44Arg i
 }
 #endif // JPH_DEBUG_RENDERER
 
-void CompoundShape::CollideSoftBodyVertices(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale, SoftBodyVertex *ioVertices, uint inNumVertices, float inDeltaTime, Vec3Arg inDisplacementDueToGravity, int inCollidingShapeIndex) const
+void CompoundShape::CollideSoftBodyVertices(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale, const CollideSoftBodyVertexIterator &inVertices, uint inNumVertices, int inCollidingShapeIndex) const
 {
 	for (const SubShape &shape : mSubShapes)
 	{
 		Mat44 transform = shape.GetLocalTransformNoScale(inScale);
-		shape.mShape->CollideSoftBodyVertices(inCenterOfMassTransform * transform, shape.TransformScale(inScale), ioVertices, inNumVertices, inDeltaTime, inDisplacementDueToGravity, inCollidingShapeIndex);
+		shape.mShape->CollideSoftBodyVertices(inCenterOfMassTransform * transform, shape.TransformScale(inScale), inVertices, inNumVertices, inCollidingShapeIndex);
 	}
 }
 

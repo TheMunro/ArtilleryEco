@@ -2,6 +2,7 @@
 
 #include "skeletonize.h"
 #include "Containers/CircularQueue.h"
+#include <thread>
 #include "SkeletonTypes.generated.h"
 
 using BristleTime = long; //this will become uint32. don't bitbash this.
@@ -25,6 +26,8 @@ public:
 		//THIS WILL REGISTER AS NOT AN OBJECT KEY PER SKELETONIZE (SFIX_NONE)
 		Obj = 0x0;
 	}
+	//you don't really want to use this one.
+	explicit FSkeletonKey(const unsigned int rhs) = delete; //I mean it. don't implement this.
 	explicit FSkeletonKey(uint64 ObjIn)
 	{
 		Obj=ObjIn;
@@ -32,7 +35,7 @@ public:
 
 	static FSkeletonKey Invalid()
 	{
-		return FSkeletonKey(0x0);
+		return FSkeletonKey();
 	}
 
 	static bool IsValid(const FSkeletonKey& Other)
@@ -41,7 +44,7 @@ public:
 	}
 	bool IsValid() const
 	{
-		return *this != FSkeletonKey::Invalid();
+		return Obj != FSkeletonKey::Invalid().Obj;
 	}
 	operator uint64() const {return Obj;};
 	
@@ -195,6 +198,28 @@ struct TransformUpdate
 	uint32 speed;// unused at the moment, here to support smearing if needed.
 };
 
+template<class FeedType>
+struct FeedMap
+{
+	using ThreadFeed = TCircularQueue<FeedType>;
+	std::thread::id That = std::thread::id();
+	TSharedPtr<ThreadFeed, ESPMode::ThreadSafe> Queue = nullptr;
+
+	FeedMap()
+	{
+		That = std::thread::id();
+		Queue = nullptr;
+	}
+
+	FeedMap(std::thread::id MappedThread, uint16 MaxQueueDepth)
+	{
+		That = MappedThread;
+		Queue = MakeShareable(new ThreadFeed(MaxQueueDepth));
+	}
+};
+
+using FBOutputFeed = FeedMap<TransformUpdate>;
+
 //Engine\Source\Runtime\CoreUObject\Public\UObject\FObjectKey is the vanilla UE equivalent.
 //Unfortunately, it's pretty heavy, since it's intended to operate in more circumstances. It requires a template arg
 //to operate, which makes it ill-suited to the truly loose coupling we're after here.
@@ -294,7 +319,7 @@ public:
 
 	static FSkeletonKey Invalid()
 	{
-		return FSkeletonKey(0);
+		return FSkeletonKey();
 	}
 
 	bool IsValid(const FSkeletonKey& Other) const
@@ -416,3 +441,44 @@ public:
 static bool operator<(FGunInstanceKey const& lhs, FGunInstanceKey const& rhs) {
 	return (lhs.Obj < rhs.Obj);
 }
+
+
+struct SKELETONKEY_API FProjectileInstanceKey
+{
+	friend struct FSkeletonKey;
+public:
+	uint64_t Obj;
+	
+	explicit FProjectileInstanceKey()
+	{
+		//THIS FAILS THE OBJECT CHECK AND THE ACTOR CHECK. THIS IS INTENDED. THIS IS THE PURPOSE OF SKELETON KEY.
+		Obj=0;
+	}
+	
+	explicit FProjectileInstanceKey(unsigned int rhs) {
+		Obj = rhs;
+		Obj <<= 32;
+		//this doesn't seem like it should work, but because the SFIX bit patterns are intentionally asym
+		//we actually do reclaim a bit of randomness.
+		Obj += rhs; 
+		Obj = FORGE_SKELETON_KEY(Obj, SKELLY::SFIX_GUN_SHOT);
+	}
+
+	explicit FProjectileInstanceKey(uint64 rhs) {
+		Obj = FORGE_SKELETON_KEY(rhs, SKELLY::SFIX_GUN_SHOT);
+	}
+	
+	operator uint64() const { return Obj; }
+	operator FSkeletonKey() const { return FSkeletonKey(Obj); }
+	
+	FProjectileInstanceKey& operator=(const uint64 rhs) {
+		//should be idempotent.
+		Obj = FORGE_SKELETON_KEY(rhs, SKELLY::SFIX_GUN_SHOT);
+		return *this;
+	}
+	
+	FGunInstanceKey& operator=(ActorKey rhs) = delete;
+
+	//bullets are real picky.
+	FProjectileInstanceKey& operator=(const FSkeletonKey& rhs) = delete;
+};

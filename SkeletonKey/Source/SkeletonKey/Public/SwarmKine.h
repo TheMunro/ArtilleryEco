@@ -1,9 +1,17 @@
 ﻿#pragma once
+
 #include "SkeletonTypes.h"
 #include "Kines.h"
 #include "CoreMinimal.h"
 #include "InstanceDataTypes.h"
 #include "Components/InstancedStaticMeshComponent.h"
+THIRD_PARTY_INCLUDES_START
+PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
+#include "libcuckoo/cuckoohash_map.hh"
+typedef libcuckoo::cuckoohash_map<int32, FSkeletonKey> LibCIntFSK;
+typedef libcuckoo::cuckoohash_map<FSkeletonKey, int32> LibCFSKInt;
+PRAGMA_POP_PLATFORM_DEFAULT_PACKING
+THIRD_PARTY_INCLUDES_END
 #include "SwarmKine.generated.h"
 
 class UObject;
@@ -14,66 +22,69 @@ UCLASS()
 class SKELETONKEY_API USwarmKineManager : public UInstancedStaticMeshComponent
 {
 	GENERATED_BODY()
+	
 public:
 	virtual ~USwarmKineManager() override;
-	 typedef int32 IDTYPE;
-	 TSharedPtr<TCircularQueue<IDTYPE>> ToRemove;
-	 USwarmKineManager()
-	 {
-	 	PrimaryComponentTick.bCanEverTick = true;
-	 	ToRemove = MakeShareable(new TCircularQueue<IDTYPE>(2048));
-		KeyToMesh = MakeShareable(new TMap<FSkeletonKey, int32>());
-		MeshToKey = MakeShareable(new TMap<int32, FSkeletonKey>());
+	typedef int32 IDTYPE;
+	TSharedPtr<TCircularQueue<IDTYPE>> ToRemove;
+	
+	USwarmKineManager()
+	{
+		PrimaryComponentTick.bCanEverTick = true;
+		ToRemove = MakeShareable(new TCircularQueue<IDTYPE>(2048));
+		KeyToMesh = MakeShareable(new LibCFSKInt());
+		MeshToKey = MakeShareable(new LibCIntFSK());
 		KeyToSceneComponent = MakeShareable(new TMap<FSkeletonKey, TObjectPtr<USceneComponent>>());
-	 	bDisableCollision = true;
-	    UPrimitiveComponent::SetSimulatePhysics(false);
-	 	
+		bDisableCollision = true;
+		UPrimitiveComponent::SetSimulatePhysics(false);
 	}
 
 	// No chaos physics for you
-	virtual bool ShouldCreatePhysicsState() const override
-	{
-		return false;
-	}
+	virtual bool ShouldCreatePhysicsState() const override { return false; }
 	
 	virtual TOptional<FTransform> GetTransformCopy(FSkeletonKey Target)
 	{
-		auto m = KeyToMesh->Find(Target);
+	 	int32 m;
 		FTransform ref;
-		if(m)
+		if(KeyToMesh->find(Target, m) && GetInstanceTransform(GetInstanceIndexForId(FPrimitiveInstanceId(m)), ref, true))
 		{
-			if (GetInstanceTransform(GetInstanceIndexForId(FPrimitiveInstanceId(*m)), ref, true))
-			{
-				return ref;
-			}
+			return ref;
 		}
 		return TOptional<FTransform>();
 	}
 	
 	virtual bool SetTransformOnInstance(FSkeletonKey Target, FTransform Update)
 	{
-		auto m = KeyToMesh->Find(Target);
-		if(m)
+	 	int32 m;
+		if(KeyToMesh->find(Target, m))
 		{
-			auto OptionalLinkedComponent = KeyToSceneComponent->FindRef(Target);
+			TObjectPtr<USceneComponent> OptionalLinkedComponent = KeyToSceneComponent->FindRef(Target);
 			if (OptionalLinkedComponent && OptionalLinkedComponent.Get())
 			{
 				OptionalLinkedComponent->SetWorldLocationAndRotationNoPhysics(Update.GetLocation(), Update.Rotator());
 			}
-			return UpdateInstanceTransform(GetInstanceIndexForId(FPrimitiveInstanceId(*m)), Update, true, false, true);
+			return UpdateInstanceTransform(GetInstanceIndexForId(FPrimitiveInstanceId(m)), Update, true, false, true);
 		}
 		return false;
 	};
+	
 	virtual FSkeletonKey GetKeyOfInstance(FPrimitiveInstanceId Target)
 	{
-		auto m = MeshToKey->Find(Target.Id);
-		return m ? *m : FSkeletonKey();
+		FSkeletonKey m;
+		return MeshToKey->find(Target.Id, m) ? m : FSkeletonKey();
 	};
 
 	virtual void AddToMap(FPrimitiveInstanceId MeshId, FSkeletonKey Key)
 	{
-		KeyToMesh->Add(Key, MeshId.Id);
-		MeshToKey->Add(MeshId.Id, Key);
+		KeyToMesh->insert_or_assign(Key, MeshId.Id);
+		MeshToKey->insert_or_assign(MeshId.Id, Key);
+		
+	}
+
+	virtual void AddToMapDbg(FPrimitiveInstanceId MeshId, FSkeletonKey Key)
+	{
+		auto a = KeyToMesh->insert_or_assign(Key, MeshId.Id);
+		auto b = MeshToKey->insert_or_assign(MeshId.Id, Key);
 	}
 
 	void QueueRemoveInstanceById(int I)
@@ -86,12 +97,12 @@ public:
 		auto HoldOpen = KeyToMesh;
 		if (HoldOpen)
 		{
-			auto m = KeyToMesh->FindRef(Target);
-			if (MeshToKey->Contains(m))
+			int32 m;
+			bool found = KeyToMesh->find(Target, m);
+			if (found && MeshToKey->erase(m))
 			{
-				MeshToKey->Remove(m);
 				QueueRemoveInstanceById(m);
-				KeyToMesh->Remove(Target);
+				KeyToMesh->erase(Target);
 				TObjectPtr<USceneComponent> Out;
 				while(KeyToSceneComponent->RemoveAndCopyValue(Target, Out))
 				{
@@ -104,26 +115,24 @@ public:
 
 	virtual TWeakObjectPtr<USceneComponent> GetSceneComponentForInstance(const FSkeletonKey InstanceKey)
 	{
-		auto m = KeyToSceneComponent->FindRef(InstanceKey);
+		TObjectPtr<USceneComponent> m = KeyToSceneComponent->FindRef(InstanceKey);
 		if (m && m.Get())
 		{
 			return m;
 		}
 
-		auto NewSceneComponent = TObjectPtr<USceneComponent>(NewObject<USceneComponent>(this)); //async flags are automatically added.
-		auto ExistingTransform = GetTransformCopy(InstanceKey);
+		TObjectPtr<USceneComponent> NewSceneComponent = TObjectPtr<USceneComponent>(NewObject<USceneComponent>(this)); //async flags are automatically added.
+		TOptional<FTransform> ExistingTransform = GetTransformCopy(InstanceKey);
 		if (ExistingTransform.IsSet())
 		{
 			NewSceneComponent->SetWorldLocationAndRotationNoPhysics(ExistingTransform->GetLocation(), ExistingTransform->Rotator());
 		}
-
+		
 		KeyToSceneComponent->Add(InstanceKey, NewSceneComponent);
-
 		return NewSceneComponent;
 	}
 
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
-		FActorComponentTickFunction* ThisTickFunction) override
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override
 	{
 		Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 		int32 Key = 0;
@@ -132,25 +141,25 @@ public:
 			RemoveInstanceById(FPrimitiveInstanceId(Key));
 		}
 	};
+	
 	void BeginDestroy() override;
 
 private:
-	TSharedPtr<TMap<FSkeletonKey, int32>> KeyToMesh;
-	TSharedPtr<TMap<int32, FSkeletonKey>> MeshToKey;
+	TSharedPtr<LibCFSKInt> KeyToMesh;
+	TSharedPtr<LibCIntFSK> MeshToKey;
 	TSharedPtr<TMap<FSkeletonKey, TObjectPtr<USceneComponent>>> KeyToSceneComponent;
 };
 
 inline USwarmKineManager::~USwarmKineManager()
 {
-
-
 }
 
 inline void USwarmKineManager::BeginDestroy()
 {
 	Super::BeginDestroy();
-	auto hold = KeyToSceneComponent;
-	for(auto x : *hold)
+	TSharedPtr<TMap<FSkeletonKey, TObjectPtr<USceneComponent>>> hold = KeyToSceneComponent;
+	// ReSharper disable once CppTemplateArgumentsCanBeDeduced - removing template typing causes compiler error
+	for(TTuple<FSkeletonKey, TObjectPtr<USceneComponent>> x : *hold)
 	{
 		x.Value->ClearInternalFlags(EInternalObjectFlags::Async);
 		x.Value->ConditionalBeginDestroy();
@@ -161,7 +170,6 @@ inline void USwarmKineManager::BeginDestroy()
 
 class SwarmKine : public Kine
 {
-
 	TWeakObjectPtr<USwarmKineManager> MyManager;
 
 public:
@@ -178,7 +186,7 @@ public:
 
 	virtual void SetLocationAndRotation(FVector3d Loc, FQuat4d Rot) override
 	{
-		auto m = MyManager->GetTransformCopy(MyKey);
+		TOptional<FTransform> m = MyManager->GetTransformCopy(MyKey);
 		if(m.IsSet())
 		{
 			m->SetLocation(Loc);
@@ -189,7 +197,7 @@ public:
 
 	virtual void SetLocationAndRotationWithScope(FVector3d Loc, FQuat4d Rot) override
 	{
-		auto m = MyManager->GetTransformCopy(MyKey);
+		TOptional<FTransform> m = MyManager->GetTransformCopy(MyKey);
 		if(m.IsSet())
 		{
 			m->SetLocation(Loc);
@@ -200,7 +208,7 @@ public:
 
 	virtual void SetLocation(FVector3d Location) override
 	{
-		auto m = MyManager->GetTransformCopy(MyKey);
+		TOptional<FTransform> m = MyManager->GetTransformCopy(MyKey);
 		if(m.IsSet())
 		{
 			m->SetLocation(Location);
@@ -210,7 +218,7 @@ public:
 
 	virtual void SetRotation(FQuat4d Rotation) override
 	{
-		auto m = MyManager->GetTransformCopy(MyKey);
+		TOptional<FTransform> m = MyManager->GetTransformCopy(MyKey);
 		if(m.IsSet())
 		{
 			m->SetRotation(Rotation);
@@ -223,6 +231,4 @@ protected:
 	{
 		return MyManager->GetTransformCopy(MyKey);
 	}
-
-
 };

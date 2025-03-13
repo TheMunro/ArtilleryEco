@@ -20,23 +20,6 @@ public:
 	// Sets default values for this component's properties
 	UBarrageStaticAutoMesh(const FObjectInitializer& ObjectInitializer);
 	virtual void Register() override;
-#if UE_ENABLE_DEBUG_DRAWING
-	virtual void Draw(FPrimitiveDrawInterface* PDI, const FLinearColor& colour, uint8 DepthPrio) override
-	{
-		AActor* Actor = GetOwner();
-		if (Actor)
-		{
-			UStaticMeshComponent* MeshPtr = Actor->GetComponentByClass<UStaticMeshComponent>();
-			if(MeshPtr)
-			{
-				FBox CompanionRectangle = MeshPtr->GetNavigationBounds();//since we actually use the collision, this might work sometimes!
-				CompanionRectangle = CompanionRectangle.IsValid && CompanionRectangle.GetVolume() >= 1.0? CompanionRectangle :
-				FBox(MeshPtr->GetComponentLocation() -10,MeshPtr->GetComponentLocation() + 10); 
-				DrawWireBox(PDI, CompanionRectangle, colour, DepthPrio);
-			}
-		}
-	}
-#endif
 };
 
 //CONSTRUCTORS
@@ -52,6 +35,12 @@ inline UBarrageStaticAutoMesh::UBarrageStaticAutoMesh(const FObjectInitializer& 
 	bWantsInitializeComponent = true;
 	PrimaryComponentTick.bCanEverTick = true;
 	MyObjectKey = 0;
+	bAlwaysCreatePhysicsState = false;
+	UPrimitiveComponent::SetNotifyRigidBodyCollision(false);
+	bCanEverAffectNavigation = false;
+	Super::SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	Super::SetEnableGravity(false);
+	Super::SetSimulatePhysics(false);
 }
 
 inline void UBarrageStaticAutoMesh::Register()

@@ -13,7 +13,7 @@
  * Component for separating UI dependencies.
  */
 UCLASS()
-class SUNFLOWERRUNTIME_API USunflowerDispatch : public UTickableWorldSubsystem, public ISkeletonLord
+class SUNFLOWERRUNTIME_API USunflowerDispatch : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 	USunflowerDispatch()

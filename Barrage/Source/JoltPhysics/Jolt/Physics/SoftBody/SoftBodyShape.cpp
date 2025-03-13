@@ -114,7 +114,7 @@ void SoftBodyShape::CollidePoint(Vec3Arg inPoint, const SubShapeIDCreator &inSub
 	sCollidePointUsingRayCast(*this, inPoint, inSubShapeIDCreator, ioCollector, inShapeFilter);
 }
 
-void SoftBodyShape::CollideSoftBodyVertices(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale, SoftBodyVertex *ioVertices, uint inNumVertices, float inDeltaTime, Vec3Arg inDisplacementDueToGravity, int inCollidingShapeIndex) const
+void SoftBodyShape::CollideSoftBodyVertices(Mat44Arg inCenterOfMassTransform, Vec3Arg inScale, const CollideSoftBodyVertexIterator &inVertices, uint inNumVertices, int inCollidingShapeIndex) const
 {
 	/* Not implemented */
 }
@@ -328,6 +328,9 @@ void SoftBodyShape::sRegister()
 	{
 		CollisionDispatch::sRegisterCollideShape(s, EShapeSubType::SoftBody, sCollideConvexVsSoftBody);
 		CollisionDispatch::sRegisterCastShape(s, EShapeSubType::SoftBody, sCastConvexVsSoftBody);
+
+		CollisionDispatch::sRegisterCollideShape(EShapeSubType::SoftBody, s, CollisionDispatch::sReversedCollideShape);
+		CollisionDispatch::sRegisterCastShape(EShapeSubType::SoftBody, s, CollisionDispatch::sReversedCastShape);
 	}
 
 	// Specialized collision functions

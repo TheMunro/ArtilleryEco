@@ -15,6 +15,7 @@ using namespace JPH;
 	void BarrageContactListener::OnContactAdded(const Body& inBody1, const Body& inBody2, const ContactManifold& inManifold,
 								ContactSettings& ioSettings)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("Report Contact");
 		if (UBarrageDispatch::SelfPtr)
 		{
 			UBarrageDispatch::SelfPtr->HandleContactAdded(inBody1, inBody2, inManifold, ioSettings);

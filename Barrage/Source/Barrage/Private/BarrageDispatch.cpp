@@ -11,10 +11,12 @@
 
 bool UBarrageDispatch::RegistrationImplementation()
 {
+	FScopeLock GrantFeedLock(&MultiAccLock);//locks the job system's threads on the grant worker func until we're spun up.
 	UE_LOG(LogTemp, Warning, TEXT("Barrage:Subsystem: Online"));
 	for (TSharedPtr<TArray<FBLet>>& TombFibletArray : Tombs)
 	{
 		TombFibletArray = MakeShareable(new TArray<FBLet>());
+		TombFibletArray->Empty();
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Barrage:TransformUpdateQueue: Online"));
@@ -24,22 +26,38 @@ bool UBarrageDispatch::RegistrationImplementation()
 	//this approach may actually be too slow. it is pleasingly lockless, but it allocs 16megs
 	//and just iterating through that could be Rough for the gamethread.
 	//so we may need to think about options.
-	JoltGameSim = MakeShareable(new FWorldSimOwner(TickRateInDelta));
+
+	//using bind here is a bit opaque, so... binding a func means you specify its parameters. member functions have an implicit-this
+	//parameter, if you think about if like, well, like I would. not proud of that, btw. the placeholder works like the marking system
+	//used by UE delegates. Bind isn't exactly like a delegate though, because this actually performs a pretty slick typehiding trick
+	//which allows us to cleanly break a dependency.
+	std::function<void(int)> bind = std::bind(&UBarrageDispatch::GrantWorkerFeed, this, std::placeholders::_1);
+	JoltGameSim = MakeShareable(new FWorldSimOwner(TickRateInDelta, bind));
 	JoltBodyLifecycleMapping = MakeShareable(new KeyToFBLet());
 	TranslationMapping = MakeShareable(new KeyToKey());
 	SelfPtr = this;
 	return true;
 }
 
-void UBarrageDispatch::GrantFeed()
+void UBarrageDispatch::GrantWorkerFeed(int MyThreadIndex)
 {
-	FScopeLock GrantFeedLock(&GrowOnlyAccLock);
+	FScopeLock GrantFeedLock(&MultiAccLock);
 
 	//TODO: expand if we need for rollback powers. could be sliiiick
-	JoltGameSim->ThreadAcc[ThreadAccTicker] = FWorldSimOwner::FeedMap(std::this_thread::get_id(), 8192);
+	JoltGameSim->WorkerAcc[WorkerThreadAccTicker] = FBOutputFeed(std::this_thread::get_id(), 8192);
+	MyWORKERIndex = WorkerThreadAccTicker;
+	++WorkerThreadAccTicker;
+}
 
-	MyBARRAGEIndex = ThreadAccTicker;
-	++ThreadAccTicker;
+void UBarrageDispatch::GrantClientFeed()
+{
+		FScopeLock GrantFeedLock(&GrowOnlyAccLock);
+
+		//TODO: expand if we need for rollback powers. could be sliiiick
+		JoltGameSim->ThreadAcc[ThreadAccTicker] = FWorldSimOwner::FBInputFeed(std::this_thread::get_id(), 8192);
+
+		MyBARRAGEIndex = ThreadAccTicker;
+		++ThreadAccTicker;
 }
 
 UBarrageDispatch::UBarrageDispatch()
@@ -159,58 +177,58 @@ void UBarrageDispatch::CastRay(
 //this is because over time, the needs of these classes may diverge and multiply
 //and it's not clear to me that Shapefulness is going to actually be the defining shared
 //feature. I'm going to wait to refactor the types until testing is complete.
-FBLet UBarrageDispatch::CreatePrimitive(FBBoxParams& Definition, FSkeletonKey OutKey, uint16_t Layer, bool isSensor, bool forceDynamic) const
+FBLet UBarrageDispatch::CreatePrimitive(FBBoxParams& Definition, FSkeletonKey OutKey, uint16_t Layer, bool isSensor, bool forceDynamic)
 {
 	if (JoltGameSim)
 	{
 		FBarrageKey temp = JoltGameSim->CreatePrimitive(Definition, Layer, isSensor, forceDynamic);
-		return ManagePointers(OutKey, temp, FBarragePrimitive::Box);
+		return ManagePointers(OutKey, temp, Box);
 	}
 	return nullptr;
 }
 
-FBLet UBarrageDispatch::CreateProjectile(FBBoxParams& Definition, FSkeletonKey OutKey, uint16_t Layer) const
+FBLet UBarrageDispatch::CreateProjectile(FBBoxParams& Definition, FSkeletonKey OutKey, uint16_t Layer)
 {
 	if (JoltGameSim)
 	{
 		FBarrageKey temp = JoltGameSim->CreatePrimitive(Definition, Layer, true, true);
-		return ManagePointers(OutKey, temp, FBarragePrimitive::Projectile);
+		return ManagePointers(OutKey, temp, Projectile);
 	}
 	return nullptr;
 }
 
 //TODO: COMPLETE MOCK
-FBLet UBarrageDispatch::CreatePrimitive(FBCharParams& Definition, FSkeletonKey OutKey, uint16_t Layer) const
+FBLet UBarrageDispatch::CreatePrimitive(FBCharParams& Definition, FSkeletonKey OutKey, uint16_t Layer)
 {
 	if (JoltGameSim)
 	{
 		FBarrageKey temp = JoltGameSim->CreatePrimitive(Definition, Layer);
-		return ManagePointers(OutKey, temp, FBarragePrimitive::Character);
+		return ManagePointers(OutKey, temp, FBShape::Character);
 	}
 	return nullptr;
 }
 
-FBLet UBarrageDispatch::CreatePrimitive(FBSphereParams& Definition, FSkeletonKey OutKey, uint16_t Layer, bool isSensor) const
+FBLet UBarrageDispatch::CreatePrimitive(FBSphereParams& Definition, FSkeletonKey OutKey, uint16_t Layer, bool isSensor)
 {
 	if (JoltGameSim)
 	{
 		FBarrageKey temp = JoltGameSim->CreatePrimitive(Definition, Layer, isSensor);
-		return ManagePointers(OutKey, temp, FBarragePrimitive::Sphere);
+		return ManagePointers(OutKey, temp, FBShape::Sphere);
 	}
 	return nullptr;
 }
 
-FBLet UBarrageDispatch::CreatePrimitive(FBCapParams& Definition, FSkeletonKey OutKey, uint16 Layer, bool isSensor, FMassByCategory::BMassCategories MassClass) const
+FBLet UBarrageDispatch::CreatePrimitive(FBCapParams& Definition, FSkeletonKey OutKey, uint16 Layer, bool isSensor, FMassByCategory::BMassCategories MassClass)
 {
 	if (JoltGameSim)
 	{
 		FBarrageKey temp = JoltGameSim->CreatePrimitive(Definition, Layer, isSensor, MassClass);
-		return ManagePointers(OutKey, temp, FBarragePrimitive::Capsule);
+		return ManagePointers(OutKey, temp, Capsule);
 	}
 	return nullptr;
 }
 
-FBLet UBarrageDispatch::ManagePointers(FSkeletonKey OutKey, FBarrageKey temp, FBarragePrimitive::FBShape form) const
+FBLet UBarrageDispatch::ManagePointers(FSkeletonKey OutKey, FBarrageKey temp, FBShape form) const
 {
 	//interestingly, you can't use auto here. don't try. it may allocate a raw pointer internal
 	//and that will get stored in the jolt body lifecycle mapping. 
@@ -276,12 +294,16 @@ FBLet UBarrageDispatch::GetShapeRef(FSkeletonKey Existing) const
 		if(holdopen->find(Existing, key))
 		{
 			TSharedPtr<KeyToFBLet> HoldMapping = JoltBodyLifecycleMapping;
-			FBLet deref;
-			if(HoldMapping && HoldMapping->find(key, deref) && deref)
+			if (HoldMapping)
 			{
-				if (FBarragePrimitive::IsNotNull(deref))//broken out to ease debug.
+				FBLet deref;
+				bool found = HoldMapping->find(key, deref);
+				if(found)
 				{
-					return deref;
+					if (FBarragePrimitive::IsNotNull(deref))//broken out to ease debug.
+					{
+						return deref;
+					}
 				}
 			}
 		}
@@ -289,7 +311,7 @@ FBLet UBarrageDispatch::GetShapeRef(FSkeletonKey Existing) const
 	return nullptr;
 }
 
-void UBarrageDispatch::FinalizeReleasePrimitive(FBarrageKey BarrageKey) const
+void UBarrageDispatch::FinalizeReleasePrimitive(FBarrageKey BarrageKey)
 {
 	if (JoltGameSim)
 	{
@@ -307,10 +329,10 @@ void UBarrageDispatch::StackUp() const
 	//currently, these are only characters but that could change. This would likely become a TMap then but maybe not.
 	if (JoltGameSim)
 	{
-		for (FWorldSimOwner::FeedMap WorldSimOwnerFeedMap : JoltGameSim->ThreadAcc)
+		for (FWorldSimOwner::FBInputFeed WorldSimOwnerFeedMap : JoltGameSim->ThreadAcc)
 		{
 			//the threadmaps themselves are always allocated, but they may not be "valid"
-			const TSharedPtr<FWorldSimOwner::ThreadFeed> HoldOpenThreadQueue = WorldSimOwnerFeedMap.Queue;
+			const TSharedPtr<FWorldSimOwner::FBInputFeed::ThreadFeed> HoldOpenThreadQueue = WorldSimOwnerFeedMap.Queue;
 			if (WorldSimOwnerFeedMap.Queue && ((HoldOpenThreadQueue != nullptr)) && WorldSimOwnerFeedMap.That != std::thread::id()) //if there IS a thread.
 			{
 				while (HoldOpenThreadQueue.Get() && !HoldOpenThreadQueue->IsEmpty())
@@ -318,13 +340,13 @@ void UBarrageDispatch::StackUp() const
 					const FBPhysicsInput* input = HoldOpenThreadQueue->Peek();
 
 					JPH::BodyID result;
-					const bool bID = JoltGameSim->BarrageToJoltMapping->find(input->Target->KeyIntoBarrage, result);
-					if (bID && input->Target->Me == FBarragePrimitive::Character)
+					const bool bID = JoltGameSim->BarrageToJoltMapping->find(input->Target, result);
+					if (bID && input->metadata == FBShape::Character)
 					{
 						UpdateCharacter(const_cast<FBPhysicsInput&>(*input));
 					}
 
-					if (bID && !result.IsInvalid() && input->Target->Me != FBarragePrimitive::Character)
+					if (bID && !result.IsInvalid() && input->metadata != FBShape::Character)
 					{
 						JPH::BodyInterface* BodyInt = JoltGameSim->body_interface;
 						switch (input->Action)
@@ -376,12 +398,20 @@ bool UBarrageDispatch::UpdateCharacter(FBPhysicsInput& CharacterInput) const
 void UBarrageDispatch::StepWorld(uint64 Time, uint64_t TickCount)
 {
 	auto PinSim = JoltGameSim;
+			
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("Step World");
 	if (JoltGameSim)
 	{
-		if(TickCount % 1024)
+		if(TickCount % 512)
 		{
-			JoltGameSim->OptimizeBroadPhase();
+					
+			TRACE_CPUPROFILER_EVENT_SCOPE_STR("Broadphase Optimize");
+			//we set a mutable for debug purposes, so we can check if the first optimization has occured in cases of perf
+			//degeneration.
+			JoltGameSim->Optimized = JoltGameSim->OptimizeBroadPhase();
 		}
+		
+		CleanTombs();
 		JoltGameSim->StepSimulation();
 		TSharedPtr<TMap<FBarrageKey, TSharedPtr<FBCharacterBase>>> HoldOpenCharacters = JoltGameSim->CharacterToJoltMapping;
 		if(HoldOpenCharacters)
@@ -407,22 +437,26 @@ void UBarrageDispatch::StepWorld(uint64 Time, uint64_t TickCount)
 		}
 		
 		//maintain tombstones
-		CleanTombs();
 		TSharedPtr<KeyToFBLet> HoldCuckooLifecycle = JoltBodyLifecycleMapping;
 		auto HoldCuckooTranslation = TranslationMapping;
 		if (HoldCuckooLifecycle && HoldCuckooLifecycle.Get() && !HoldCuckooLifecycle.Get()->empty())
 		{
-			for (std::pair<const FBarrageKey, TSharedPtr<FBarragePrimitive>>& KeyAndBarragePrimitive : HoldCuckooLifecycle->lock_table())
+			for (std::pair<const FBarrageKey, TSharedPtr<FBarragePrimitive>> KeyAndBarragePrimitive : HoldCuckooLifecycle->lock_table())
 			{
-				if (KeyAndBarragePrimitive.first.KeyIntoBarrage != 0 && FBarragePrimitive::IsNotNull(KeyAndBarragePrimitive.second))
+				FBLet HoldOpenFBP = KeyAndBarragePrimitive.second;
+				//NOTE: nullity check here includes tombstone check. Hence the odd form of the SECOND check.
+				//in other words, this checks != null && !tombstoned
+				if (KeyAndBarragePrimitive.first.KeyIntoBarrage != 0 && FBarragePrimitive::IsNotNull(HoldOpenFBP))
 				{
-					FBarragePrimitive::TryUpdateTransformFromJolt(KeyAndBarragePrimitive.second, Time);
-					if(KeyAndBarragePrimitive.second->tombstone)
-					{
-						//TODO: MAY NOT BE THREADSAFE. CHECK NLT 10/5/24
-						Entomb(KeyAndBarragePrimitive.second);
-					}
+					FBarragePrimitive::TryUpdateTransformFromJolt(HoldOpenFBP, Time);
+					
 					//returns a bool that can be used for debug.
+				} //This checks for != null && tombstoned
+				else if(KeyAndBarragePrimitive.first.KeyIntoBarrage != 0 && HoldOpenFBP && HoldOpenFBP->tombstone != 0) //just to make it explicit.
+				{
+					//TODO: MAY NOT BE THREADSAFE. CHECK NLT 10/5/24
+					
+					Tombs[TombOffset]->Push(HoldOpenFBP);
 				}
 			}
 		}
@@ -451,6 +485,7 @@ bool UBarrageDispatch::BroadcastContactEvents() const
 							OnBarrageContactPersistedDelegate.Broadcast(*Update);
 							break;
 						case EBarrageContactEventType::REMOVED:
+							// REMOVE EVENTS REQUIRE ADDITIONAL SPECIAL HANDLING AS THEY DO NOT HAVE ALL DATA SET
 							OnBarrageContactRemovedDelegate.Broadcast(*Update);
 							break;
 					}
@@ -470,41 +505,30 @@ bool UBarrageDispatch::BroadcastContactEvents() const
 inline BarrageContactEvent ConstructContactEvent(EBarrageContactEventType EventType, UBarrageDispatch* BarrageDispatch, const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold,
                                                  JPH::ContactSettings& ioSettings)
 {
-	FBLet Body1Let = BarrageDispatch->GetShapeRef(BarrageDispatch->GenerateBarrageKeyFromBodyId(inBody1.GetID()));
-	FBLet Body2Let = BarrageDispatch->GetShapeRef(BarrageDispatch->GenerateBarrageKeyFromBodyId(inBody2.GetID()));
-	return BarrageContactEvent(EventType, BarrageContactEntity(Body1Let->KeyOutOfBarrage, inBody1), BarrageContactEntity(Body2Let->KeyOutOfBarrage, inBody2));
+	return BarrageContactEvent(EventType, BarrageContactEntity(BarrageDispatch->GenerateBarrageKeyFromBodyId(inBody1.GetID()), inBody1), BarrageContactEntity(BarrageDispatch->GenerateBarrageKeyFromBodyId(inBody2.GetID()), inBody2));
 }
 
 void UBarrageDispatch::HandleContactAdded(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold,
 									JPH::ContactSettings& ioSettings)
 {
-	if (JoltBodyLifecycleMapping.IsValid())
-	{
 		BarrageContactEvent ContactEventToEnqueue = ConstructContactEvent(EBarrageContactEventType::ADDED, this, inBody1, inBody2, inManifold, ioSettings);
 		ContactEventPump->Enqueue(ContactEventToEnqueue);
-	}
 }
 void UBarrageDispatch::HandleContactPersisted(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold,
 									JPH::ContactSettings& ioSettings)
 {
-	if (JoltBodyLifecycleMapping.IsValid())
-	{
 		BarrageContactEvent ContactEventToEnqueue = ConstructContactEvent(EBarrageContactEventType::PERSISTED, this, inBody1, inBody2, inManifold, ioSettings);
 		ContactEventPump->Enqueue(ContactEventToEnqueue);
-	}
 }
 void UBarrageDispatch::HandleContactRemoved(const JPH::SubShapeIDPair& inSubShapePair) const
 {
-	if (JoltBodyLifecycleMapping.IsValid())
-	{
-		FBLet Body1Let = this->GetShapeRef(this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody1ID()));
-		FBLet Body2Let = this->GetShapeRef(this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody2ID()));
-		BarrageContactEvent ContactEventToEnqueue(
-			EBarrageContactEventType::REMOVED,
-			BarrageContactEntity(Body1Let->KeyOutOfBarrage),
-			BarrageContactEntity(Body2Let->KeyOutOfBarrage));
-		ContactEventPump->Enqueue(ContactEventToEnqueue);
-	}
+	auto BK1 = this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody1ID());
+	auto BK2 = this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody2ID());
+	BarrageContactEvent ContactEventToEnqueue(
+	EBarrageContactEventType::REMOVED,
+	BarrageContactEntity(BK1),
+	BarrageContactEntity(BK2));
+			ContactEventPump->Enqueue(ContactEventToEnqueue);
 }
 
 FBarrageKey UBarrageDispatch::GenerateBarrageKeyFromBodyId(const JPH::BodyID& Input) const

@@ -5,6 +5,7 @@
 #include "NativeGameplayTags.h"
 #include "SmartObjectComponent.h"
 #include "SmartObjectSubsystem.h"
+#include "ThistleDispatch.h"
 #include "TransformDispatch.h"
 #include "Public/GameplayTags.h"
 
@@ -114,7 +115,7 @@ void UThistleBehavioralist::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	SET_INITIALIZATION_ORDER_BY_ORDINATEKEY_AND_WORLD
 	//huh, this idiom for breaking up ordered registration is actually really nice and provides a really obvious separation.
-	GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(ORDIN::E_D_C::EnemyTagState, &(this->TagRegistration));
+	GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(ORDIN::E_D_C::EnemyTagState, &(this->TagRegistration), &(this->TagRegistration));
 }
 
 void UThistleBehavioralist::OnWorldBeginPlay(UWorld& InWorld)

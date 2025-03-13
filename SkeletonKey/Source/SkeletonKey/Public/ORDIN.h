@@ -38,7 +38,7 @@ namespace ORDIN
 	//It's also fast, readable, and surprisingly maintainable.
 	typedef TPair<int,IKeyedConstruct*> SequencedKey;
 	typedef TArray<SequencedKey> InitSequence;
-	typedef TPair<int,ISkeletonLord*> SubsystemKey;
+	typedef TPair<int,ICanReady*> SubsystemKey;
 	typedef TArray<SubsystemKey> ForbiddenInitSequence;
 	static constexpr int FirstSeqKey		= 10;
 	static constexpr int Step = 100;
@@ -64,7 +64,7 @@ namespace ORDIN
 }
 
 
-#define SET_INITIALIZATION_ORDER_BY_ORDINATEKEY_AND_WORLD GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(OrdinateSeqKey, this);
+#define SET_INITIALIZATION_ORDER_BY_ORDINATEKEY_AND_WORLD GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(OrdinateSeqKey, this, this);
 //There are native ways to do this which might be better, but unfortunately, I can't be sure we'll
 //only need to order UE-ish stuff for declaring dependencies.
 //
@@ -79,7 +79,7 @@ namespace ORDIN
 //needs to be created in a totally different place and way from the proxies.
 //Hopefully, as we learn more, we can remove this pillar, but I unfortunately doubt that.
 UCLASS()
-class SKELETONKEY_API UOrdinatePillar : public UWorldSubsystem, public ISkeletonLord
+class SKELETONKEY_API UOrdinatePillar : public UWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 	FSkeletonKey DefaultObjectKey = FSkeletonKey();
@@ -126,7 +126,7 @@ public:
 	//it must register DURING construction.
 	void REGISTERORDER(int RegisterAs, int group, IKeyedConstruct* YourThisPointer);
 	virtual void PostInitialize() override;
-	void REGISTERLORD(int RegisterAs, ISkeletonLord* YourThisPointer);
+	void REGISTERLORD(int RegisterAs, ISkeletonLord* YourThisPointer, ICanReady* YourThisPointerAgain);
 	//BEGIN OVERRIDES
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;

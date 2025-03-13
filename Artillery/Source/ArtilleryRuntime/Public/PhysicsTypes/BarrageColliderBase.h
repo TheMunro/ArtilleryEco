@@ -19,19 +19,6 @@ public:
 	UBarrageColliderBase(const FObjectInitializer& ObjectInitializer);
 	virtual void InitializeComponent() override;
 	FBLet MyBarrageBody = nullptr;
-#if UE_ENABLE_DEBUG_DRAWING
-	virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
-	//if you're seeing stars, you forgot to override this.
-	virtual void Draw(FPrimitiveDrawInterface* PDI, const FLinearColor& colour, uint8 DepthPrio)
-	{
-		//hey don't use the base class or we'll draw weird giant stars on your stuff.
-		DrawWireStar(PDI, this->Transform.Location, 100.0, colour, DepthPrio);
-		int rotate = GetLastRenderTime();
-		rotate %= 10;
-		DrawWireStar(PDI, this->Transform.Location + FVector::LeftVector * rotate, 100.0, colour, DepthPrio);
-		DrawWireStar(PDI, this->Transform.Location - FVector::LeftVector * rotate, 100.0, colour, DepthPrio);
-	}
-#endif
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	FSkeletonKey MyObjectKey;
@@ -125,65 +112,6 @@ inline void UBarrageColliderBase::OnDestroyPhysicsState()
 			MyBarrageBody.Reset();
 		}
 	}
-}
-
-inline FPrimitiveSceneProxy* UBarrageColliderBase::CreateSceneProxy()
-{
-	class FBarrageSceneProxy : public FPrimitiveSceneProxy
-	{
-	public:
-		TWeakObjectPtr<UBarrageColliderBase> ProxyOf;
-
-		explicit FBarrageSceneProxy(UBarrageColliderBase* BarrageColliderBase): FPrimitiveSceneProxy(
-			BarrageColliderBase)
-		{
-			ProxyOf = MakeWeakObjectPtr(BarrageColliderBase);
-			bWillEverBeLit = false;
-		}
-
-		virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily,
-		                                    uint32 VisibilityMap, FMeshElementCollector& Collector) const override
-		{
-			if (!ProxyOf.IsValid())
-			{
-				return;
-			}
-
-			if (IsSelected())
-			{
-				return;
-			}
-
-
-			for (int32 Vind = 0; Vind < Views.Num(); Vind++)
-			{
-				const FSceneView* View = Views[Vind];
-
-				FPrimitiveDrawInterface* PDI = Collector.GetPDI(Vind);
-
-				FLinearColor Draw = GetViewSelectionColor(
-					FLinearColor::Yellow,
-					*View,
-					IsSelected(),
-					IsHovered(),
-					false,
-					IsIndividuallySelected());
-
-				ProxyOf.Get()->Draw(PDI, Draw, SDPG_World);
-			}
-		}
-
-		virtual uint32 GetMemoryFootprint() const override
-		{
-			return sizeof *this; // no. dynamic. data. thanks.
-		}
-
-		virtual SIZE_T GetTypeHash() const override
-		{
-			return PointerHash(this);
-		}
-	};
-	return new FBarrageSceneProxy(this);
 }
 
 inline void UBarrageColliderBase::EndPlay(const EEndPlayReason::Type EndPlayReason)

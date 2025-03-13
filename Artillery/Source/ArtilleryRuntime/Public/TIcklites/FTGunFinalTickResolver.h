@@ -15,18 +15,21 @@ class TLGunFinalTickResolver : public UArtilleryDispatch::TL_ThreadedImpl /*Faca
 {
 public:
 	FSkeletonKey EntityKey;
-	
+
+	int cadence_ticks = 0;
+	int cadence_interval = 16;
 	TLGunFinalTickResolver(): TL_ThreadedImpl()
 	{
 	}
 
 	TLGunFinalTickResolver(
-		FSkeletonKey Target) : TL_ThreadedImpl(), EntityKey(Target)
+		FSkeletonKey Target, const FArtilleryGun* Exists) : TL_ThreadedImpl(), EntityKey(Target), ExistCheck(Exists)
 	{
 	}
 	
 	void TICKLITE_StateReset()
 	{
+		//todo: need a good way to reset cadence. :/
 	}
 	
 	void TICKLITE_Calculate()
@@ -87,13 +90,23 @@ public:
 
 	bool TICKLITE_CheckForExpiration()
 	{
-		return ADispatch->IsLiveKey(EntityKey) == DEAD;
+		if (cadence_ticks%cadence_interval)
+		{
+			if (ExistCheck == nullptr) //TODO: adjust to make this deterministic.
+			{
+				return true;
+			}
+		}
+		++cadence_ticks;
+		return false;
 	}
 
 	void TICKLITE_OnExpiration()
 	{
 		//no op
 	}
+private:
+	const FArtilleryGun* ExistCheck;
 };
 
 typedef Ticklites::Ticklite<TLGunFinalTickResolver> GunFinalTickResolver;

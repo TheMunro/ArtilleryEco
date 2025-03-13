@@ -4,23 +4,28 @@
 
 struct BarrageContactEntity
 {
-	BarrageContactEntity(const FSkeletonKey ContactKeyIn)
+	BarrageContactEntity(): bIsProjectile(false), bIsStaticGeometry(false)
 	{
-		ContactKey = ContactKeyIn;
-		bIsProjectile = false;
-		bIsStaticGeometry = false;
+		ContactKey = FBarrageKey();
 		MyLayer = Layers::NUM_LAYERS;
 	}
-	BarrageContactEntity(const FSkeletonKey ContactKeyIn, const JPH::Body& BodyIn)
+	BarrageContactEntity(const FBarrageKey ContactKeyIn): bIsProjectile(false), bIsStaticGeometry(false)
 	{
 		ContactKey = ContactKeyIn;
-		bIsProjectile = BodyIn.GetObjectLayer() == Layers::PROJECTILE || BodyIn.GetObjectLayer() == Layers::ENEMYPROJECTILE;
+		MyLayer = Layers::NUM_LAYERS;
+	}
+	BarrageContactEntity(const FBarrageKey ContactKeyIn, const JPH::Body& BodyIn)
+	{
+		ContactKey = ContactKeyIn;
+		bIsProjectile = (BodyIn.GetObjectLayer() == Layers::PROJECTILE || BodyIn.GetObjectLayer() ==
+			Layers::ENEMYPROJECTILE);
 		bIsStaticGeometry = BodyIn.GetObjectLayer() == Layers::NON_MOVING;
 		MyLayer = Layers::EJoltPhysicsLayer(BodyIn.GetObjectLayer());
 	}
-	FSkeletonKey ContactKey;
-	bool bIsProjectile:1;
-	bool bIsStaticGeometry:1;
+
+	FBarrageKey ContactKey;
+	bool bIsProjectile = false;
+	bool bIsStaticGeometry = false;
 	Layers::EJoltPhysicsLayer MyLayer;
 };
 
@@ -28,11 +33,20 @@ enum class EBarrageContactEventType
 {
 	ADDED,
 	PERSISTED,
-	REMOVED
+	REMOVED, // REMOVE EVENTS REQUIRE ADDITIONAL SPECIAL HANDLING AS THEY DO NOT HAVE ALL DATA SET
+	GHOST
 };
 
 struct BarrageContactEvent
 {
+	BarrageContactEvent()
+	{
+		ContactEventType = EBarrageContactEventType::GHOST;
+	}
+
+
+	BarrageContactEvent(EBarrageContactEventType EventType, const BarrageContactEntity& BarrageContactEntity,
+	                    const ::BarrageContactEntity& BarrageContactEntity1);
 	EBarrageContactEventType ContactEventType;
 	BarrageContactEntity ContactEntity1;
 	BarrageContactEntity ContactEntity2;
@@ -42,3 +56,13 @@ struct BarrageContactEvent
 		return ContactEntity1.bIsProjectile || ContactEntity2.bIsProjectile;
 	}
 };
+
+inline BarrageContactEvent::BarrageContactEvent(EBarrageContactEventType EventType,
+                                                const BarrageContactEntity& BarrageContact1,
+                                                const BarrageContactEntity& BarrageContact2)
+	:
+	ContactEventType(EventType),
+	ContactEntity1(BarrageContact1),
+	ContactEntity2(BarrageContact2)
+{
+}

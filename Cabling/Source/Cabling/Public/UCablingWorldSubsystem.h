@@ -18,7 +18,7 @@
 
 //This is not a full dispatch, as it possesses no ECS like capabilities to expose.
 UCLASS()
-class  CABLING_API UCablingWorldSubsystem : public UTickableWorldSubsystem, public ISkeletonLord
+class  CABLING_API UCablingWorldSubsystem : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 public:

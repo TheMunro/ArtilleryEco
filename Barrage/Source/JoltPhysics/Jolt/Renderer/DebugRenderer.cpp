@@ -18,7 +18,7 @@ DebugRenderer *DebugRenderer::sInstance = nullptr;
 static const int sMaxLevel = 4;
 
 // Distance for each LOD level, these are tweaked for an object of approx. size 1. Use the lod scale to scale these distances.
-static const float sLODDistanceForLevel[] = { 5.0f, 10.0f, 40.0f, FLT_MAX };
+static const float sLODDistanceForLevel[] = { 5.0f, 10.0f, 40.0f, cLargeFloat };
 
 DebugRenderer::Triangle::Triangle(Vec3Arg inV1, Vec3Arg inV2, Vec3Arg inV3, ColorArg inColor)
 {
@@ -724,7 +724,7 @@ void DebugRenderer::DrawBox(const AABox &inBox, ColorArg inColor, ECastShadow in
 {
 	JPH_PROFILE_FUNCTION();
 
-	RMat44 m = RMat44::sScale(inBox.GetExtent());
+	RMat44 m = RMat44::sScale(Vec3::sMax(inBox.GetExtent(), Vec3::sReplicate(1.0e-6f))); // Prevent div by zero when one of the edges has length 0
 	m.SetTranslation(RVec3(inBox.GetCenter()));
 	DrawGeometry(m, inColor, mBox, ECullMode::CullBackFace, inCastShadow, inDrawMode);
 }
@@ -733,7 +733,7 @@ void DebugRenderer::DrawBox(RMat44Arg inMatrix, const AABox &inBox, ColorArg inC
 {
 	JPH_PROFILE_FUNCTION();
 
-	Mat44 m = Mat44::sScale(inBox.GetExtent());
+	Mat44 m = Mat44::sScale(Vec3::sMax(inBox.GetExtent(), Vec3::sReplicate(1.0e-6f))); // Prevent div by zero when one of the edges has length 0
 	m.SetTranslation(inBox.GetCenter());
 	DrawGeometry(inMatrix * m, inColor, mBox, ECullMode::CullBackFace, inCastShadow, inDrawMode);
 }

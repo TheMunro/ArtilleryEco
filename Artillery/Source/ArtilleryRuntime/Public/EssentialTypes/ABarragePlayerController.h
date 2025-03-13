@@ -231,7 +231,7 @@ TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!
 				auto TheirControllerAttrib = MyDispatch->GetIdent(AnyKeyCarry->GetMyKey(), Ident::CurrentController);
 				if(TheirControllerAttrib && TheirControllerAttrib->CurrentValue != GetMyKey())
 				{
-					TheirControllerAttrib->SetCurrentValue(FSkeletonKey(0));
+					TheirControllerAttrib->SetCurrentValue(FSkeletonKey());
 				}
 			}
 			else if (AnyKeyCarry)

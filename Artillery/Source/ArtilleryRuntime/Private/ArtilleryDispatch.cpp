@@ -1,3 +1,4 @@
+// ReSharper disable CppMemberFunctionMayBeConst
 #include "ArtilleryDispatch.h"
 #include "FArtilleryGun.h"
 #include "NeedA.h"
@@ -14,6 +15,8 @@
 
 bool UArtilleryDispatch::RegistrationImplementation()
 {
+	
+	GameplayTagContainerToDataMapping->Empty();//it's oddly safest to do this here. isn't that fun?
 	UE_LOG(LogTemp, Warning, TEXT("ArtilleryDispatch:Subsystem: Online"));
 	AttributeSetToDataMapping = MakeShareable(new AttrCuckoo());
 	RequestRouter = MakeShareable(new F_INeedA());
@@ -55,10 +58,10 @@ bool UArtilleryDispatch::RegistrationImplementation()
 	ArtilleryAsyncWorldSim.Locomos_BufferNotThreadSafe = RequestorQueue_Locomos;
 	ThreadSetup();
 
-	WorldSim_Thread.Reset(FRunnableThread::Create(&ArtilleryAsyncWorldSim, TEXT("ARTILLERY_ONLINE.")));
-	WorldSim_AI_Thread.Reset(FRunnableThread::Create(&ArtilleryAIWorker_LockstepToWorldSim, TEXT("ARTILLERY_ONLINE.")));
+	WorldSim_Thread.Reset(FRunnableThread::Create(&ArtilleryAsyncWorldSim, TEXT("ARTILLERY_WORLDSIM_ONLINE.")));
+	WorldSim_AI_Thread.Reset(FRunnableThread::Create(&ArtilleryAIWorker_LockstepToWorldSim, TEXT("ARTILLERY_AISIM_ONLINE.")));
 	WorldSim_Ticklites_Thread.Reset(
-		FRunnableThread::Create(&ArtilleryTicklitesWorker_LockstepToWorldSim,TEXT("TICKLITES_ONLINE.")));
+		FRunnableThread::Create(&ArtilleryTicklitesWorker_LockstepToWorldSim,TEXT("ARTILLERY_TICKLITES_ONLINE.")));
 	
 	SelfPtr = this;
 	return true;
@@ -79,9 +82,9 @@ void UArtilleryDispatch::REGISTER_PROJECTILE_FINAL_TICK_RESOLVER(uint32 MaximumL
 	this->RequestAddTicklite(MakeShareable(new ProjectileFinalTickResolver(temp)), FINAL_TICK_RESOLVE);
 }
 
-void UArtilleryDispatch::REGISTER_GUN_FINAL_TICK_RESOLVER(const FGunKey& Self)
+void UArtilleryDispatch::REGISTER_GUN_FINAL_TICK_RESOLVER(const FGunKey& Self, const FArtilleryGun* ExistCheck)
 {
-	TLGunFinalTickResolver temp = TLGunFinalTickResolver(Self); //this semantic sucks. gotta fix it.
+	TLGunFinalTickResolver temp = TLGunFinalTickResolver(Self, ExistCheck); //this semantic sucks. gotta fix it.
 	this->RequestAddTicklite(MakeShareable(new GunFinalTickResolver(temp)), FINAL_TICK_RESOLVE);
 }
 
@@ -91,7 +94,10 @@ void UArtilleryDispatch::INITIATE_JUMP_TIMER(const FSkeletonKey& Self)
 	this->RequestAddTicklite(MakeShareable(new TL_JumpTimer(JumpTimer)), Normal);
 }
 
-FBLet UArtilleryDispatch::GetFBLetByObjectKey(const FSkeletonKey& Target, ArtilleryTime Now) const
+//legit, it can't. ffs. you can get sliced ANYWHERE in here and lose your reffed memory.
+//god help you if you call from blueprint or a state tree.
+// ReSharper disable once CppPassValueParameterByConstReference
+FBLet UArtilleryDispatch::GetFBLetByObjectKey(FSkeletonKey Target, ArtilleryTime Now)
 {
 	UBarrageDispatch* PhysicsECSPillar = UWorld::GetSubsystem<UBarrageDispatch>(GetWorld());
 	return PhysicsECSPillar ? PhysicsECSPillar->GetShapeRef(Target) : FBLet();
@@ -102,7 +108,7 @@ void UArtilleryDispatch::ThreadSetup()
 	UBarrageDispatch* PhysicsECSPillar = GetWorld()->GetSubsystem<UBarrageDispatch>();
 	if(PhysicsECSPillar)
 	{
-		PhysicsECSPillar->GrantFeed();
+		PhysicsECSPillar->GrantClientFeed();
 	}
 		
 	if(RequestRouter)
@@ -114,7 +120,7 @@ void UArtilleryDispatch::ThreadSetup()
 void UArtilleryDispatch::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(OrdinateSeqKey, this);
+	GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(OrdinateSeqKey, this, this);
 }
 
 void UArtilleryDispatch::PostInitialize()
@@ -133,13 +139,14 @@ void UArtilleryDispatch::Deinitialize()
 {
 	Super::Deinitialize();
 	StartTicklitesSim->Trigger();
+	ArtilleryAIWorker_LockstepToWorldSim.Stop();
+	ArtilleryTicklitesWorker_LockstepToWorldSim.Stop();
+	ArtilleryAsyncWorldSim.Stop();
 	ArtilleryTicklitesWorker_LockstepToWorldSim.Exit();
 	ArtilleryAIWorker_LockstepToWorldSim.Exit();
 	ArtilleryAsyncWorldSim.Exit();
 	
-	ArtilleryAIWorker_LockstepToWorldSim.Stop();
-	ArtilleryTicklitesWorker_LockstepToWorldSim.Stop();
-	ArtilleryAsyncWorldSim.Stop();
+
 	
 	StartTicklitesApply->Trigger();
 	StartRunAhead->Trigger();
@@ -167,7 +174,6 @@ void UArtilleryDispatch::Deinitialize()
 	IdentSetToDataMapping->Empty();
 	KeyToControlliteMapping->Empty();
 	VectorSetToDataMapping->Empty();
-	GameplayTagContainerToDataMapping->Empty();
 	GunToFiringFunctionMapping->Empty();
 	GunByKey->Empty();
 	HoldOpen.Reset();
@@ -362,8 +368,7 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 							}
 							else
 							{
-								UE_LOG(LogTemp, Error,
-								       TEXT(
+								UE_LOG(LogTemp, Warning, TEXT(
 									       "ArtilleryRequestType::SpawnStaticMesh: Could not get tag container for [%lld]"
 								       ), Request.SourceOrSelf.Obj);
 								throw;
@@ -456,10 +461,6 @@ FGunKey UArtilleryDispatch::GetGun(const FString& GunDefinitionID, const ActorKe
 			}
 		}
 	}
-	// else
-	// {
-	// 	UE_LOG(LogTemp, Error, TEXT("UArtilleryDispatch::GetGun: Gun Definition ID [%s] is invalid! (Probable Owner = [%llu]"), *GunDefinitionID, ProbableOwner.Obj);		
-	// }
 	return FGunKey();
 }
 
@@ -472,11 +473,11 @@ FGunKey UArtilleryDispatch::RegisterExistingGun(const TSharedPtr<FArtilleryGun>&
 	return ToBind->MyGunKey;
 }
 
-bool UArtilleryDispatch::IsGunLive(FSkeletonKey Key) const
+bool UArtilleryDispatch::IsGunLive(FSkeletonKey Key)
 {
 	TSharedPtr<TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>> HoldOpenGuns = GunByKey;
 
-	if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns != nullptr && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
+	if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns != nullptr && GunByKey && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
 	{
 		return HoldOpenGuns->IsEmpty() ? false : HoldOpenGuns->Contains(Key);
 	}
@@ -519,7 +520,9 @@ void UArtilleryDispatch::QueueResim(FGunKey Key, ArtilleryTime Time) const
 
 AttrMapPtr UArtilleryDispatch::GetAttribMap(const FSkeletonKey Owner) const
 {
-	return AttributeSetToDataMapping->find(Owner);
+	AttrMapPtr result;
+	bool found = AttributeSetToDataMapping->find(Owner, result);
+	return found ? result : nullptr;
 }
 
 //Do not swap this to a ref, because a ref is a ref. If you want a no copy op, first off,

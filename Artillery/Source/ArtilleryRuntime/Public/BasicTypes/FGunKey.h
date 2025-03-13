@@ -58,7 +58,7 @@ GunDefinitionID(Name), GunInstanceID()
 		return GetTypeHash(Other.GunDefinitionID) + GetTypeHash(Other.GunInstanceID);
 	}
 
-	bool IsValidInstance() const { return GunInstanceID != 0; }
+	bool IsValidInstance() const { return GunInstanceID.Obj != 0; }
 };
 static bool operator==(FGunKey const& lhs, FGunKey const& rhs) {
 	return (lhs.GunDefinitionID == rhs.GunDefinitionID) && (lhs.GunInstanceID == rhs.GunInstanceID);

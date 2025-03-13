@@ -7,13 +7,13 @@
 JPH_NAMESPACE_BEGIN
 
 /// If objects are closer than this distance, they are considered to be colliding (used for GJK) (unit: meter)
-constexpr float cDefaultCollisionTolerance = 1.0e-3f;
+constexpr float cDefaultCollisionTolerance = 1.0e-5f;
 
 /// A factor that determines the accuracy of the penetration depth calculation. If the change of the squared distance is less than tolerance * current_penetration_depth^2 the algorithm will terminate. (unit: dimensionless)
-constexpr float cDefaultPenetrationTolerance = 1.0e-3f; ///< Stop when there's =< 1% change
+constexpr float cDefaultPenetrationTolerance = 1.0e-4f; ///< Stop when there's =< 1% change
 
 /// How much padding to add around objects
-constexpr float cDefaultConvexRadius = 0.08f;
+constexpr float cDefaultConvexRadius = 0.05f;
 
 /// Used by (Tapered)CapsuleShape to determine when supporting face is an edge rather than a point (unit: meter)
 static constexpr float cCapsuleProjectionSlop = 0.02f;
@@ -44,7 +44,7 @@ struct PhysicsSettings
 	/// Radius around objects inside which speculative contact points will be detected. Note that if this is too big
 	/// you will get ghost collisions as speculative contacts are based on the closest points during the collision detection
 	/// step which may not be the actual closest points by the time the two objects hit (unit: meters)
-	float		mSpeculativeContactDistance = 0.02f;
+	float		mSpeculativeContactDistance = 0.002f;
 
 	/// How much bodies are allowed to sink into each other (unit: meters)
 	float		mPenetrationSlop = 0.02f;
@@ -55,38 +55,44 @@ struct PhysicsSettings
 	/// Fraction of its inner radius a body may penetrate another body for the LinearCast motion quality
 	float		mLinearCastMaxPenetration = 0.25f;
 
-	/// Max squared distance to use to determine if two points are on the same plane for determining the contact manifold between two shape faces (unit: meter^2)
-	float		mManifoldToleranceSq = 1.0e-3f;
+	/// Max distance to use to determine if two points are on the same plane for determining the contact manifold between two shape faces (unit: meter)
+	float		mManifoldTolerance = 1.0e-3f;
 
 	/// Maximum distance to correct in a single iteration when solving position constraints (unit: meters)
-	float		mMaxPenetrationDistance = 0.25f;
+	float		mMaxPenetrationDistance = 0.2f;
 
 	/// Maximum relative delta position for body pairs to be able to reuse collision results from last frame (units: meter^2)
-	float		mBodyPairCacheMaxDeltaPositionSq = Square(0.05f); ///< 5 cm
+	float		mBodyPairCacheMaxDeltaPositionSq = Square(0.001f); ///< 1 mm
 
 	/// Maximum relative delta orientation for body pairs to be able to reuse collision results from last frame, stored as cos(max angle / 2)
-	float		mBodyPairCacheCosMaxDeltaRotationDiv2 = 0.99939f; ///< cos(4 degrees / 2)
+	float		mBodyPairCacheCosMaxDeltaRotationDiv2 = 0.9998476951f; ///< cos(2 degrees / 2)
 
 	/// Maximum angle between normals that allows manifolds between different sub shapes of the same body pair to be combined
-	float		mContactNormalCosMaxDeltaRotation = 0.9961946f; ///< cos(5 degree)
+	float		mContactNormalCosMaxDeltaRotation = 0.996194698091f; ///< cos(5 degree)
 
 	/// Maximum allowed distance between old and new contact point to preserve contact forces for warm start (units: meter^2)
-	float		mContactPointPreserveLambdaMaxDistSq = Square(0.05f); ///< 5 cm
+	float		mContactPointPreserveLambdaMaxDistSq = Square(0.01f); ///< 1 cm
 
 	/// Number of solver velocity iterations to run
 	/// Note that this needs to be >= 2 in order for friction to work (friction is applied using the non-penetration impulse from the previous iteration)
-	uint		mNumVelocitySteps = 6; // We're ticking VERY fast.
+	uint		mNumVelocitySteps = 10;
 
 	/// Number of solver position iterations to run
 	uint		mNumPositionSteps = 2;
 
-	/// Minimal velocity needed before a collision can be elastic (unit: m)
+	/// Minimal velocity needed before a collision can be elastic. If the relative velocity between colliding objects
+	/// in the direction of the contact normal is lower than this, the restitution will be zero regardless of the configured
+	/// value. This lets an object settle sooner. Must be a positive number. (unit: m)
 	float		mMinVelocityForRestitution = 1.0f;
 
 	/// Time before object is allowed to go to sleep (unit: seconds)
 	float		mTimeBeforeSleep = 0.5f;
 
-	/// Velocity of points on bounding box of object below which an object can be considered sleeping (unit: m/s)
+	/// To detect if an object is sleeping, we use 3 points:
+	/// - The center of mass.
+	/// - The centers of the faces of the bounding box that are furthest away from the center.
+	/// The movement of these points is tracked and if the velocity of all 3 points is lower than this value,
+	/// the object is allowed to go to sleep. Must be a positive number. (unit: m/s)
 	float		mPointVelocitySleepThreshold = 0.03f;
 
 	/// By default the simulation is deterministic, it is possible to turn this off by setting this setting to false. This will make the simulation run faster but it will no longer be deterministic.

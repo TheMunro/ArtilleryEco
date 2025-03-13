@@ -309,7 +309,7 @@ public:
 			SetGunKey(MyGunKey);
 		}
 		
-		MyDispatch->REGISTER_GUN_FINAL_TICK_RESOLVER(MyGunKey);
+		MyDispatch->REGISTER_GUN_FINAL_TICK_RESOLVER(MyGunKey, this);
 		ReadyToFire = ReadyToFire || !MyCodeWillSetGunKey;
 		return ReadyToFire;
 	}
@@ -331,5 +331,9 @@ public:
 		MyGunKey = DefaultGunKey;
 	}
 
-	virtual void ProjectileCollided(const FSkeletonKey& ProjectileKey) {}
+	//TODO: Refactor to take hit-entity key as well.
+	virtual void ProjectileCollided(const FSkeletonKey ProjectileKey, const FSkeletonKey HitEntity)
+	{
+		UArtilleryLibrary::ApplyDamage(HitEntity, 100);
+	}
 };

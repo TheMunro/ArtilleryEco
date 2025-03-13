@@ -19,12 +19,7 @@ public class Barrage : ModuleRules
 			);
 			
 		bEnableExceptions = true;
-		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
-				Path.Combine(ModuleDirectory,"libcuckoo")
-			}
-		);
+
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
@@ -73,25 +68,23 @@ public class Barrage : ModuleRules
 	
 	
 
-        // JOLT Stuff
-        PublicDefinitions.Add("JPH_CROSS_PLATFORM_DETERMINISTIC");
-        //PublicDefinitions.Add("JPH_DOUBLE_PRECISION");
-        PublicDefinitions.Add("JPH_OBJECT_STREAM"); 
-        PublicDefinitions.Add("JPH_OBJECT_LAYER_BITS=16");
-        PublicDefinitions.Add("JPH_USE_SSE4_2");
-        PublicDefinitions.Add("JPH_USE_SSE4_1");
-        PublicDefinitions.Add("JPH_USE_LZCNT");
-        PublicDefinitions.Add("JPH_USE_TZCNT");
-        PublicDefinitions.Add("JPH_USE_F16C");
+        // JOLT Stuff - needs to match on both sides.
+        DefineIt("JPH_CROSS_PLATFORM_DETERMINISTIC");
+        DefineIt("JPH_OBJECT_STREAM"); 
+        DefineIt("JPH_OBJECT_LAYER_BITS=16");
+        DefineIt("JPH_USE_SSE4_2");
+        DefineIt("JPH_USE_SSE4_1");
+        DefineIt("JPH_USE_LZCNT");
+        DefineIt("JPH_USE_F16C");
+        DefineIt("JPH_USE_AVX");
+        DefineIt("JPH_USE_AVX2");
 
 
         var configType = "";
 
         if (Target.Configuration == UnrealTargetConfiguration.Debug)
         {
-            PublicDefinitions.Add("JPH_PROFILE_ENABLED");
-            PublicDefinitions.Add("JPH_DEBUG_RENDERER");
-            PublicDefinitions.Add("JPH_ENABLE_ASSERTS");
+	        DefineIt("JPH_ENABLE_ASSERTS");
             if (Target.Platform == UnrealTargetPlatform.Win64)
             {
                 //PublicDefinitions.Add("JPH_FLOATING_POINT_EXCEPTIONS_ENABLED");
@@ -100,9 +93,7 @@ public class Barrage : ModuleRules
         }
         else if (Target.Configuration == UnrealTargetConfiguration.DebugGame || Target.Configuration == UnrealTargetConfiguration.Development)
         {
-            PublicDefinitions.Add("JPH_PROFILE_ENABLED");
-            PublicDefinitions.Add("JPH_DEBUG_RENDERER");
-            PublicDefinitions.Add("JPH_ENABLE_ASSERTS");
+	        DefineIt("JPH_ENABLE_ASSERTS");
 
             configType = "Release";
         }
@@ -127,5 +118,11 @@ public class Barrage : ModuleRules
 
         PublicAdditionalLibraries.Add(libPath);
 		
+	}
+
+	private void DefineIt(String str)
+	{
+		PublicDefinitions.Add(str);
+		PrivateDefinitions.Add(str);
 	}
 }

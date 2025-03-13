@@ -80,7 +80,7 @@ TEXT("Unexpected call to unimplemented Locomotion State Machine method. While no
 LogTemp,
 Error,
 TEXT("Unexpected call to unimplemented GetMyKey method. While not necessarily fatal, this is always worth checking."));
-		return FSkeletonKey(0);
+		return FSkeletonKey();
 	}
 
 	virtual void PrepareForPossess() 
@@ -159,7 +159,7 @@ public:
 	virtual void ArtilleryTick(uint64_t TicksSoFar) {}
 	virtual void ArtilleryTick() {}
 	
-	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(0); }
+	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(); }
 };
 
 class FTickHeavy : public ITickHeavy
@@ -200,7 +200,7 @@ public:
 	virtual void ArtilleryTick(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear) override {}
 	
 	virtual void RegisterWithDispatch(FSkeletonKey MyKey) {}
-	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(0); }
+	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(); }
 };
 
 class FControllite : public IArtilleryControllite
@@ -217,7 +217,7 @@ public:
 	virtual void ArtilleryTick(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear) override {}
 	
 	virtual void RegisterWithDispatch(FSkeletonKey MyKey) override {}
-	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(0); }
+	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(); }
 };
 
 

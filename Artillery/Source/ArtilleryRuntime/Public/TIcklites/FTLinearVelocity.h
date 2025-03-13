@@ -21,7 +21,7 @@ public:
 	uint32 TicksToSplitVelocityOver;
 	uint32 TicksRemaining; //TODO: make this rollback correctly.
 	VelocityVec Velocity;
-	FTLinearVelocity(): TL_ThreadedImpl(), VelocityTarget(0), TicksToSplitVelocityOver(1), TicksRemaining(0)
+	FTLinearVelocity(): TL_ThreadedImpl(), VelocityTarget(), TicksToSplitVelocityOver(1), TicksRemaining(0)
 	{
 	}
 

@@ -16,16 +16,7 @@ class BARRAGE_API FBarragePrimitive
 {
 	friend class UBarrageDispatch;
 public:
-	enum FBShape
-	{
-		Uninitialized,
-		Capsule,
-		Box,
-		Sphere,
-		Static,
-		Character,
-		Projectile
-	};
+
 
 	enum FBGroundState
 	{
@@ -68,7 +59,7 @@ public:
 	// used in conjunction with null checks to ensure that short tasks can finish safely without
 	// worrying about the exact structure of our lifecycles. it is also used for pool and rollback handling,
 	// and the implementation will change as those come online in artillery.
-	uint32 tombstone; //4b 
+	uint32 tombstone = 0; //4b 
 	FBShape Me; //4b
 
 	FBarragePrimitive(FBarrageKey Into, FSkeletonKey OutOf)
@@ -146,7 +137,7 @@ protected:
 };
 
 typedef FBarragePrimitive FBShapelet;
-typedef TSharedPtr<FBShapelet> FBLet;
+typedef TSharedPtr<FBShapelet, ESPMode::ThreadSafe> FBLet;
 
 THIRD_PARTY_INCLUDES_START
 PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING

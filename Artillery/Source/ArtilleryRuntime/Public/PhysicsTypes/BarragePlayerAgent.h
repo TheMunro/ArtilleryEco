@@ -144,7 +144,7 @@ public:
 	
 	UBarragePlayerAgent(const FObjectInitializer& ObjectInitializer);
 	virtual void Register() override;
-	void AddForce(float Duration);
+	void AddBarrageForce(float Duration);
 	float ShortCastTo(const FVector3d& Direction);
 	void ApplyRotation(float Duration, FQuat4f Rotation);
 	void AddOneTickOfForce(FVector3d Force);
@@ -154,13 +154,7 @@ public:
 	void SetThrottleModel(double carryover = -1, double gravity = -1, double locomotion = -1, double forces = -1);
 	void SetCharacterGravity(FVector3f NewGravity);
 	void SetCharacterGravity(FVector3d NewGravity);
-#if UE_ENABLE_DEBUG_DRAWING
-	virtual void Draw(FPrimitiveDrawInterface* PDI, const FLinearColor& colour, uint8 DepthPrio) override
-	{
-		DrawWireCapsule(PDI, GetComponentLocation(), FVector::XAxisVector, FVector::YAxisVector,
-			FVector::ZAxisVector, colour, radius, extent, 12, DepthPrio, 4);
-	}
-#endif
+
 	UFUNCTION(BlueprintPure)
 	FVector3f GetVelocity() const
 	{
@@ -287,6 +281,12 @@ inline UBarragePlayerAgent::UBarragePlayerAgent(const FObjectInitializer& Object
 	PrimaryComponentTick.bCanEverTick = true;
 	MyObjectKey = 0;
 	ThrottleModel = FQuat4d(1,1,1,1);
+	bAlwaysCreatePhysicsState = false;
+	UPrimitiveComponent::SetNotifyRigidBodyCollision(false);
+	bCanEverAffectNavigation = false;
+	Super::SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	Super::SetEnableGravity(false);
+	Super::SetSimulatePhysics(false);
 }
 
 //Of these, get velo is the only one that could be considered kinda risky given when it's called. the others could need a hold open.
@@ -321,14 +321,14 @@ inline void UBarragePlayerAgent::Register()
 	{
 		FBCharParams params = FBarrageBounder::GenerateCharacterBounds(GetOwner()->GetActorLocation(), radius, extent, HardMaxVelocity);
 		MyBarrageBody = GetWorld()->GetSubsystem<UBarrageDispatch>()->CreatePrimitive(params, MyObjectKey, Layers::MOVING);
-		if(MyBarrageBody && MyBarrageBody->tombstone == 0 && MyBarrageBody->Me != FBarragePrimitive::Uninitialized)
+		if(MyBarrageBody && MyBarrageBody->tombstone == 0 && MyBarrageBody->Me != FBShape::Uninitialized)
 		{
 			IsReady = true;
 		}
 	}
 }
 
-inline void UBarragePlayerAgent::AddForce(float Duration)
+inline void UBarragePlayerAgent::AddBarrageForce(float Duration)
 {
 	//I'll be back for youuuu.
 	throw;
@@ -493,15 +493,16 @@ inline void UBarragePlayerAgent::ApplyAimFriction(
 		if (!TargetFiblet.IsValid() || HitBarrageKey != TargetFiblet->KeyIntoBarrage)
 		{
 			TargetFiblet = Physics->GetShapeRef(HitBarrageKey);
-			check(TargetFiblet.IsValid());
-		
-			UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
-			check(TransformDispatch);
-
-			UArtilleryDispatch* ADispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
-			if (ADispatch->DoesEntityHaveTag(TargetFiblet->KeyOutOfBarrage, FGameplayTag::RequestGameplayTag("Enemy")))
+			if (TargetFiblet)
 			{
-				TargetPtr = TransformDispatch->GetAActorByObjectKey(TargetFiblet->KeyOutOfBarrage);
+				UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
+				check(TransformDispatch);
+
+				UArtilleryDispatch* ADispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
+				if (ADispatch->DoesEntityHaveTag(TargetFiblet->KeyOutOfBarrage, FGameplayTag::RequestGameplayTag("Enemy")))
+				{
+					TargetPtr = TransformDispatch->GetAActorByObjectKey(TargetFiblet->KeyOutOfBarrage);
+				}
 			}
 		}
 	}
@@ -562,7 +563,7 @@ inline bool UBarragePlayerAgent::CalculateAimVector(
 	if(MyFiblet)
 	{
 		const JPH::DefaultBroadPhaseLayerFilter BroadPhaseFilter = Physics->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY);
-		const JPH::SpecifiedObjectLayerFilter ObjectLayerFilter = Physics->GetFilterForSpecificObjectLayerOnly(Layers::ENEMY);
+		const JPH::DefaultObjectLayerFilter ObjectLayerFilter = Physics->GetDefaultLayerFilter(Layers::CAST_QUERY);
 		const JPH::IgnoreSingleBodyFilter BodyFilter = Physics->GetFilterToIgnoreSingleBody(MyFiblet);
 		
 		TSharedPtr<FHitResult> HitObjectResult = MakeShared<FHitResult>();
@@ -582,26 +583,27 @@ inline bool UBarragePlayerAgent::CalculateAimVector(
 		{
 			//DrawDebugSphere(GetWorld(), HitObjectResult.Get()->Location, 10.f, 12, FColor::Red, true, 1, SDPG_Foreground, 1.f);
 			FBLet AimAtFiblet = Physics->GetShapeRef(HitBarrageKey);
-			check(AimAtFiblet.IsValid());
-	
-			UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
-			check(TransformDispatch);
-		
-			TWeakObjectPtr<AActor> AimTarget = TransformDispatch->GetAActorByObjectKey(AimAtFiblet->KeyOutOfBarrage);
-			UArtilleryDispatch* ADispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
-			if (AimTarget.IsValid() && ADispatch->DoesEntityHaveTag(AimAtFiblet->KeyOutOfBarrage, FGameplayTag::RequestGameplayTag("Enemy")))
+			if (AimAtFiblet)
 			{
-				OutTargetAimAtLocation = AimTarget->GetActorLocation();
-				TargetKey = AimAtFiblet->KeyOutOfBarrage;
-				TargetActor = AimTarget.Get();
-				//DrawDebugSphere(GetWorld(), AimTarget->GetActorLocation(), 10.f, 12, FColor::Yellow, true, 1, SDPG_Foreground, 1.f);
-				return true;
-			}
+	
+				UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
+				check(TransformDispatch);
 		
-			OutTargetAimAtLocation = HitObjectResult->Location;
-			return false;
+				TWeakObjectPtr<AActor> AimTarget = TransformDispatch->GetAActorByObjectKey(AimAtFiblet->KeyOutOfBarrage);
+				UArtilleryDispatch* ADispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
+				if (AimTarget.IsValid() && ADispatch->DoesEntityHaveTag(AimAtFiblet->KeyOutOfBarrage, FGameplayTag::RequestGameplayTag("Enemy")))
+				{
+					OutTargetAimAtLocation = AimTarget->GetActorLocation();
+					TargetKey = AimAtFiblet->KeyOutOfBarrage;
+					TargetActor = AimTarget.Get();
+					//DrawDebugSphere(GetWorld(), AimTarget->GetActorLocation(), 10.f, 12, FColor::Yellow, true, 1, SDPG_Foreground, 1.f);
+					return true;
+				}
+		
+				OutTargetAimAtLocation = HitObjectResult->Location;
+				return false;
+			}
 		}
-
 		OutTargetAimAtLocation = ActorLocation + (Direction * 3000.f);
 		return false;
 	}

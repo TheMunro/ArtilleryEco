@@ -8,7 +8,43 @@
 #include "KeyedConcept.generated.h"
 
 UINTERFACE(NotBlueprintable)
-class SKELETONKEY_API UKeyedConstruct : public UInterface
+class SKELETONKEY_API UCanReady : public UInterface
+{
+	GENERATED_UINTERFACE_BODY()
+
+	
+};
+
+
+inline UCanReady::UCanReady(const FObjectInitializer& ObjectInitializer)
+: Super(ObjectInitializer)
+{
+}
+
+
+
+class SKELETONKEY_API ICanReady 
+{
+	GENERATED_IINTERFACE_BODY()
+	
+	//this generalizes the latch-forward design we use in the keycarry and elsewhere. It's turned out to not suck.
+	bool IsReady = false;
+
+	//Generally, you don't need to override this, but it's virtual just in case. the default behavior is what we've found effective.
+	virtual void AttemptRegister()
+	{
+		if (!IsReady)
+		{
+			IsReady = RegistrationImplementation();
+		}
+		
+	};
+	// override this:
+	virtual bool RegistrationImplementation() { return true; };
+};
+
+UINTERFACE(NotBlueprintable)
+class SKELETONKEY_API UKeyedConstruct : public UCanReady
 {
 	GENERATED_UINTERFACE_BODY()
 
@@ -23,7 +59,7 @@ inline UKeyedConstruct::UKeyedConstruct(const FObjectInitializer& ObjectInitiali
 
 
 
-class SKELETONKEY_API IKeyedConstruct
+class SKELETONKEY_API IKeyedConstruct : public ICanReady
 {
 	GENERATED_IINTERFACE_BODY()
 	
@@ -33,25 +69,11 @@ class SKELETONKEY_API IKeyedConstruct
 	LogTemp,
 	Error,
 	TEXT("Unexpected call to unimplemented GetMyKey method. While not necessarily fatal, this is always worth checking."));
-		return FSkeletonKey(0);
+		return FSkeletonKey();
 	}
-
-	//this generalizes the latch-forward design we use in the keycarry and elsewhere. It's turned out to not suck.
-	bool IsReady = false; 
-
-	//Generally, you don't need to override this, but it's virtual just in case. the default behavior is what we've found effective.
-	virtual void AttemptRegister()
-	{
-		if (!IsReady)
-		{
-			IsReady = RegistrationImplementation();
-		}
-		
-	};
-	// override this:
-	virtual bool RegistrationImplementation() { return false; };
 };
 
+//tag interface marking out that this is a system, pillar, entity, or external that provides facts about keys or manages keys
 UINTERFACE(NotBlueprintable)
 class USkeletonLord : public UInterface
 {
@@ -70,18 +92,5 @@ inline USkeletonLord::USkeletonLord(const FObjectInitializer& ObjectInitializer)
 class ISkeletonLord
 {
 	GENERATED_IINTERFACE_BODY()
-	//this generalizes the latch-forward design we use in the keycarry and elsewhere. It's turned out to not suck.
-	bool IsReady = false; 
-
-	//Generally, you don't need to override this, but it's virtual just in case. the default behavior is what we've found effective.
-	virtual void AttemptRegister()
-	{
-		if (!IsReady)
-		{
-			IsReady = RegistrationImplementation();
-		}
-		
-	};
-	// override this:
-	virtual bool RegistrationImplementation() { return true; };
+	
 };

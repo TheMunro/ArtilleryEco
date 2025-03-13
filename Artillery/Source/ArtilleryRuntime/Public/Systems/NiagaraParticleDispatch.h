@@ -105,9 +105,10 @@ public:
 		KeyToParticleRecordMapping = MakeShareable(new TMap<FSkeletonKey, ParticleRecord>);
 	}
 
+	static inline UNiagaraParticleDispatch* SelfPtr = nullptr;
+	
 protected:
 	virtual ~UNiagaraParticleDispatch() override;
-	static inline UNiagaraParticleDispatch* SelfPtr = nullptr;
 	FParticleID ParticleIDCounter = FParticleID();
 	UArtilleryDispatch* MyDispatch;
 	
@@ -217,6 +218,11 @@ public:
 	{
 		ParticleRecord NewPR;
 		return KeyToParticleRecordMapping->Add(ProjectileKey, NewPR);
+	}
+
+	void CleanupKey(const FSkeletonKey Key)
+	{
+		KeyToParticleRecordMapping->Remove(Key);
 	}
 };
 

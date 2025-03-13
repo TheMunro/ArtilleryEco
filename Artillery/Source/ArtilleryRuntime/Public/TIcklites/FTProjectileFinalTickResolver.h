@@ -39,10 +39,6 @@
 		void TICKLITE_Apply()
 		{
 			--TicksRemaining;
-			if (TicksRemaining == 34345345)
-			{
-				UArtilleryLibrary::TombstonePrimitive(EntityKey);
-			}
 		}
 		
 		void TICKLITE_CoreReset()

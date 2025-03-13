@@ -33,7 +33,7 @@ static constexpr int32 MAX_ENEMY_COUNT = 500;
  * 
  */
 UCLASS()
-class THISTLERUNTIME_API UThistleBehavioralist : public UTickableWorldSubsystem, public ISkeletonLord
+class THISTLERUNTIME_API UThistleBehavioralist : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 
@@ -73,7 +73,7 @@ public:
 
 	//this could COMFORTABLY use the postinitializer. it was a simple and good case to demonstrate another
 	//approach though. I hope this remains only a curiosity and not a standard pattern.
-	struct THISTLERUNTIME_API FTagRegistration : public ISkeletonLord
+	struct THISTLERUNTIME_API FTagRegistration : public ISkeletonLord, public ICanReady
 	{
 	public:
 		FTagRegistration()

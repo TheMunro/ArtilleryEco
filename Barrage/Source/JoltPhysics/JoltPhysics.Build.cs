@@ -31,9 +31,9 @@ public class JoltPhysics : ModuleRules
             cmakeOptions += " -DGENERATE_DEBUG_SYMBOLS=ON ";
             cmakeOptions += " -DOVERRIDE_CXX_FLAGS=OFF "; // probably may be omitted
             cmakeOptions += " -DCMAKE_CXX_FLAGS_RELEASE=\" /GS /Od /Ob0 /RTC1\" "; // probably may be omitted
-            cmakeOptions += " -DDEBUG_RENDERER=ON ";
-            cmakeOptions += " -DPROFILE_ENABLED=ON ";
-            cmakeOptions += " -DENABLE_ASSERTS=ON ";
+            cmakeOptions += " -DDEBUG_RENDERER=OFF ";
+            cmakeOptions += " -DPROFILE_ENABLED=OFF ";
+            cmakeOptions += " -DENABLE_ASSERTS=OFF ";
         }
         else {
             cmakeOptions += " -DCMAKE_BUILD_TYPE=Distribution ";
@@ -77,8 +77,8 @@ public class JoltPhysics : ModuleRules
 
         var simdStatus = "ON ";
         cmakeOptions += " -DUSE_AVX512=OFF ";
-        cmakeOptions += " -DUSE_AVX2=OFF ";
-        cmakeOptions += " -DUSE_AVX=OFF ";
+        cmakeOptions += " -DUSE_AVX2=ON ";
+        cmakeOptions += " -DUSE_AVX=ON ";
         cmakeOptions += " -DUSE_FMADD=OFF ";
         cmakeOptions += " -DUSE_SSE4_2=" + simdStatus;
         cmakeOptions += " -DUSE_SSE4_1=" + simdStatus;

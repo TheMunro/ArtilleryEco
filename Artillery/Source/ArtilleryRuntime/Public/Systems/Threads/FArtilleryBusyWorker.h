@@ -46,7 +46,7 @@ class FArtilleryBusyWorker : public FRunnable {
 		uint64_t& currentIndexCabling,
 		bool& burstDropDetected,
 		TheCone::PacketElement& current,
-		bool& RemoteInput) const;
+		bool& RemoteInput);
 	void ProcessRequestRouterBusyWorkerThread();
 	virtual uint32 Run() override;
 	virtual void Exit() override;

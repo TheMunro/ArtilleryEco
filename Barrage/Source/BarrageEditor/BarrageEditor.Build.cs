@@ -25,7 +25,7 @@ public class BarrageEditor : ModuleRules
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-				Path.Combine(PluginDirectory,"Source/BarrageRuntime")
+				Path.Combine(PluginDirectory,"Source/Barrage")
 			}
 		);
 
@@ -36,13 +36,7 @@ public class BarrageEditor : ModuleRules
 				Path.Combine(ModuleDirectory,"../JoltPhysics"), // for jolt includes
 			}
 		);
-			
-		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
-				Path.Combine(ModuleDirectory,"libcuckoo")
-			}
-		);
+		
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {

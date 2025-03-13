@@ -48,7 +48,7 @@ uint32 FBristleconeReceiver::Run() {
 	//first K binary digits to help remove jitter's effect.
 	uint32_t ThinHash = FTextLocalizationResource::HashString(localNID, TheCone::DummyGetBristleconeSessionID());
 	MySeen = TheCone::CycleTracking(ThinHash);
-	
+	const FTimespan Period(100000); //we wait 10ms at a stop. we don't have anything to do while we aren't waiting, but I don't trust it.
 	while (running && receiver_socket) {
 		TheCone::Packet_tpl receiving_state;
 	
@@ -79,8 +79,8 @@ uint32 FBristleconeReceiver::Run() {
 			
 
 		}
-
-		receiver_socket.IsValid() ? receiver_socket.Get()->Wait(ESocketWaitConditions::WaitForRead, 0.01f) : 0;
+	
+		receiver_socket.IsValid() ? receiver_socket.Get()->Wait(ESocketWaitConditions::WaitForRead, Period) : 0;
 	}
 	receiver_socket = nullptr;//revise this, it's not super safe even with threadsafe smart pointers, but it'll hold for now.
 	return 0;

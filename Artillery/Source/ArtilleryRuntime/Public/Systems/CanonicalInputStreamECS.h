@@ -49,7 +49,7 @@ and uses that for the outcome (and presumably flags whoever disagreed for statis
 class UFireControlMachine;
 
 UCLASS()
-class ARTILLERYRUNTIME_API UCanonicalInputStreamECS : public UTickableWorldSubsystem, public ISkeletonLord
+class ARTILLERYRUNTIME_API UCanonicalInputStreamECS : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 	UCanonicalInputStreamECS(): UTickableWorldSubsystem(), MyNetworkDispatch(nullptr)

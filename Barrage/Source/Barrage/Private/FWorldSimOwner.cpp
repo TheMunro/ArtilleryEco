@@ -8,18 +8,19 @@
 #include "CollisionDetectionFilters/FirstHitRayCastCollector.h"
 
 using namespace JOLT;
-
-	FWorldSimOwner::FWorldSimOwner(float cDeltaTime)
+//it's going to be quite tempting to make that initexit a const or a reference. don't.
+// ReSharper disable once CppPassValueParameterByConstReference
+FWorldSimOwner::FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadInitializer)
 	{
 		DeltaTime = cDeltaTime;
-		// Register allocation hook. In this example we'll just let Jolt use malloc / free but you can override these if you want (see Memory.h).
-		// This needs to be done before any other Jolt function is called.
+
 		BarrageToJoltMapping = MakeShareable(new KeyToBody());
 		BoxCache = MakeShareable(new BoundsToShape());
 		CharacterToJoltMapping = MakeShareable(new TMap<FBarrageKey, TSharedPtr<FBCharacterBase>>());
+		// Register allocation hook. In this example we'll just let Jolt use malloc / free but you can override these if you want (see Memory.h).
+		// This needs to be done before any other Jolt function is called.
 		RegisterDefaultAllocator();
 		contact_listener = MakeShareable(new BarrageContactListener());
-		body_activation_listener = MakeShareable(new MyBodyActivationListener());
 		Allocator = MakeShareable(new TempAllocatorImpl(AllocationArenaSize));
 		physics_system = MakeShareable(new PhysicsSystem());
 		// Install trace and assert callbacks
@@ -39,16 +40,14 @@ using namespace JOLT;
 		// you would implement the JobSystem interface yourself and let Jolt Physics run on top
 		// of your own job scheduler. JobSystemThreadPool is an example implementation.
 		job_system = MakeShareable(
-			new JobSystemThreadPool(cMaxPhysicsJobs, cMaxPhysicsBarriers, thread::hardware_concurrency() - 1));
+			new JobSystemThreadPool(cMaxPhysicsJobs, cMaxPhysicsBarriers, 4));
+		job_system->SetThreadInitFunction(JobThreadInitializer);
 		// Now we can create the actual physics system.
 		physics_system->Init(cMaxBodies, cNumBodyMutexes, cMaxBodyPairs, cMaxContactConstraints,
 		                     broad_phase_layer_interface, object_vs_broadphase_layer_filter,
 		                     object_vs_object_layer_filter);
 
-
-		physics_system->SetBodyActivationListener(body_activation_listener.Get());
-
-
+		
 		physics_system->SetContactListener(contact_listener.Get());
 
 		// The main way to interact with the bodies in the physics system is through the body interface. There is a locking and a non-locking
@@ -86,7 +85,7 @@ using namespace JOLT;
 		settings.mReturnDeepestPoint = true;
 	
 		JPH::SphereShape sphere(Radius);
-		sphere.SetEmbedded();
+		//sphere.SetEmbedded();
 
 		JPH::Vec3 JoltCastFrom = CoordinateUtils::ToJoltCoordinates(CastFrom);
 		JPH::Vec3 JoltDirection = CoordinateUtils::ToJoltCoordinates(Direction) * Distance;
@@ -227,9 +226,9 @@ using namespace JOLT;
 		case Layers::HITBOX:
 			return EMotionQuality::Discrete;
 		case Layers::PROJECTILE:
-			return EMotionQuality::LinearCast;
+			return EMotionQuality::Discrete;
 		case Layers::ENEMYPROJECTILE:
-			return EMotionQuality::LinearCast;
+			return EMotionQuality::Discrete;
 		case Layers::BONKFREEENEMY:
 			return EMotionQuality::Discrete;
 		case Layers::ENEMY:
@@ -288,11 +287,11 @@ using namespace JOLT;
 		{
 			HEReduceMin = 0.01;
 		}
-		//not really sure how much our cache helps us, but it could in theory improve GJK perf? idk. hm.
-		Ref<Shape> CachedShape = AttemptBoxCache(ToCreate.JoltX, ToCreate.JoltY, ToCreate.JoltZ, FMath::Min(HEReduceMin / 2.f, 0.01));
-	
+		//not really sure how much our cache helps us, but it could in theory improve GJK perf? Removed for perf testing.
+		//Ref<Shape> CachedShape = AttemptBoxCache(ToCreate.JoltX, ToCreate.JoltY, ToCreate.JoltZ, FMath::Min(HEReduceMin / 2.f, 0.01));
+		Ref<Shape> NewShape = new BoxShape(Vec3(ToCreate.JoltX, ToCreate.JoltY, ToCreate.JoltZ), FMath::Min(HEReduceMin / 2.f, 0.02));
 		ShapeSettings::ShapeResult box = RotatedTranslatedShapeSettings(
-			 	 CoordinateUtils::ToJoltCoordinates(ToCreate.Offset.X, ToCreate.Offset.Y, ToCreate.Offset.Z), Quat::sIdentity(), CachedShape).Create();
+			 	 CoordinateUtils::ToJoltCoordinates(ToCreate.Offset.X, ToCreate.Offset.Y, ToCreate.Offset.Z), Quat::sIdentity(), NewShape).Create();
 		ShapeRefC box_shape = box.Get();
 
 		// We don't expect an error here, but you can check floor_shape_result for HasError() / GetError()
@@ -346,7 +345,6 @@ using namespace JOLT;
 		NewCharacter->World = this->physics_system;
 		NewCharacter->mDeltaTime = DeltaTime;
 		NewCharacter->mForcesUpdate = Vec3::sZero();
-		//floor_shape_settings.SetEmbedded(); // A ref counted object on the stack (base class RefTarget) should be marked as such to prevent it from being freed when its reference count goes to 0.
 		// Create the shape
 		BodyIDTemp = NewCharacter->Create(&this->CharacterVsCharacterCollisionSimple);
 		//Barrage key is unique to WORLD and BODY. This is crushingly important.
@@ -527,17 +525,20 @@ using namespace JOLT;
 		auto PhysicsHoldOpen = physics_system;
 		if (AllocHoldOpen && JobHoldOpen)
 		{
+			TRACE_CPUPROFILER_EVENT_SCOPE_STR("Physics Update");
 			PhysicsHoldOpen->Update(DeltaTime, cCollisionSteps, AllocHoldOpen.Get(), JobHoldOpen.Get());
 		}
 	}
 
-	void FWorldSimOwner::OptimizeBroadPhase()
+	
+	bool FWorldSimOwner::OptimizeBroadPhase()
 	{
 		// Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
 		// You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
 		// Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
 		auto HoldOpen = physics_system;
 		HoldOpen->OptimizeBroadPhase();
+		return true;
 	}
 
 	FBarrageKey FWorldSimOwner::GenerateBarrageKeyFromBodyId(const BodyID& Input) const
@@ -572,7 +573,7 @@ using namespace JOLT;
 
 	bool FWorldSimOwner::UpdateCharacter(FBPhysicsInput& Update)
 	{
-		auto key = Update.Target.Get()->KeyIntoBarrage;
+		auto key = Update.Target;
 		auto CharacterOuter = CharacterToJoltMapping->Find(key);
 		//As you add handling for Characters with Inner Shapes, you'll need to use something like the line below.
 		//Unfortunately, it's going to be a lot of work. Right now, there's a bug preventing us from doing it, something in the lifecycle.

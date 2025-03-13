@@ -1,3 +1,4 @@
+// ReSharper disable CppMemberFunctionMayBeConst
 #pragma once
 
 #include "SkeletonTypes.h"
@@ -16,6 +17,9 @@
 #include "TransformDispatch.h"
 #include "BarrageDispatch.generated.h"
 
+#ifndef HERTZ_OF_BARRAGE
+#define HERTZ_OF_BARRAGE 128
+#endif
 
 static constexpr uint32 MAX_FOUND_OBJECTS = 1024;
 
@@ -49,8 +53,10 @@ constexpr int ALLOWED_THREADS_FOR_BARRAGE_PHYSICS = 64;
 //before we invest more time in it. I had a migraine when I wrote this, by way of explanation --J
 thread_local static uint32 MyBARRAGEIndex = ALLOWED_THREADS_FOR_BARRAGE_PHYSICS + 1;
 
+thread_local static uint32 MyWORKERIndex = ALLOWED_THREADS_FOR_BARRAGE_PHYSICS + 1;
+
 UCLASS()
-class BARRAGE_API UBarrageDispatch : public UTickableWorldSubsystem, public ISkeletonLord
+class BARRAGE_API UBarrageDispatch : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 	
@@ -63,17 +69,20 @@ public:
 	//minimize use of this outside of artillery blueprint library (UArtilleryLibrary)
 	static inline UBarrageDispatch* SelfPtr = nullptr;
 	constexpr static int OrdinateSeqKey = ORDIN::LastSubstrateKey;
-	virtual bool RegistrationImplementation() override; 
-	static constexpr float TickRateInDelta = 1.0 / 120.0;
+	virtual bool RegistrationImplementation() override;
+	void GrantWorkerFeed(int MyThreadIndex);
+	static constexpr float TickRateInDelta = 1.0 / HERTZ_OF_BARRAGE;
 	uint8 ThreadAccTicker = 0;
 	TSharedPtr<TransformUpdatesForGameThread> GameTransformPump;
 	TSharedPtr<TCircularQueue<BarrageContactEvent>> ContactEventPump;
 	 //this value indicates you have none.
 	mutable FCriticalSection GrowOnlyAccLock;
+	uint8 WorkerThreadAccTicker = 0;
+	mutable FCriticalSection MultiAccLock;
 
 	// Why would I do it this way? It's fast and easy to debug, and we will probably need to force a thread
 	// order for determinism. this ensures there's a call point where we can institute that.
-	void GrantFeed();
+	void GrantClientFeed();
 	UBarrageDispatch();
 	
 	virtual ~UBarrageDispatch() override;
@@ -87,15 +96,15 @@ public:
 	virtual void CastRay(FVector3d CastFrom, FVector3d Direction, const JPH::BroadPhaseLayerFilter& BroadPhaseFilter, const JPH::ObjectLayerFilter& ObjectFilter, const JPH::BodyFilter& BodiesFilter, TSharedPtr<FHitResult> OutHit);
 	
 	//and viola [sic] actually pretty elegant even without type polymorphism by using overloading polymorphism.
-	FBLet CreatePrimitive(FBBoxParams& Definition, FSkeletonKey Outkey, uint16 Layer, bool IsSensor = false, bool forceDynamic = false) const;
-	FBLet CreatePrimitive(FBCharParams& Definition, FSkeletonKey Outkey, uint16 Layer) const;
-	FBLet CreatePrimitive(FBSphereParams& Definition, FSkeletonKey OutKey, uint16 Layer, bool IsSensor = false) const;
-	FBLet CreatePrimitive(FBCapParams& Definition, FSkeletonKey OutKey, uint16 Layer, bool IsSensor = false, FMassByCategory::BMassCategories MassClass = FMassByCategory::MostEnemies) const;
-	FBLet CreateProjectile(FBBoxParams& Definition, FSkeletonKey OutKey, uint16_t Layer) const;
+	FBLet CreatePrimitive(FBBoxParams& Definition, FSkeletonKey Outkey, uint16 Layer, bool IsSensor = false, bool forceDynamic = false);
+	FBLet CreatePrimitive(FBCharParams& Definition, FSkeletonKey Outkey, uint16 Layer);
+	FBLet CreatePrimitive(FBSphereParams& Definition, FSkeletonKey OutKey, uint16 Layer, bool IsSensor = false);
+	FBLet CreatePrimitive(FBCapParams& Definition, FSkeletonKey OutKey, uint16 Layer, bool IsSensor = false, FMassByCategory::BMassCategories MassClass = FMassByCategory::MostEnemies);
+	FBLet CreateProjectile(FBBoxParams& Definition, FSkeletonKey OutKey, uint16_t Layer);
 	FBLet LoadComplexStaticMesh(FBTransform& MeshTransform, const UStaticMeshComponent* StaticMeshComponent, FSkeletonKey OutKey) const;
 	FBLet GetShapeRef(FBarrageKey Existing) const;
 	FBLet GetShapeRef(FSkeletonKey Existing) const;
-	void FinalizeReleasePrimitive(FBarrageKey BarrageKey) const;
+	void FinalizeReleasePrimitive(FBarrageKey BarrageKey);
 
 	//any non-zero value is the same, effectively, as a nullity for the purposes of any new operation.
 	//because we can't control certain aspects of timing and because we may need to roll back, we use tombstoning
@@ -104,7 +113,8 @@ public:
 	//and we want to be able to revert that decision for faster rollbacks or for pooling purposes.
 	constexpr static uint32 TombstoneInitialMinimum = 9;
 
-	uint32 SuggestTombstone(const FBLet& Target) const
+	//don't const stuff that causes huge side effects.
+	uint32 SuggestTombstone(FBLet Target) 
 	{
 		if (FBarragePrimitive::IsNotNull(Target))
 		{
@@ -137,7 +147,9 @@ public:
 	FOnBarrageContactPersisted OnBarrageContactPersistedDelegate;
 	void HandleContactPersisted(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold,
 	                            JPH::ContactSettings& ioSettings);
+	// REMOVE EVENTS REQUIRE ADDITIONAL SPECIAL HANDLING AS THEY DO NOT HAVE ALL DATA SET
 	FOnBarrageContactRemoved OnBarrageContactRemovedDelegate;
+	// REMOVE EVENTS REQUIRE ADDITIONAL SPECIAL HANDLING AS THEY DO NOT HAVE ALL DATA SET
 	void HandleContactRemoved(const JPH::SubShapeIDPair& inSubShapePair) const;
 
 	FBarrageKey GenerateBarrageKeyFromBodyId(const JPH::BodyID& Input) const;
@@ -161,7 +173,7 @@ private:
 	TSharedPtr<KeyToFBLet> JoltBodyLifecycleMapping;
 	
 	TSharedPtr<KeyToKey> TranslationMapping;
-	FBLet ManagePointers(FSkeletonKey OutKey, FBarrageKey temp, FBarragePrimitive::FBShape form) const;
+	FBLet ManagePointers(FSkeletonKey OutKey, FBarrageKey temp, FBShape form) const;
 	uint32 TombOffset = 0; //ticks up by one every world step.
 	//this is a little hard to explain. so keys are inserted as 
 
@@ -175,23 +187,25 @@ private:
 	{
 		//free tomb at offset - TombstoneInitialMinimum, fulfilling our promised minimum.
 		TSharedPtr<TArray<FBLet>>* HoldOpen = Tombs;
-		TSharedPtr<TArray<FBLet>>& Mausoleum = HoldOpen[(TombOffset - TombstoneInitialMinimum) % (TombstoneInitialMinimum + 1)];
-		if(Mausoleum)
+		TSharedPtr<TArray<FBLet>> Mausoleum = HoldOpen[(TombOffset) % (TombstoneInitialMinimum + 1)]; //think this math is wrong.
+		if(Mausoleum && !Mausoleum->IsEmpty())
+		{
+			for (auto Tombstone : *Mausoleum)
+			{
+				if (Tombstone)
+				{
+					JoltBodyLifecycleMapping->erase(Tombstone->KeyIntoBarrage);
+					TranslationMapping->erase(Tombstone->KeyOutOfBarrage);
+				}
+			}
+		}
+		Mausoleum = HoldOpen[(TombOffset - TombstoneInitialMinimum) % (TombstoneInitialMinimum + 1)];
+		if (Mausoleum)
 		{
 			Mausoleum->Empty(); //roast 'em lmao.
 		}
 		TombOffset = (TombOffset + 1) % (TombstoneInitialMinimum + 1);
 	}
-
-	void Entomb(const FBLet& NONREFERENCE)
-	{
-		//request removal here
-		JoltBodyLifecycleMapping->erase(NONREFERENCE->KeyIntoBarrage);
-		TranslationMapping->erase(NONREFERENCE->KeyOutOfBarrage);
-		// there doesn't seem to be a better way to do this idiomatically in the UE framework.
-		//push into tomb here. because we shadow two back on the release, this is guaranteed to be safe?
-		Tombs[TombOffset]->Push(NONREFERENCE);
-		//DO NOT make that a reference parameter
-	}
+	
 };
 

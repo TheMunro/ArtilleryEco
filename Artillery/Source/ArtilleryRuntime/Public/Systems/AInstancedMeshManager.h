@@ -8,6 +8,7 @@
 #include "GameFramework/Actor.h"
 #include "SwarmKine.h"
 #include "EPhysicsLayer.h"
+#include <thread>
 #include "AInstancedMeshManager.generated.h"
 
 UCLASS()
@@ -24,7 +25,6 @@ public:
 	UTransformDispatch* TransformDispatch;
 
 	uint32 instances_generated;
-	
 	virtual void BeginPlay() override
 	{
 		Super::BeginPlay();
@@ -91,7 +91,21 @@ public:
 	
 	FSkeletonKey GenerateNewProjectileKey()
 	{
-		return FSkeletonKey(HashCombine(GetTypeHash(SwarmKineManager), GetTypeHash(++instances_generated)));
+		//You would not believe how much trouble this caused. you just would not believe it.
+		//TODO: this is not currently deterministic in some senses. ensure it is not an issue for sim (thread ordering produces diff keys)
+		//likely, we want something like an atomic instead of instances generated or we want something that lets us better mark out when and why
+		//in a lexical ordering. it's not an easy problem. I think it'll be vastly simplified by breaking skeleton keys into type short,meta short,hash uint
+		//that'll let us use meta for ordering in some cases and verity in others.
+		std::hash<std::thread::id> hasher;
+		uint32 low = HashCombineFast(
+				HashCombineFast(GetTypeHash(SwarmKineManager), GetTypeHash(++instances_generated)),
+				F_INeedA::HashDownTo32( hasher(std::this_thread::get_id()))
+				);
+		uint64 combo = low;
+		combo = (combo << 32) + low;
+		return FProjectileInstanceKey(
+			combo
+			);
 	}
 
 	UFUNCTION(BlueprintCallable, Category = Instance)
@@ -100,15 +114,15 @@ public:
 		return CreateNewInstance(WorldTransform, MuzzleVelocity, static_cast<uint16_t>(Layer), Scale, FSkeletonKey(), IsSensor, IsDynamic);
 	}
 	
-	FSkeletonKey CreateNewInstance(const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const uint16_t Layer, float Scale = 1.0f, const FSkeletonKey& ExistingKey = FSkeletonKey::Invalid(), bool IsSensor = false, bool IsDynamic = false)
+	FSkeletonKey CreateNewInstance(const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const uint16_t Layer, float Scale = 1.0f, FSkeletonKey ExistingKey = FSkeletonKey::Invalid(), bool IsSensor = false, bool IsDynamic = false)
 	{
 		// TODO: Does this make a good hash? Can we hash collide?
 		// TODO: Oh god this definitely birthday problems at some point but I don't know how else to get a unique hash since the instances rotate around and reuse the same memory
-		FSkeletonKey NewInstanceKey = ExistingKey == FSkeletonKey::Invalid() ? GenerateNewProjectileKey() : ExistingKey;
+		FSkeletonKey NewInstanceKey = (ExistingKey == FSkeletonKey::Invalid()) ? GenerateNewProjectileKey() : ExistingKey;
 
 		auto ScaledTransform = FTransform(FRotator::ZeroRotator,WorldTransform.GetLocation(), FVector3d(Scale, Scale, Scale));
 		FPrimitiveInstanceId NewInstanceId = SwarmKineManager->AddInstanceById(ScaledTransform, true);
-		SwarmKineManager->AddToMap(NewInstanceId, NewInstanceKey);
+		SwarmKineManager->AddToMapDbg(NewInstanceId, NewInstanceKey);
 
 		CreateNewInstanceWithKeyInternal(NewInstanceKey, WorldTransform, MuzzleVelocity, Layer, Scale);
 		
@@ -122,18 +136,16 @@ public:
 		return SwarmKineManager->GetSceneComponentForInstance(InstanceKey);
 	}
 
-	// THIS MUST BE CALLED OR ELSE THE MAPPINGS WILL KEEP THE LIVE REFERENCE 4EVA
-
+	// This function will eventually become private. Do not call it directly from outside of Artillery itself.
 	void CleanupInstance(const FSkeletonKey Target)
 	{
 		auto Physics = GetWorld()->GetSubsystem<UBarrageDispatch>();
-		Physics->SuggestTombstone(Physics->GetShapeRef(Target));
 		TransformDispatch->ReleaseKineByKey(Target);
 		SwarmKineManager->CleanupInstance(Target);
 	}
 
 private:
-	void CreateNewInstanceWithKeyInternal(const FSkeletonKey& ProjectileKey, const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const uint16_t Layer, float Scale) const
+	void CreateNewInstanceWithKeyInternal(FSkeletonKey ProjectileKey, const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const uint16_t Layer, float Scale) const
 	{
 		// TODO: can't use the BarrageColliderBase set of types, so in-lining the barrage setup code. Is this what we want long-term?
 		auto Physics = GetWorld()->GetSubsystem<UBarrageDispatch>();
@@ -145,6 +157,7 @@ private:
 			FVector3d(0, 0, extents.Z/2));
 		
 		FBLet MyBarrageBody = Physics->CreateProjectile(params, ProjectileKey, Layer);
+
 		TransformDispatch->RegisterObjectToShadowTransform(ProjectileKey, SwarmKineManager);
 		FBarragePrimitive::SetVelocity(MuzzleVelocity, MyBarrageBody);
 

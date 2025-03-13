@@ -28,7 +28,7 @@ bool FArtilleryBusyWorker::Init()
 
 void FArtilleryBusyWorker::RunStandardFrameSim(bool& missedPrior, uint64_t& currentIndexCabling,
                                                bool& burstDropDetected, PacketElement& current,
-                                               bool& RemoteInput) const
+                                               bool& RemoteInput)
 {
 	//this is an odd thing to do, I know, but we have some book-keeping we want to reserve for each code path.
 	//once this settles a little, I'll refactor, but I'm going to end up reworking this next weekend.
@@ -202,11 +202,15 @@ uint32 FArtilleryBusyWorker::Run()
 	constexpr uint32_t RunHertz = LongboySendHertz;
 	const uint32_t SendHertzFactor = sampleHertz / RunHertz; // THIS ROUNDS DOWN. IT IS INT MATH.
 	//in other words, artillery will always run at powers of two right now. that's intended for prototype.
-	constexpr uint32_t Period = 999600 / sampleHertz;
+	constexpr uint32_t Period = 999900 / sampleHertz;
 	//swap to microseconds. standardizing. we actually run a LITTLE fast. for science reasons.
-	constexpr double MarginOfErrorForSleep = 0.8;
+	constexpr double MarginOfErrorForSleep = 0.75;
+	constexpr double MarginOfErrorForSpin = 0.90; //roughly .2 ms. Nothing but a spin is gonna be fast enough.
+	
 	//sleep basically always has +/1 duration * .5 error, at our sample rates.
 	constexpr uint32_t ErrorAdjustedPeriod = Period * MarginOfErrorForSleep;
+	
+	constexpr uint32_t MicroErrorAdjustedPeriod = Period * MarginOfErrorForSpin;
 	// we prefer to land near the _start_ of a period, so we bias.
 
 	constexpr std::chrono::milliseconds Step(Period / 1000);
@@ -281,6 +285,11 @@ uint32 FArtilleryBusyWorker::Run()
 				sent = false;
 			}
 			++SeqNumber;
+		}
+		else if ((LastIncrementWindow + MicroErrorAdjustedPeriod) <= lsbTime)
+		{
+			//spin spin spin
+			
 		}
 		else if ((LastIncrementWindow + ErrorAdjustedPeriod) <= lsbTime)
 		{

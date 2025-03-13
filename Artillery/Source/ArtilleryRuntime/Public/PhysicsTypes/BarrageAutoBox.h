@@ -35,15 +35,7 @@ public:
 	EPhysicsLayer Layer;
 	FMassByCategory MyMassClass;
 	virtual void Register() override;
-
-#if UE_ENABLE_DEBUG_DRAWING
-	virtual void Draw(FPrimitiveDrawInterface* PDI, const FLinearColor& colour, uint8 DepthPrio) override
-	{
-		FVector HalfExtent = DiameterXYZ/2;
-		FBox CompanionRectangle = FBox(this->Transform.Location - HalfExtent, this->Transform.Location + HalfExtent);
-		DrawWireBox(PDI, CompanionRectangle, colour, DepthPrio);
-	}
-#endif
+	
 	
 };
 
@@ -69,6 +61,12 @@ inline UBarrageAutoBox::UBarrageAutoBox(const FObjectInitializer& ObjectInitiali
 	bWantsInitializeComponent = true;
 	PrimaryComponentTick.bCanEverTick = true;
 	MyObjectKey = 0;
+	bAlwaysCreatePhysicsState = false;
+	UPrimitiveComponent::SetNotifyRigidBodyCollision(false);
+	bCanEverAffectNavigation = false;
+	Super::SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	Super::SetEnableGravity(false);
+	Super::SetSimulatePhysics(false);
 }
 
 //KEY REGISTER, initializer, and failover.

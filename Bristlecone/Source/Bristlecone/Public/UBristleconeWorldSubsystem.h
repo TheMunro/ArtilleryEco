@@ -20,7 +20,7 @@
 using namespace TheCone;
 
 UCLASS()
-class BRISTLECONE_API UBristleconeWorldSubsystem : public UTickableWorldSubsystem, public ISkeletonLord
+class BRISTLECONE_API UBristleconeWorldSubsystem : public UTickableWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 

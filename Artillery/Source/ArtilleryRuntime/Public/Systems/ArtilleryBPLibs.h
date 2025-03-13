@@ -439,12 +439,12 @@ public:
 		 SimpleEstimator(Forward, 15);
 	}
 
+	//differs from tombstone primitive ONLY in that it will NOT kill non-projectiles.
 	static bool DeleteProjectile(FSkeletonKey Target)
 	{
 		if(UArtilleryDispatch::SelfPtr && UArtilleryProjectileDispatch::SelfPtr && UArtilleryProjectileDispatch::SelfPtr->IsArtilleryProjectile(Target))
 		{
-			UArtilleryDispatch::SelfPtr->DeregisterGameplayTags(Target);
-			UArtilleryProjectileDispatch::SelfPtr->DeleteProjectile(Target);
+			TombstonePrimitive(Target);
 			return true;
 		}
 		return false;
@@ -463,11 +463,11 @@ public:
 		{
 			ArtilleryTime Now = UArtilleryDispatch::SelfPtr->GetShadowNow();
 			FBLet Prim = UArtilleryDispatch::SelfPtr->GetFBLetByObjectKey(Target, Now);
-			if (Prim && Prim->Me == FBarragePrimitive::Projectile)
+			if (Prim && Prim->Me == FBShape::Projectile)
 			{
-				return  DeleteProjectile(Target); // quite a bit extra has to happen, but it does all happen.
+				UArtilleryProjectileDispatch::SelfPtr->DeleteProjectile(Target); // quite a bit extra has to happen, but it does all happen.
 			}
-			return 1 != UBarrageDispatch::SelfPtr->SuggestTombstone(Prim);
+			return UBarrageDispatch::SelfPtr->SuggestTombstone(Prim) != 1;
 		}
 		return false;
 	}

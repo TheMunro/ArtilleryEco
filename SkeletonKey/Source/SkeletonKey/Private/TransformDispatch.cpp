@@ -63,11 +63,6 @@ void UTransformDispatch::ReleaseKineByKey(FSkeletonKey Target)
 		TSharedPtr<KineLookup> HoldOpen = ObjectToTransformMapping;
 		if(HoldOpen)
 		{
-			TSharedPtr<Kine> ref;
-			HoldOpen->find(Target, ref);
-			if(ref){
-				ref.Get()->MyKey = FSkeletonKey();
-			}
 			HoldOpen->erase(Target);
 		}
 	}
