@@ -1,5 +1,5 @@
-# ParaY: For Abilities And Parallelism
-Determinism, threaded input processing, and access management primitives married to a core set of basic tools used to bind to a weapon or character actor in a compositional and elegant way, loosely backwards compatible with GAS while simplifying its usage considerably. Artillery is at 0.2 and is not yet in pre-alpha. It provides, as of right now:
+# ArtilleryEco: Determinism For Free
+Determinism, abilities, threaded input processing, and state management primitives married to a core set of basic tools used to bind to a weapon or character actor in a compositional and elegant way, loosely backwards compatible with GAS while simplifying its usage considerably. Artillery is at 0.2 and is not yet in pre-alpha. It provides, as of right now:
 
 - Integration with GAS through ArtilleryGuns
 - Full support for the Jolt physics engine for game simulation through Barrage
