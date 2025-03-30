@@ -59,6 +59,8 @@ GunDefinitionID(Name), GunInstanceID()
 	}
 
 	bool IsValidInstance() const { return GunInstanceID.Obj != 0; }
+
+	static FGunKey Invalid() { return FGunKey(); }
 };
 static bool operator==(FGunKey const& lhs, FGunKey const& rhs) {
 	return (lhs.GunDefinitionID == rhs.GunDefinitionID) && (lhs.GunInstanceID == rhs.GunInstanceID);

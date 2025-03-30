@@ -175,55 +175,9 @@ void FArtilleryBusyWorker::ProcessRequestRouterBusyWorkerThread()
 	}
 }
 
-uint32 FArtilleryBusyWorker::Run()
+void FArtilleryBusyWorker::RunFrameProcessingLoop(bool missedPrior, uint64_t currentIndexCabling, bool burstDropDetected, bool sent, uint32_t LastIncrementWindow, uint32_t lsbTime, const uint32_t SendHertzFactor, const uint32_t Period, const std::chrono::microseconds HalfStep, UArtilleryDispatch* ArtilleryDispatch)
 {
-	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Running Artillery thread"));
-	if (RequestorQueue_Abilities_TripleBuffer == nullptr)
-	{
-#ifdef UE_BUILD_SHIPPING
-		return -1;
-#else
-		throw; // this is a BUG. A BAD ONE. 
-#endif
-	}
-	
-	bool missedPrior = false;
-	uint64_t currentIndexCabling = 0;
-	bool burstDropDetected = false;
-	bool sent = false;
-	//TODO: remember why this needs to be an int. 
-	//if you wanna use this for a really long lived session, you'll need to fix it. you know. one longer than 34 years.
-	SeqNumber = 0;
-	//Hi! Jake here! Reminding you that this will CYCLE
-	//That's known. Isn't that fun? :) Don't reorder these, by the way.
-	uint32_t LastIncrementWindow = ContingentInputECSLinkage->Now();
-	uint32_t lsbTime = ContingentInputECSLinkage->Now();
-	constexpr uint32_t sampleHertz = TheCone::CablingSampleHertz;
-	constexpr uint32_t RunHertz = LongboySendHertz;
-	const uint32_t SendHertzFactor = sampleHertz / RunHertz; // THIS ROUNDS DOWN. IT IS INT MATH.
-	//in other words, artillery will always run at powers of two right now. that's intended for prototype.
-	constexpr uint32_t Period = 999900 / sampleHertz;
-	//swap to microseconds. standardizing. we actually run a LITTLE fast. for science reasons.
-	constexpr double MarginOfErrorForSleep = 0.75;
-	constexpr double MarginOfErrorForSpin = 0.90; //roughly .2 ms. Nothing but a spin is gonna be fast enough.
-	
-	//sleep basically always has +/1 duration * .5 error, at our sample rates.
-	constexpr uint32_t ErrorAdjustedPeriod = Period * MarginOfErrorForSleep;
-	
-	constexpr uint32_t MicroErrorAdjustedPeriod = Period * MarginOfErrorForSpin;
-	// we prefer to land near the _start_ of a period, so we bias.
-
-	constexpr std::chrono::milliseconds Step(Period / 1000);
-
-	//we can now start the sim. we latch only on the apply step.
-	StartTicklitesSim->Trigger();
-	//we are started by Artillery Dispatch, but we can't use it in the .h file to avoid dependencies.
-	//so we know it's live, but we don't take a ref to it until this point.
-	//we only use it for GrantFeed, but it's important that we start abiding by separation of concerns
-	//where we can, so we're trying to hide the barrage dependency here in a sense. We can't fully, but.
-	UArtilleryDispatch* ArtilleryDispatch = ContingentInputECSLinkage->GetWorld()->GetSubsystem<UArtilleryDispatch>();
-	ArtilleryDispatch->ThreadSetup();
-	timeBeginPeriod(2);
+	timeBeginPeriod(1);
 	
 	while (running)
 	{
@@ -285,30 +239,74 @@ uint32 FArtilleryBusyWorker::Run()
 				sent = false;
 			}
 			++SeqNumber;
-		}
-		else if ((LastIncrementWindow + MicroErrorAdjustedPeriod) <= lsbTime)
+		}//because we would be pushing our luck w. the error bars on sleep in certain cases, we try to detect those so we can instead spin. Hence the modifier.
+		//this is saying if the current time + the sleep time + the margin for error is less than the target time, then we can sleep.
+		else if (lsbTime + (1.3 * (HalfStep).count()) <= (LastIncrementWindow + Period))
 		{
-			//spin spin spin
-			
+			std::this_thread::sleep_for(HalfStep);
+			lsbTime = NarrowClock::getSlicedMicrosecondNow();
 		}
-		else if ((LastIncrementWindow + ErrorAdjustedPeriod) <= lsbTime)
-		{
-			std::this_thread::yield(); //if we're within the margin of error on sleep, we yield instead.
-		}
-		else
-		{
-			std::this_thread::sleep_for(Step);
-		}
-		//std::this_thread::yield();
+		
 		lsbTime = ContingentInputECSLinkage->Now();
-		if ((SeqNumber % sampleHertz) == 0)
-		{
-			UE_LOG(LogTemp, Display, TEXT("Artillery Busy Worker hertz cycled: %u against seq %ld"),
-				   lsbTime, SeqNumber);
-		}
+	}
+}
+
+uint32 FArtilleryBusyWorker::Run()
+{
+	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Running Artillery thread"));
+	if (RequestorQueue_Abilities_TripleBuffer == nullptr)
+	{
+		return -1;
 	}
 	
-	timeEndPeriod(2);
+	bool missedPrior = false;
+	uint64_t currentIndexCabling = 0;
+	bool burstDropDetected = false;
+	bool sent = false;
+	//TODO: remember why this needs to be an int. 
+	//if you wanna use this for a really long lived session, you'll need to fix it. you know. one longer than 34 years.
+	SeqNumber = 0;
+	//Hi! Jake here! Reminding you that this will CYCLE
+	//That's known. Isn't that fun? :) Don't reorder these, by the way.
+	uint32_t LastIncrementWindow = ContingentInputECSLinkage->Now();
+	uint32_t lsbTime = ContingentInputECSLinkage->Now();
+	constexpr uint32_t sampleHertz = TheCone::CablingSampleHertz;
+	constexpr uint32_t RunHertz = LongboySendHertz;
+	const uint32_t SendHertzFactor = sampleHertz / RunHertz; // THIS ROUNDS DOWN. IT IS INT MATH.
+	//in other words, artillery will always run at powers of two right now. that's intended for prototype.
+	//we actually run a LITTLE fast to offset us against cabling.
+	constexpr uint32_t Period = 999900 / sampleHertz;
+
+	// we prefer to land near the _start_ of a period, so we bias.
+	constexpr auto HalfStep = std::chrono::microseconds(Period / 2);
+	PROCESS_POWER_THROTTLING_STATE PowerThrottling;
+	RtlZeroMemory(&PowerThrottling, sizeof(PowerThrottling));
+	PowerThrottling.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+
+	PowerThrottling.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
+	PowerThrottling.StateMask = 0;
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+
+	SetProcessInformation(GetCurrentProcess(), 
+						  ProcessPowerThrottling, 
+						  &PowerThrottling,
+						  sizeof(PowerThrottling));
+	
+	//we can now start the sim. we latch only on the apply step.
+	StartTicklitesSim->Trigger();
+	//we are started by Artillery Dispatch, but we can't use it in the .h file to avoid dependencies.
+	//so we know it's live, but we don't take a ref to it until this point.
+	//we only use it for GrantFeed, but it's important that we start abiding by separation of concerns
+	//where we can, so we're trying to hide the barrage dependency here in a sense. We can't fully, but.
+	UArtilleryDispatch* ArtilleryDispatch = ContingentInputECSLinkage->GetWorld()->GetSubsystem<UArtilleryDispatch>();
+	ArtilleryDispatch->ThreadSetup();
+
+	//Run loop is in here.
+	RunFrameProcessingLoop(missedPrior, currentIndexCabling, burstDropDetected, sent, LastIncrementWindow, lsbTime,
+	                       SendHertzFactor, Period, HalfStep, ArtilleryDispatch);
+
+	//just in case we end up unrolling or something weird.
+	timeEndPeriod(1);
 	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Run Ended."));
 	return 0;
 }

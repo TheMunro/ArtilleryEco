@@ -38,7 +38,8 @@ public class SunflowerRuntime : ModuleRules
                 "SkeletonKey", 
                 "ArtilleryRuntime",
                 "ThistleRuntime",
-                "MassEntity"
+                "MassEntity",
+                "UMG"
 
 				// ... add other public dependencies that you statically link with here ...
 			}

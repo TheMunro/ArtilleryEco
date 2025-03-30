@@ -21,6 +21,12 @@
 		{
 			return mCharacter->GetPosition();
 		}
+
+		void SetPosition(JPH::Vec3 NewPosition) const
+		{
+			mCharacter->SetPosition(NewPosition);
+		}
+		
 		// Create the character
 		// Fails if the mProperties are not correctly set.
 		JPH::BodyID Create(JPH::CharacterVsCharacterCollision* CVCColliderSystem);

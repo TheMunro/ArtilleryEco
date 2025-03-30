@@ -188,8 +188,11 @@ private:
 		//free tomb at offset - TombstoneInitialMinimum, fulfilling our promised minimum.
 		TSharedPtr<TArray<FBLet>>* HoldOpen = Tombs;
 		TSharedPtr<TArray<FBLet>> Mausoleum = HoldOpen[(TombOffset) % (TombstoneInitialMinimum + 1)]; //think this math is wrong.
-		if(Mausoleum && !Mausoleum->IsEmpty())
+		auto HoldOpenBMap = JoltBodyLifecycleMapping;
+		auto HoldOpenTMap = TranslationMapping;
+		if(Mausoleum && !Mausoleum->IsEmpty() && HoldOpenBMap && HoldOpenTMap)
 		{
+
 			for (auto Tombstone : *Mausoleum)
 			{
 				if (Tombstone)

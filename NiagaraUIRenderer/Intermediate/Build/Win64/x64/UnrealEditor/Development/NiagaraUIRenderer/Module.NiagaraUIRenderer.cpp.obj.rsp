@@ -1,12 +1,12 @@
-"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp"
-/FI"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
-/FI"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Definitions.NiagaraUIRenderer.h"
-/Yu"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
-/Fp"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h.pch"
-/Fo"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.obj"
-/experimental:log "C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.sarif"
-/sourceDependencies "C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.dep.json"
-@"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\NiagaraUIRenderer.Shared.rsp"
+"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp"
+/FI"C:\GitHub\Bristle54\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
+/FI"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Definitions.NiagaraUIRenderer.h"
+/Yu"C:\GitHub\Bristle54\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
+/Fp"C:\GitHub\Bristle54\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h.pch"
+/Fo"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.obj"
+/experimental:log "C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.sarif"
+/sourceDependencies "C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\Module.NiagaraUIRenderer.cpp.dep.json"
+@"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRenderer\NiagaraUIRenderer.Shared.rsp"
 /d2ssa-cfg-question-
 /Zc:inline
 /nologo

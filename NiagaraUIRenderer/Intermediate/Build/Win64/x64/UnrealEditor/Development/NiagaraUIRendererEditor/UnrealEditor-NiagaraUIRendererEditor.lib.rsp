@@ -6,7 +6,7 @@
 /NAME:"UnrealEditor-NiagaraUIRendererEditor.dll"
 /IGNORE:4221
 /NODEFAULTLIB
-"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h.obj"
-"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRendererEditor\Module.NiagaraUIRendererEditor.cpp.obj"
-"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRendererEditor\Default.rc2.res"
-/OUT:"C:\Users\jakek\Documents\Unreal Projects\Bristle54 5.5\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRendererEditor\UnrealEditor-NiagaraUIRendererEditor.lib"
+"C:\GitHub\Bristle54\Intermediate\Build\Win64\x64\Bristle54Editor\Development\UnrealEd\SharedPCH.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h.obj"
+"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRendererEditor\Module.NiagaraUIRendererEditor.cpp.obj"
+"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRendererEditor\Default.rc2.res"
+/OUT:"C:\GitHub\Bristle54\plugins\NiagaraUIRenderer\Intermediate\Build\Win64\x64\UnrealEditor\Development\NiagaraUIRendererEditor\UnrealEditor-NiagaraUIRendererEditor.lib"

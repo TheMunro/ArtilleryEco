@@ -76,10 +76,9 @@ namespace Arty
 	DECLARE_DELEGATE_OneParam(FArtilleryUpdateEnemyControllerSubsystem, uint64_t CurrentTick)
 	typedef FStateTreesWorker<UArtilleryDispatch> AIWorker;
 	typedef FArtilleryTicklitesWorker<UArtilleryDispatch> TickliteWorker;
-	typedef TWeakObjectPtr<UArtilleryGameplayTagContainer> GameplayTagContainerPtr;
+	typedef TSharedPtr<FGameplayTagContainer> GameplayTagContainerPtr;
 	
-	typedef TStrongObjectPtr<UArtilleryGameplayTagContainer> GameplayTagContainerPtrInternal;
-	typedef TSharedPtr<UArtilleryGameplayTagContainer> ArtilleryGameplayTagContainerPtr;
+	typedef TSharedPtr<FGameplayTagContainer> GameplayTagContainerPtrInternal;
 }
 
 class UCanonicalInputStreamECS;
@@ -173,7 +172,7 @@ protected:
 	TSharedPtr<TMap<FSkeletonKey, IdMapPtr>> IdentSetToDataMapping;
 	TSharedPtr<TMap<FSkeletonKey, Attr3MapPtr>> VectorSetToDataMapping;
 	
-	/** Map of skeleton key to map of gameplay tags to delegates on add/remove of tag */
+	/** skeleton key to map of gameplay tags */
 	TSharedPtr<TMap<FSkeletonKey, GameplayTagContainerPtrInternal>> GameplayTagContainerToDataMapping;
 	
 	TSharedPtr<TransformUpdatesForGameThread> TransformUpdateQueue;
@@ -270,6 +269,7 @@ public:
 	}
 	
 	FGunKey RegisterExistingGun(const TSharedPtr<FArtilleryGun>& toBind, const ActorKey& ProbableOwner) const;
+	void UnregisterExistingGun(FGunKey GunKey) const { GunByKey->Remove(GunKey); }
 	bool IsGunLive(FSkeletonKey Key); 
 	bool IsActorTransformAlive(ActorKey Key) const;
 	
@@ -315,6 +315,7 @@ public:
 	Attr3Ptr GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib) const;
 	// TODO - Add a mirrored `remove` function for temporary use (like with instanced meshes)
 	GameplayTagContainerPtr GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner);
+	GameplayTagContainerPtr GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner, GameplayTagContainerPtr AddIfAbsent);
 	GameplayTagContainerPtr GetGameplayTagContainer(const FSkeletonKey& Owner) const;
 	virtual ~UArtilleryDispatch() override;
 
@@ -374,10 +375,11 @@ public:
 	{
 		VectorSetToDataMapping->Add(in, Vectors);
 	}
-	
-	void RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtr GameplayTags)
+
+	//adds or assumes responsibility for the lifecycle of a tag container keyed to this SK
+	void RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags)
 	{
-		GameplayTagContainerToDataMapping->Add(in, GameplayTags.Pin());
+		GameplayTagContainerToDataMapping->Add(in, GameplayTags);
 	}
 	
 	void DeregisterAttributes(FSkeletonKey in)

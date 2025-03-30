@@ -148,9 +148,6 @@ TPair<ActorKey, InputStreamKey> UCanonicalInputStreamECS::RegisterKeysToParentAc
 	//this is a hack. this is such a hack. oh god.
 	if(IsActorForLocalPlayer)
 	{
-#if UE_BUILD_SHIPPING != 0
-		throw; //I told you not to ship this without checking.
-#endif
 		//this relies on a really ugly hack using the ENUM. do not ship this without being sure you want to.
 		InputStreamKey LocalKey = GetStreamForPlayer(APlayer::CABLE);
 		StreamToActorMapping->Add(LocalKey, ParentKey); //ONE OF THE TWO THINGS IS WRONG NOW, CONGRATS, HERO.

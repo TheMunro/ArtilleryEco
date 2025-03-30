@@ -568,8 +568,8 @@ inline bool UBarragePlayerAgent::CalculateAimVector(
 		
 		TSharedPtr<FHitResult> HitObjectResult = MakeShared<FHitResult>();
 		Physics->SphereCast(
-			0.05f,
-			3000.0f, // Hard-coding range for now until we determine how we want to handle range on this
+			0.1f,
+			10000.0f, // Hard-coding range for now until we determine how we want to handle range on this
 			ActorLocation,
 			Direction,
 			HitObjectResult,
@@ -577,7 +577,7 @@ inline bool UBarragePlayerAgent::CalculateAimVector(
 			ObjectLayerFilter,
 			BodyFilter);
 
-		//DrawDebugLine(GetWorld(), ActorLocation, Direction * 3000.f, FColor::Red, false, 0.4f, 0.f, 0.5f);
+		//DrawDebugLine(GetWorld(), ActorLocation, Direction * 10000.f, FColor::Red, false, 0.4f, 0.f, 0.5f);
 		FBarrageKey HitBarrageKey = Physics->GetBarrageKeyFromFHitResult(HitObjectResult);
 		if (HitBarrageKey != 0)
 		{

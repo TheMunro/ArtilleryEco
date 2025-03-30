@@ -107,28 +107,30 @@ void FBCharacter::StepCharacter()
 
 void FBCharacter::IngestUpdate(FBPhysicsInput& input)
 {
-	if (input.Action == PhysicsInputType::Rotation)
+	switch (input.Action)
 	{
+	case PhysicsInputType::Rotation:
 		mCapsuleRotationUpdate = input.State;
-	}
-	else if (input.Action == PhysicsInputType::OtherForce)
-	{
+		break;
+	case PhysicsInputType::OtherForce:
 		// TODO: IDK this is a kludge for now since we removed the 100.0 divide by in CoordinateUtils::ToBarrageForce
 		mForcesUpdate += input.State.GetXYZ() / 100.0;
-	}
-	else if (input.Action == PhysicsInputType::SelfMovement)
-	{
+		break;
+	case PhysicsInputType::SelfMovement:
 		mLocomotionUpdate += input.State.GetXYZ()/ 100.0;
-	}
-	else if (input.Action == PhysicsInputType::Throttle)
-	{
+		break;
+	case PhysicsInputType::Throttle:
 		//Throttle controls the four key forces acting on a character by scaling them.
 		mThrottleModel = input.State;
-	}
-	else if (input.Action == PhysicsInputType::SetCharacterGravity)
-	{
+		break;
+	case PhysicsInputType::SetCharacterGravity:
 		mGravity = input.State.GetXYZ()/ 100.0;
-	}
-	
+		break;
+	case PhysicsInputType::SetPosition:
+		SetPosition(input.State.GetXYZ());	
+		break;
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("FBCharacter::IngestUpdate: Received unimplemented input.Action = [%d]"), input.Action);
+	};
 			
 }

@@ -80,58 +80,6 @@ protected:
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 };
 
-USTRUCT()
-struct THISTLERUNTIME_API FMoveOrder : public FTTaskBase
-{
-
-	GENERATED_BODY()
-public:
-	using FInstanceDataType = F_TPOIInstanceNavData;
-
-
-	
-protected:
-
-	//
-	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
-	/**
-	* Called when a current state is exited and task is part of active states.
-	* @param Context Reference to current execution context.
-	* @param Transition Describes the states involved in the transition
-	*/
-	virtual void ExitState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const override;
-
-	/**
-	 * Called right after a state has been completed, but before new state has been selected. StateCompleted is called in reverse order to allow to propagate state to other Tasks that
-	 * are executed earlier in the tree. Note that StateCompleted is not called if conditional transition changes the state.
-	 * @param Context Reference to current execution context.
-	 * @param CompletionStatus Describes the running status of the completed state (Succeeded/Failed).
-	 * @param CompletedActiveStates Active states at the time of completion.
-	 */
-	virtual void StateCompleted(FStateTreeExecutionContext& Context, const EStateTreeRunStatus CompletionStatus, const FStateTreeActiveStates& CompletedActiveStates) const override;
-	EStateTreeRunStatus AttemptMovePath(FStateTreeExecutionContext& Context, FVector location, FVector HereIAm) const;
-
-	/**
-	 * Called during state tree tick when the task is on active state.
-	 * Note: The method is called only if bShouldCallTick or bShouldCallTickOnlyOnEvents is set.
-	 * @param Context Reference to current execution context.
-	 * @param DeltaTime Time since last StateTree tick.
-	 * @return Running status of the state: Running if still in progress, Succeeded if execution is done and succeeded, Failed if execution is done and failed.
-	 */
-	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;;
-
-	/**
-	 * Called when state tree triggers transitions. This method is called during transition handling, before state's tick and event transitions are handled.
-	 * Note: the method is called only if bShouldAffectTransitions is set.
-	 * @param Context Reference to current execution context.
-	 */
-	virtual void TriggerTransitions(FStateTreeExecutionContext& Context) const override;
-
-	UPROPERTY(EditAnywhere)
-	float Tolerance = 0;
-
-};
-
 
 ////////////////////////////////////////////////////////////////////////
 // Thistle State Tree Lease is a Cadenced StateTree holder. It provides registration and execution context support

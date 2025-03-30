@@ -3,7 +3,86 @@
     "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
     "runs": [
         {
-            "results": [],
+            "results": [
+                {
+                    "ruleId": "C4005",
+                    "message": {
+                        "text": "'WINVER': macro redefinition"
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRenderer/Module.NiagaraUIRenderer.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRenderer/Definitions.NiagaraUIRenderer.h"
+                                },
+                                "region": {
+                                    "startLine": 20,
+                                    "startColumn": 1
+                                }
+                            }
+                        }
+                    ],
+                    "relatedLocations": [
+                        {
+                            "id": 0,
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/Intermediate/Build/Win64/x64/Bristle54Editor/Development/UnrealEd/SharedDefinitions.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
+                                },
+                                "region": {
+                                    "startLine": 66,
+                                    "startColumn": 1
+                                }
+                            },
+                            "message": {
+                                "text": "see previous definition of 'WINVER'"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "ruleId": "C4005",
+                    "message": {
+                        "text": "'_WIN32_WINNT': macro redefinition"
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRenderer/Module.NiagaraUIRenderer.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRenderer/Definitions.NiagaraUIRenderer.h"
+                                },
+                                "region": {
+                                    "startLine": 21,
+                                    "startColumn": 1
+                                }
+                            }
+                        }
+                    ],
+                    "relatedLocations": [
+                        {
+                            "id": 0,
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/Intermediate/Build/Win64/x64/Bristle54Editor/Development/UnrealEd/SharedDefinitions.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
+                                },
+                                "region": {
+                                    "startLine": 65,
+                                    "startColumn": 1
+                                }
+                            },
+                            "message": {
+                                "text": "see previous definition of '_WIN32_WINNT'"
+                            }
+                        }
+                    ]
+                }
+            ],
             "tool": {
                 "driver": {
                     "name": "MSVC",

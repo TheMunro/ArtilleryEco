@@ -1,11 +1,14 @@
 ﻿#pragma once
 
+#include <GunOwner.h>
+
 #include "ArtilleryDispatch.h"
 #include "ArtilleryProjectileDispatch.h"
 #include "CanonicalInputStreamECS.h"
 #include "FTTimer.h"
 #include "PhysicsTypes/BarragePlayerAgent.h"
 #include "UArtilleryGameplayTagContainer.h"
+#include "UFireControlMachine.h"
 #include "Components/TimerTickliteHandlerComponent.h"
 #include "ArtilleryBPLibs.generated.h"
 
@@ -295,12 +298,29 @@ public:
 		if (Tags.IsValid())
 		{
 			bFound = true;
-			return Tags.Get();
+			 
+			auto TagRef = NewObject<UArtilleryGameplayTagContainer>();
+			TagRef->Initialize( Key, UArtilleryDispatch::SelfPtr, true);
+			return TagRef;
 		}
 		bFound = false;
 		return nullptr;
 	}
 
+
+	static GameplayTagContainerPtr InternalTagsByKey(FSkeletonKey Key, bool& bFound)
+	{
+		GameplayTagContainerPtr Tags = UArtilleryDispatch::SelfPtr->GetGameplayTagContainer(Key);
+		if (Tags.IsValid())
+		{
+			bFound = true;
+			
+			return Tags;
+		}
+		bFound = false;
+		return nullptr;
+	}
+	
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "GetPlayerGameplayTags", DisplayName = "Get Local Player's Gameplay Tags", WorldContext = "WorldContextObject", HidePin = "WorldContextObject", ExpandBoolAsExecs="bFound"),  Category="Artillery|Tags")
 	static UArtilleryGameplayTagContainer* K2_GetPlayerTags(UObject* WorldContextObject, bool& bFound)
 	{
@@ -431,6 +451,12 @@ public:
 			FVector moveY = accumulateY * bind->Acceleration * Forwardish;
 			Forwardish = moveX + moveY;
 		}
+	}
+
+	static UFireControlMachine* GetLocalPlayerFirecOntrolMachine()
+	{
+		IArtilleryFireControlInterface* FireControlInterface = Cast<IArtilleryFireControlInterface>(GetLocalPlayer_UNSAFE());
+		return FireControlInterface != nullptr ? FireControlInterface->GetFireControlMachine() : nullptr;
 	}
 
 	UFUNCTION(BlueprintPure, meta = (ScriptName = "GetPlayerDirectionEstimator", DisplayName = "Get Local Player's Direction Estimator"),  Category="Artillery|Character")

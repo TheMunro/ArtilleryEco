@@ -37,7 +37,7 @@ void FBarragePrimitive::ApplyRotation(FQuat4d Rotator, FBLet Target)
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::Rotation,CoordinateUtils::ToBarrageRotation(Rotator)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::Rotation,CoordinateUtils::ToBarrageRotation(Rotator), Target->Me));
 		}
 	}
 }
@@ -65,8 +65,9 @@ bool FBarragePrimitive::TryUpdateTransformFromJolt(FBLet Target, uint64 Time)
 						TSharedPtr<FBCharacterBase>* CharacterRef = GameSimHoldOpen->CharacterToJoltMapping->Find(Target->KeyIntoBarrage);
 						if (CharacterRef)
 						{
-							JPH::RVec3 Pos = CharacterRef->Get()->mCharacter->GetPosition();
-							JPH::Quat Rot = CharacterRef->Get()->mCharacter->GetRotation();
+							JPH::Ref<JPH::CharacterVirtual> CharacterPtr = CharacterRef->Get()->mCharacter;
+							JPH::RVec3 Pos = CharacterPtr->GetPosition();
+							JPH::Quat Rot = CharacterPtr->GetRotation();
 							HoldOpen->Enqueue(TransformUpdate(
 								Target->KeyOutOfBarrage,
 								Time,
@@ -181,7 +182,7 @@ void FBarragePrimitive::SetVelocity(FVector3d Velocity, FBLet Target)
 			JPH::Quat lastchance =  CoordinateUtils::ToBarrageVelocity(Velocity);
 			lastchance = lastchance.IsNaN() ? JPH::Quat::sZero() : lastchance;
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::Velocity, lastchance));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::Velocity, lastchance, Target->Me));
 		}
 	}
 }
@@ -196,7 +197,7 @@ void FBarragePrimitive::SetPosition(FVector Position, FBLet Target)
 			JPH::Quat lastchance =  CoordinateUtils::ToBarrageVelocity(Position);
 			lastchance = lastchance.IsNaN() ? JPH::Quat::sZero() : lastchance;
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetPosition, lastchance));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetPosition, lastchance, Target->Me));
 		}
 	}
 }
@@ -210,7 +211,7 @@ void FBarragePrimitive::SetGravityFactor(float GravityFactor, FBLet Target)
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetGravityFactor, JPH::Quat(0, 0, GravityFactor, 0)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetGravityFactor, JPH::Quat(0, 0, GravityFactor, 0), Target->Me));
 		}
 	}
 }
@@ -224,7 +225,7 @@ void FBarragePrimitive::Apply_Unsafe(FQuat4d Any, FBLet Target, PhysicsInputType
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, Type, JPH::Quat(Any.X, Any.Y, Any.Z, Any.W)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, Type, JPH::Quat(Any.X, Any.Y, Any.Z, Any.W), Target->Me));
 		}
 	}
 }
@@ -237,7 +238,7 @@ void FBarragePrimitive::ApplyForce(FVector3d Force, FBLet Target, PhysicsInputTy
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, Type,CoordinateUtils::ToBarrageForce(Force)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, Type,CoordinateUtils::ToBarrageForce(Force), Target->Me));
 		}
 	}
 }
@@ -331,7 +332,7 @@ void FBarragePrimitive::SetCharacterGravity(FVector3d InVector, FBLet Target)
 		if (GameSimHoldOpen && MyBARRAGEIndex < ALLOWED_THREADS_FOR_BARRAGE_PHYSICS)
 		{
 			GameSimHoldOpen->ThreadAcc[MyBARRAGEIndex].Queue->Enqueue(
-				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetCharacterGravity,CoordinateUtils::ToBarrageForce(InVector)));
+				FBPhysicsInput(Target->KeyIntoBarrage, 0, PhysicsInputType::SetCharacterGravity,CoordinateUtils::ToBarrageForce(InVector), Target->Me));
 		}
 	}
 }

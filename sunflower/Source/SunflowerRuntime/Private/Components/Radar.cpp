@@ -66,8 +66,10 @@ inline void URadarComponent::UpdateMinimapTexture()
 	UCanvas* Canvas;
 	FVector2D CanvasToRenderTargetSize;
 	FDrawToRenderTargetContext RenderTargetContext;
+
 	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, RenderTarget2D, Canvas, CanvasToRenderTargetSize, RenderTargetContext);
-	
+	RenderTargetContext.RenderTarget->Filter = TF_Nearest;
+	RenderTargetContext.RenderTarget->bAutoGenerateMips = false;
 	FVector2d PlayerLocation(GetOwner()->GetActorLocation());
 	const double MinimapScalar = Radius / static_cast<float>(TEXTURE_LENGTH);
 	for (TPair KeyLocPair : ActorsInRange)
@@ -77,7 +79,7 @@ inline void URadarComponent::UpdateMinimapTexture()
 		float DirectionLength = Direction.Length() / MinimapScalar;
 		Direction = Direction.GetSafeNormal() * DirectionLength;
 		Direction = Direction + MINIMAP_CENTER;
-		Canvas->DrawItem(BoxItem, FVector2d(static_cast<int32>(Direction.X), static_cast<int32>(Direction.Y)));
+		Canvas->DrawItem(BoxItem, FVector2d(FMath::RoundToInt32(Direction.X), FMath::RoundToInt32(Direction.Y)));
 	}
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, RenderTargetContext);
 }

@@ -84,17 +84,11 @@ public class Barrage : ModuleRules
 
         if (Target.Configuration == UnrealTargetConfiguration.Debug)
         {
-	        DefineIt("JPH_ENABLE_ASSERTS");
-            if (Target.Platform == UnrealTargetPlatform.Win64)
-            {
-                //PublicDefinitions.Add("JPH_FLOATING_POINT_EXCEPTIONS_ENABLED");
-            }
+
             configType = "Debug";
         }
         else if (Target.Configuration == UnrealTargetConfiguration.DebugGame || Target.Configuration == UnrealTargetConfiguration.Development)
         {
-	        DefineIt("JPH_ENABLE_ASSERTS");
-
             configType = "Release";
         }
         else

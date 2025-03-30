@@ -227,68 +227,82 @@ bool AThistleInject::MoveToPoint(FVector3f To)
 void AThistleInject::LocomotionStateMachine()
 {
 	// I KNOW THIS LOOKS DUMB BUT ONE IS POINTER CHECK AND OTHER IS PATH VALIDITY CHECK (lol.)
-	if(this && this->MyKey != 0 && Path.IsValid() && Path->IsValid())
+	auto selfpin = BarragePhysicsAgent->MyBarrageBody;
+	if(this && this->MyKey != 0 && Path.IsValid() && Path->IsValid() && selfpin)
 	{
-		FVector3f Destination = FVector3f(Path->GetDestinationLocation());
-		FVector3f NextWaypoint = FVector3f(Path->GetPathPoints()[NextPathIndex].Location);
 		
-		FVector3f CurrentPos = FVector3f(GetActorLocation());
-		LastTickPosition = CurrentPos;
-
-		FVector3f CurrentVelocity = FBarragePrimitive::GetVelocity(BarragePhysicsAgent->MyBarrageBody);
-		double EasingDistance = StoppingTime * CurrentVelocity.Length();
+		const auto Physics = UBarrageDispatch::SelfPtr;
+		// Perform a downwards cast towards ground to project the target location to the ground
+		const JPH::DefaultBroadPhaseLayerFilter BroadPhaseFilter = Physics->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY);
+		const auto ObjectLayerFilter = Physics->GetDefaultLayerFilter(Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY);
+		const JPH::IgnoreSingleBodyFilter BodyFilter = Physics->GetFilterToIgnoreSingleBody(BarragePhysicsAgent->MyBarrageBody);
 		
-		
-		if (EnemyType == Ground)
+		TSharedPtr<FHitResult> HitResult = MakeShared<FHitResult>();
+		Physics->SphereCast(0.05f, 200.0f, static_cast<FVector3d>(BarragePhysicsAgent->MyBarrageBody->GetCentroidPossiblyStale(BarragePhysicsAgent->MyBarrageBody)), FVector::DownVector, HitResult, BroadPhaseFilter, ObjectLayerFilter, BodyFilter);
+		bool groundful = HitResult && HitResult->Distance < 30;
+		if (EnemyType == Ground && groundful && !ArtilleryStateMachine->MyTags->HasTag(TAG_Orders_Move_Break))
 		{
-			CurrentVelocity.Z = 0;
-		}
+			FVector3f Destination = FVector3f(Path->GetDestinationLocation());
+			FVector3f NextWaypoint = FVector3f(Path->GetPathPoints()[NextPathIndex].Location);
+		
+			FVector3f CurrentPos = FVector3f(GetActorLocation());
+			LastTickPosition = CurrentPos;
+
+			FVector3f CurrentVelocity = FBarragePrimitive::GetVelocity(BarragePhysicsAgent->MyBarrageBody);
+			double EasingDistance = StoppingTime * CurrentVelocity.Length();
+		
+
 	
-		if (FVector3f(CurrentPos.X, CurrentPos.Y, EnemyType == Ground ? 0 : CurrentPos.Z).Equals(FVector3f(Destination.X, Destination.Y, EnemyType == Ground ? 0 : Destination.Z), 10.0))
-		{
-			// Hard stop
-			if (!CurrentVelocity.IsNearlyZero()) {
-				// Put the Z back
-				FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(CurrentVelocity * 0.5f), BarragePhysicsAgent->MyBarrageBody);
-			}
-			Idle = true;
+			if (FVector3f(CurrentPos.X, CurrentPos.Y, EnemyType == Ground ? 0 : CurrentPos.Z).Equals(FVector3f(Destination.X, Destination.Y, EnemyType == Ground ? 0 : Destination.Z), 10.0))
+			{
+				// Hard stop
+				if (!CurrentVelocity.IsNearlyZero()) {
+					// Put the Z back
+					FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(CurrentVelocity * 0.5f), BarragePhysicsAgent->MyBarrageBody);
+				}
+				Idle = true;
 			
+				//TODO Add tags
+				return;
+			}
+
+			//UE_LOG(LogTemp, Warning, TEXT("Current: %f %f Waypoint: %f %f"), CurrentPos.X, CurrentPos.Y, NextWaypoint.X, NextWaypoint.Y);
+			if (FVector3f(CurrentPos.X, CurrentPos.Y, EnemyType == Ground ? 0 : CurrentPos.Z).Equals(FVector3f(NextWaypoint.X, NextWaypoint.Y, EnemyType == Ground ? 0 : NextWaypoint.Z), 10.0))
+			{
+				NextPathIndex++;
+				NextWaypoint = FVector3f(Path->GetPathPoints()[NextPathIndex].Location);
+			}
+
 			//TODO Add tags
-			return;
-		}
-
-		//UE_LOG(LogTemp, Warning, TEXT("Current: %f %f Waypoint: %f %f"), CurrentPos.X, CurrentPos.Y, NextWaypoint.X, NextWaypoint.Y);
-		if (FVector3f(CurrentPos.X, CurrentPos.Y, EnemyType == Ground ? 0 : CurrentPos.Z).Equals(FVector3f(NextWaypoint.X, NextWaypoint.Y, EnemyType == Ground ? 0 : NextWaypoint.Z), 10.0))
-		{
-			NextPathIndex++;
-			NextWaypoint = FVector3f(Path->GetPathPoints()[NextPathIndex].Location);
-		}
-
-		//TODO Add tags
-		Idle = false;
+			Idle = false;
 		
-		FVector3f DirectionOfMovement = NextWaypoint - CurrentPos;
-		const float DistanceToNextWaypoint = DirectionOfMovement.Length();
-		auto VectDir = DirectionOfMovement.GetSafeNormal();
-		// 2D projected direction of movement (parallel to ground)
-		// Accelerate towards next waypoint if still at least 0.5 * StoppingTime (s) away from final destination or next waypoint is not final destination
-		if ((CurrentPos - Destination).Length() > EasingDistance)
-		{
-			FVector3f NewVelocityAfterAcceleration = (CurrentVelocity + UBarrageDispatch::TickRateInDelta * Acceleration * DirectionOfMovement).GetClampedToMaxSize(MaxWalkSpeed);
+			FVector3f DirectionOfMovement = NextWaypoint - CurrentPos;
+			const float DistanceToNextWaypoint = DirectionOfMovement.Length();
+			auto VectDir = DirectionOfMovement.GetSafeNormal();
+			// 2D projected direction of movement (parallel to ground)
+			// Accelerate towards next waypoint if still at least 0.5 * StoppingTime (s) away from final destination or next waypoint is not final destination
+			if ((CurrentPos - Destination).Length() > EasingDistance)
+			{
+				FVector3f NewVelocityAfterAcceleration = (CurrentVelocity + UBarrageDispatch::TickRateInDelta * Acceleration * DirectionOfMovement).GetClampedToMaxSize(MaxWalkSpeed);
 
-			// Rotate towards destination
-			FBarragePrimitive::ApplyRotation(FBarragePrimitive::UpConvertFloatQuat(NewVelocityAfterAcceleration.ToOrientationQuat()), BarragePhysicsAgent->MyBarrageBody);
-			// Put the Z back
-			FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(NewVelocityAfterAcceleration), BarragePhysicsAgent->MyBarrageBody);
+				// Rotate towards destination
+				FBarragePrimitive::ApplyRotation(FBarragePrimitive::UpConvertFloatQuat(NewVelocityAfterAcceleration.ToOrientationQuat()), BarragePhysicsAgent->MyBarrageBody);
+				FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(NewVelocityAfterAcceleration), BarragePhysicsAgent->MyBarrageBody);
+			}
+			else // Otherwise, start stopping
+			{
+				FVector3f NewVelocityAfterDeceleration = (CurrentVelocity * 0.8f).GetClampedToMaxSize(MaxWalkSpeed);
+
+				// Rotate towards destination
+				FBarragePrimitive::ApplyRotation(FBarragePrimitive::UpConvertFloatQuat(NewVelocityAfterDeceleration.ToOrientationQuat()), BarragePhysicsAgent->MyBarrageBody);
+				FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(NewVelocityAfterDeceleration), BarragePhysicsAgent->MyBarrageBody);
+			}
+			
+
 		}
-		else // Otherwise, start stopping
+		else 			if (EnemyType == Ground)
 		{
-			FVector3f NewVelocityAfterDeceleration = (CurrentVelocity * 0.9f).GetClampedToMaxSize(MaxWalkSpeed);
-
-			// Rotate towards destination
-			FBarragePrimitive::ApplyRotation(FBarragePrimitive::UpConvertFloatQuat(NewVelocityAfterDeceleration.ToOrientationQuat()), BarragePhysicsAgent->MyBarrageBody);
-			// Put the Z back
-			FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(NewVelocityAfterDeceleration), BarragePhysicsAgent->MyBarrageBody);
+			FBarragePrimitive::ApplyForce({0, 0, -20000/HERTZ_OF_BARRAGE}, BarragePhysicsAgent->MyBarrageBody, PhysicsInputType::OtherForce);
 		}
 	}
 }

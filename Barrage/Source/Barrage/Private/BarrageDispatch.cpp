@@ -105,7 +105,7 @@ void UBarrageDispatch::Deinitialize()
 	}
 	HoldOpen = nullptr;
 
-	auto HoldOpen2 = ContactEventPump;
+	TSharedPtr<TCircularQueue<BarrageContactEvent>> HoldOpen2 = ContactEventPump;
 	ContactEventPump = nullptr;
 	if (HoldOpen2)
 	{
@@ -397,15 +397,14 @@ bool UBarrageDispatch::UpdateCharacter(FBPhysicsInput& CharacterInput) const
 
 void UBarrageDispatch::StepWorld(uint64 Time, uint64_t TickCount)
 {
-	auto PinSim = JoltGameSim;
+	TSharedPtr<FWorldSimOwner> PinSim = JoltGameSim;
 			
-	TRACE_CPUPROFILER_EVENT_SCOPE_STR("Step World");
+	//TRACE_CPUPROFILER_EVENT_SCOPE_STR("Step World");
 	if (JoltGameSim)
 	{
-		if(TickCount % 512)
-		{
-					
-			TRACE_CPUPROFILER_EVENT_SCOPE_STR("Broadphase Optimize");
+		if(TickCount % 512 == 0)
+		{	
+			//TRACE_CPUPROFILER_EVENT_SCOPE_STR("Broadphase Optimize");
 			//we set a mutable for debug purposes, so we can check if the first optimization has occured in cases of perf
 			//degeneration.
 			JoltGameSim->Optimized = JoltGameSim->OptimizeBroadPhase();
@@ -436,27 +435,32 @@ void UBarrageDispatch::StepWorld(uint64 Time, uint64_t TickCount)
 			}
 		}
 		
-		//maintain tombstones
-		TSharedPtr<KeyToFBLet> HoldCuckooLifecycle = JoltBodyLifecycleMapping;
-		auto HoldCuckooTranslation = TranslationMapping;
-		if (HoldCuckooLifecycle && HoldCuckooLifecycle.Get() && !HoldCuckooLifecycle.Get()->empty())
 		{
-			for (std::pair<const FBarrageKey, TSharedPtr<FBarragePrimitive>> KeyAndBarragePrimitive : HoldCuckooLifecycle->lock_table())
+			//TRACE_CPUPROFILER_EVENT_SCOPE_STR("Jolt Body Lifecycle Update");
+			//maintain tombstones
+			TSharedPtr<KeyToFBLet> HoldCuckooLifecycle = JoltBodyLifecycleMapping;
+			TSharedPtr<KeyToKey> HoldCuckooTranslation = TranslationMapping;
+			if (HoldCuckooLifecycle && HoldCuckooLifecycle.Get() && !HoldCuckooLifecycle.Get()->empty())
 			{
-				FBLet HoldOpenFBP = KeyAndBarragePrimitive.second;
-				//NOTE: nullity check here includes tombstone check. Hence the odd form of the SECOND check.
-				//in other words, this checks != null && !tombstoned
-				if (KeyAndBarragePrimitive.first.KeyIntoBarrage != 0 && FBarragePrimitive::IsNotNull(HoldOpenFBP))
+				KeyToFBLet::locked_table HoldCuckooLifecycleLocked = HoldCuckooLifecycle->lock_table();
+				for (std::pair<const FBarrageKey, FBLet> KeyAndBarragePrimitive : HoldCuckooLifecycleLocked)
 				{
-					FBarragePrimitive::TryUpdateTransformFromJolt(HoldOpenFBP, Time);
-					
-					//returns a bool that can be used for debug.
-				} //This checks for != null && tombstoned
-				else if(KeyAndBarragePrimitive.first.KeyIntoBarrage != 0 && HoldOpenFBP && HoldOpenFBP->tombstone != 0) //just to make it explicit.
-				{
-					//TODO: MAY NOT BE THREADSAFE. CHECK NLT 10/5/24
-					
-					Tombs[TombOffset]->Push(HoldOpenFBP);
+					if (KeyAndBarragePrimitive.first.KeyIntoBarrage != 0)
+					{
+						FBLet HoldOpenFBP = KeyAndBarragePrimitive.second;
+						//NOTE: nullity check here includes tombstone check. Hence the odd form of the SECOND check.
+						//in other words, this checks != null && !tombstoned
+						if (FBarragePrimitive::IsNotNull(HoldOpenFBP))
+						{
+							FBarragePrimitive::TryUpdateTransformFromJolt(HoldOpenFBP, Time);
+							//returns a bool that can be used for debug.
+						} //This checks for != null && tombstoned
+						else if(HoldOpenFBP && HoldOpenFBP->tombstone != 0 && Tombs[TombOffset]) //just to make it explicit.
+						{
+							//TODO: MAY NOT BE THREADSAFE. CHECK NLT 10/5/24
+							Tombs[TombOffset]->Push(HoldOpenFBP);
+						}
+					}
 				}
 			}
 		}
@@ -522,8 +526,8 @@ void UBarrageDispatch::HandleContactPersisted(const JPH::Body& inBody1, const JP
 }
 void UBarrageDispatch::HandleContactRemoved(const JPH::SubShapeIDPair& inSubShapePair) const
 {
-	auto BK1 = this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody1ID());
-	auto BK2 = this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody2ID());
+	FBarrageKey BK1 = this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody1ID());
+	FBarrageKey BK2 = this->GenerateBarrageKeyFromBodyId(inSubShapePair.GetBody2ID());
 	BarrageContactEvent ContactEventToEnqueue(
 	EBarrageContactEventType::REMOVED,
 	BarrageContactEntity(BK1),

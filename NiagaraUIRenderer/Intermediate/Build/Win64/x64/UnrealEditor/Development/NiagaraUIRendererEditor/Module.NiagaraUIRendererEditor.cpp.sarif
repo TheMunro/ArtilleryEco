@@ -5,18 +5,96 @@
         {
             "results": [
                 {
-                    "ruleId": "C4996",
+                    "ruleId": "C4005",
                     "message": {
-                        "text": "'UMaterialExpression::GetInputsView': Use FExpressionInputIterator instead or GetInput() directly. Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
+                        "text": "'WINVER': macro redefinition"
                     },
                     "analysisTarget": {
-                        "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
                     },
                     "locations": [
                         {
                             "physicalLocation": {
                                 "artifactLocation": {
-                                    "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraUIContentBrowserExtension.cpp"
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Definitions.NiagaraUIRendererEditor.h"
+                                },
+                                "region": {
+                                    "startLine": 20,
+                                    "startColumn": 1
+                                }
+                            }
+                        }
+                    ],
+                    "relatedLocations": [
+                        {
+                            "id": 0,
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/Intermediate/Build/Win64/x64/Bristle54Editor/Development/UnrealEd/SharedDefinitions.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
+                                },
+                                "region": {
+                                    "startLine": 66,
+                                    "startColumn": 1
+                                }
+                            },
+                            "message": {
+                                "text": "see previous definition of 'WINVER'"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "ruleId": "C4005",
+                    "message": {
+                        "text": "'_WIN32_WINNT': macro redefinition"
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Definitions.NiagaraUIRendererEditor.h"
+                                },
+                                "region": {
+                                    "startLine": 21,
+                                    "startColumn": 1
+                                }
+                            }
+                        }
+                    ],
+                    "relatedLocations": [
+                        {
+                            "id": 0,
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/Intermediate/Build/Win64/x64/Bristle54Editor/Development/UnrealEd/SharedDefinitions.UnrealEd.Project.ValApi.Cpp20.InclOrderUnreal5_4.h"
+                                },
+                                "region": {
+                                    "startLine": 65,
+                                    "startColumn": 1
+                                }
+                            },
+                            "message": {
+                                "text": "see previous definition of '_WIN32_WINNT'"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "ruleId": "C4996",
+                    "message": {
+                        "text": "'UMaterialExpression::GetInputsView': Use FExpressionInputIterator instead or GetInput() directly. Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
+                    },
+                    "analysisTarget": {
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraUIContentBrowserExtension.cpp"
                                 },
                                 "region": {
                                     "startLine": 108,
@@ -32,13 +110,13 @@
                         "text": "'FNiagaraEmitterInstance::GetCachedEmitter': Please update your code to handle execution path for different emitter types Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
                     },
                     "analysisTarget": {
-                        "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
                     },
                     "locations": [
                         {
                             "physicalLocation": {
                                 "artifactLocation": {
-                                    "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraWidgetDetailCustomization.cpp"
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraWidgetDetailCustomization.cpp"
                                 },
                                 "region": {
                                     "startLine": 179,
@@ -54,13 +132,13 @@
                         "text": "'FNiagaraEmitterInstance::GetCachedEmitterData': Please update your code to handle execution path for different emitter types Please update your code to the new API before upgrading to the next release, otherwise your project will no longer compile."
                     },
                     "analysisTarget": {
-                        "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
+                        "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Intermediate/Build/Win64/x64/UnrealEditor/Development/NiagaraUIRendererEditor/Module.NiagaraUIRendererEditor.cpp"
                     },
                     "locations": [
                         {
                             "physicalLocation": {
                                 "artifactLocation": {
-                                    "uri": "file:///C:/Users/jakek/Documents/Unreal Projects/Bristle54 5.5/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraWidgetDetailCustomization.cpp"
+                                    "uri": "file:///C:/GitHub/Bristle54/plugins/NiagaraUIRenderer/Source/NiagaraUIRendererEditor/Private/NiagaraWidgetDetailCustomization.cpp"
                                 },
                                 "region": {
                                     "startLine": 396,

@@ -26,7 +26,7 @@ UOrdinatePillar::~UOrdinatePillar()
 void UOrdinatePillar::Deinitialize()
 {
 	Super::Deinitialize();
-	//we init and deinit on load reload...
+	//we clear on fire so this is a precaution.
 	for (ORDIN::InitSequence* Group : Data.GROUPS)
 	{
 		Group->Empty();
@@ -104,7 +104,20 @@ void UOrdinatePillar::OnWorldBeginPlay(UWorld& InWorld)
 		Group->Sort();
 		for (ORDIN::SequencedKey Register : *Group)
 		{
-			Register.Value->AttemptRegister();
+			if (Register.Value != nullptr && !Register.Value->IsReady)
+			{
+				Register.Value->AttemptRegister();
+			}
 		}
+	}
+	//we clear once fired!
+	for (ORDIN::InitSequence* Group : Data.GROUPS)
+	{
+		Group->Empty();
+	}
+	//we also fry the fallback.
+	for (ORDIN::InitSequence* Group : ORDINATION_Fallback.GROUPS)
+	{
+		Group->Empty();
 	}
 }

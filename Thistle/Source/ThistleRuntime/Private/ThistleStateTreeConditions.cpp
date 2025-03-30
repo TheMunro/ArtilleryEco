@@ -11,41 +11,6 @@
 #if WITH_EDITOR
 #define LOCTEXT_NAMESPACE "StateTreeEditor"
 
-namespace UE::StateTree::Conditions
-{
-	// ReSharper disable once CppPassValueParameterByConstReference
-	//This is a shared pointer. Pass it by ref, and the bloody ref count doesn't go up and you get
-	//no bloody benefits to using the shared pointer at all, thank you.
-	FText GetArtilleryContainerAsText(const ArtilleryGameplayTagContainerPtr TagContainer, const int ApproxMaxLength = 60)
-	{
-		FString Combined;
-		for (const FGameplayTag& Tag : TagContainer->MyTags)
-		{
-			FString TagString = Tag.ToString();
-
-			if (Combined.Len() > 0)
-			{
-				Combined += TEXT(", ");
-			}
-			
-			if (Combined.Len() + TagString.Len() > ApproxMaxLength)
-			{
-				// Overflow
-				if (Combined.Len() == 0)
-				{
-					Combined += TagString.Left(ApproxMaxLength);
-				}
-				Combined += TEXT("...");
-				break;
-			}
-
-			Combined += TagString;
-		}
-
-		return FText::FromString(Combined);
-	}
-	
-}
 
 #endif// WITH_EDITOR
 
@@ -58,7 +23,7 @@ bool FArtilleryTagMatchCondition::TestCondition(FStateTreeExecutionContext& Cont
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool found = false;
-	auto Container = UArtilleryLibrary::K2_GetTagsByKey(InstanceData.KeyOf, found);
+	auto Container = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
 	if (found)
 	{
 		return (bExactMatch ?  Container->HasTagExact(InstanceData.Tag) : Container->HasTag(InstanceData.Tag)) ^ bInvert;

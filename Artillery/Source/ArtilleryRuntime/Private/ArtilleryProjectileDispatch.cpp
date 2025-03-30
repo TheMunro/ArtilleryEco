@@ -347,13 +347,17 @@ void UArtilleryProjectileDispatch::OnBarrageContactAdded(const BarrageContactEve
 					if (found)
 					{
 						TSharedPtr<FArtilleryGun> ProjectileGun = MyDispatch->GetPointerToGun(GunKey);
-						if (ProjectileGun)
+						if (ProjectileGun && UBarrageDispatch::SelfPtr)
 						{
-							FSkeletonKey EntityKeyIntoArtillery = UBarrageDispatch::SelfPtr->GetShapeRef(EntityHitKey)->
-								KeyOutOfBarrage;
-							if (EntityKeyIntoArtillery.IsValid())
+							auto hold = UBarrageDispatch::SelfPtr->GetShapeRef(EntityHitKey);
+							if (hold)
 							{
-								ProjectileGun.Get()->ProjectileCollided(KeyIntoArtillery, EntityKeyIntoArtillery);
+								FSkeletonKey EntityKeyIntoArtillery = hold->
+									KeyOutOfBarrage;
+								if (EntityKeyIntoArtillery.IsValid())
+								{
+									ProjectileGun.Get()->ProjectileCollided(KeyIntoArtillery, EntityKeyIntoArtillery);
+								}
 							}
 						}
 					}

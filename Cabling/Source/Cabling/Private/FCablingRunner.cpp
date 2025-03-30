@@ -1,5 +1,6 @@
 ﻿#include "FCablingRunner.h"
-
+#include "Windows/WindowsSystemIncludes.h"
+#include <timeapi.h>
 #include <bitset>
 #include <thread>
 
@@ -195,6 +196,7 @@ uint32 FCabling::Run()
 	const uint64_t BlankGamepad = FromGamePadState(GameInputGamepadState());
 	const uint64_t BlankKeyboard = FromKeyboardState(16, states);
 
+	timeBeginPeriod(1);
 
 	//We're using the GameInput lib.
 	//https://learn.microsoft.com/en-us/gaming/gdk/_content/gc/input/overviews/input-overview
@@ -302,6 +304,8 @@ uint32 FCabling::Run()
 	{
 		g_gameInput->Release();
 	}
+	
+	timeEndPeriod(1);
 	GuessedInputCount = 0;
 	return 0;
 }

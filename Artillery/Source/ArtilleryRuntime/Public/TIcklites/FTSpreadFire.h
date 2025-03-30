@@ -71,7 +71,10 @@ public:
 			const ActorKey& CurrentKey = (*ActorsToSearch)[ActorIndex];
 			FVector ActorLocation = TransformDispatch->GetAActorByObjectKey(CurrentKey)->GetActorLocation();
 			FBLet ActorFiblet = this->ADispatch->GetFBLetByObjectKey(CurrentKey, this->ADispatch->GetShadowNow());
-
+			if (ActorFiblet == nullptr)
+			{
+				continue;
+			}
 			const JPH::DefaultBroadPhaseLayerFilter BroadPhaseFilter = Physics->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY);
 			const auto ObjectLayerFilter = Physics->GetDefaultLayerFilter(Layers::CAST_QUERY);
 			const JPH::IgnoreSingleBodyFilter BodyFilter = Physics->GetFilterToIgnoreSingleBody(ActorFiblet);

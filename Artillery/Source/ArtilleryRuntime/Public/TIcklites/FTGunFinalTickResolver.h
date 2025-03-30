@@ -90,7 +90,7 @@ public:
 
 	bool TICKLITE_CheckForExpiration()
 	{
-		if (cadence_ticks%cadence_interval)
+		if (cadence_ticks%cadence_interval == 0)
 		{
 			if (ExistCheck == nullptr) //TODO: adjust to make this deterministic.
 			{

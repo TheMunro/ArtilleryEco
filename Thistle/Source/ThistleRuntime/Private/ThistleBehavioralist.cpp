@@ -37,7 +37,7 @@ bool UThistleBehavioralist::RegistrationImplementation()
 void UThistleBehavioralist::BounceTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration) const
 {
 	bool found = false;
-	auto tagc = UArtilleryLibrary::K2_GetTagsByKey(Key, found);
+	auto tagc = UArtilleryLibrary::InternalTagsByKey(Key, found);
 	auto stamp = DeadlinerTime+Duration;
 	if (found)
 	{
@@ -69,7 +69,7 @@ void UThistleBehavioralist::DelayedTag(FSkeletonKey Key, FNativeGameplayTag& Tag
 void UThistleBehavioralist::ExpireTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration)
 {
 	bool found = false;
-	auto tagc = UArtilleryLibrary::K2_GetTagsByKey(Key, found);
+	auto tagc = UArtilleryLibrary::InternalTagsByKey(Key, found);
 	auto stamp = DeadlinerTime+Duration;
 	if (found)
 	{
@@ -94,7 +94,7 @@ void UThistleBehavioralist::TimedTagsMaintenance(int CurrentTck)
 		for (auto Goner : AnyToExpire)
 		{
 			bool found = false;
-			auto tagc = UArtilleryLibrary::K2_GetTagsByKey(Goner.Get<0>(), found);
+			auto tagc = UArtilleryLibrary::InternalTagsByKey(Goner.Get<0>(), found);
 			if (found)
 			{
 				if (Goner.Get<2>())
@@ -418,7 +418,7 @@ void UThistleBehavioralist::EmptyRecent()
 void UThistleBehavioralist::Update(uint64_t CurrentTck)
 {
 	//this maybe be replaced by a full Harvester.
-	if(CurrentTck % WIDE_CADENCE)
+	if(CurrentTck % WIDE_CADENCE == 0)
 	{
 		ProcessRallyPoint();
 		CueEmptyRecent();

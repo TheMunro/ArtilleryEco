@@ -23,24 +23,25 @@ EStateTreeRunStatus FAimTurret::Tick(FStateTreeExecutionContext& Context, const 
 			auto MyRot = UArtilleryLibrary::implK2_GetAttr3Ptr(InstanceData.KeyOf, E_VectorAttrib::AimVector, found);
 			if (found)
 			{
-				if (MyRot->CurrentValue.Equals(Rot.Vector(), 0.1f))
+				if (MyRot->CurrentValue.Equals(Rot.Vector(), 0.2f))
 				{
 					return EStateTreeRunStatus::Succeeded;
 				}
 			}
-			//run on cadence.
-			if ( (UArtilleryLibrary::GetTotalsTickCount()) % 8)
+			else
 			{
+				// we do need to handle this but I actually don't know what we should do yet.
+			}
+
 				auto unit = MyRot->CurrentValue.GetSafeNormal();
 				auto unit2 = Rot.Vector();
 				auto dotto = unit.Dot(unit2);
 				auto degrees = FMath::RadiansToDegrees(acos(dotto));
 				if (degrees > 60)
 				{
-				  Rot =	FVector::SlerpVectorToDirection(unit, unit2, 0.3).Rotation();
+				  Rot =	FVector::SlerpVectorToDirection(unit, unit2, 0.4).Rotation();
 				}
 				UThistleBehavioralist::AttemptAimFromKey(InstanceData.KeyOf, Rot);
-			}
 			return EStateTreeRunStatus::Running;
 		}
 	}

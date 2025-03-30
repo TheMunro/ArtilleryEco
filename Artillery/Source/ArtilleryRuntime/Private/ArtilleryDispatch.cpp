@@ -137,6 +137,8 @@ void UArtilleryDispatch::OnWorldBeginPlay(UWorld& InWorld)
 
 void UArtilleryDispatch::Deinitialize()
 {
+	SelfPtr = nullptr;
+	IsReady = false;
 	Super::Deinitialize();
 	StartTicklitesSim->Trigger();
 	ArtilleryAIWorker_LockstepToWorldSim.Stop();
@@ -477,7 +479,7 @@ bool UArtilleryDispatch::IsGunLive(FSkeletonKey Key)
 {
 	TSharedPtr<TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>> HoldOpenGuns = GunByKey;
 
-	if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns != nullptr && GunByKey && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
+	if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns.IsValid() && GunByKey && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
 	{
 		return HoldOpenGuns->IsEmpty() ? false : HoldOpenGuns->Contains(Key);
 	}
@@ -621,17 +623,27 @@ GameplayTagContainerPtr UArtilleryDispatch::GetGameplayTagContainerAndAddIfNotEx
 	GameplayTagContainerPtrInternal* TagContainer = GameplayTagContainerToDataMapping->Find(Owner);
 	if (TagContainer == nullptr)
 	{
-		GameplayTagContainerPtrInternal NewContainer(NewObject<UArtilleryGameplayTagContainer>());
-		NewContainer->Initialize(Owner, this);
-		return GameplayTagContainerToDataMapping->Add(Owner, NewContainer).Get();
+		GameplayTagContainerPtrInternal UnderlyingContainer = MakeShareable(new FGameplayTagContainer());
+		return GameplayTagContainerToDataMapping->Add(Owner, UnderlyingContainer);
 	}
-	return TagContainer->Get();
+	return *TagContainer;
 }
+
+GameplayTagContainerPtr UArtilleryDispatch::GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner, GameplayTagContainerPtr AddIfAbsent)
+{
+	GameplayTagContainerPtrInternal* TagContainer = GameplayTagContainerToDataMapping->Find(Owner);
+	if (TagContainer == nullptr)
+	{
+		return GameplayTagContainerToDataMapping->Add(Owner, AddIfAbsent);
+	}
+	return *TagContainer;
+}
+
 
 GameplayTagContainerPtr UArtilleryDispatch::GetGameplayTagContainer(const FSkeletonKey& Owner) const
 {
 	GameplayTagContainerPtrInternal* TagContainerPtr = GameplayTagContainerToDataMapping->Find(Owner);
-	return TagContainerPtr != nullptr ? TagContainerPtr->Get() : nullptr;
+	return TagContainerPtr != nullptr ? *TagContainerPtr : nullptr;
 }
 
 UArtilleryDispatch::~UArtilleryDispatch()
@@ -753,20 +765,17 @@ void UArtilleryDispatch::RERunGuns()
 {
 	if (ActionsToReconcile && ActionsToReconcile.IsValid())
 	{
-		throw;
+		//throw;
 	}
 }
 
 void UArtilleryDispatch::RERunLocomotions()
 {
-	throw;
+	//throw;
 }
 
 void UArtilleryDispatch::LoadGunData()
 {
-#if UE_BUILD_SHIPPING != 0
-		throw;
-#endif
 	FString AccumulatePath = FPaths::Combine(FPaths::ProjectPluginsDir(), "Artillery", "Data", "GunData");
 }
 

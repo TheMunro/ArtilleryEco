@@ -16,18 +16,16 @@ public class JoltPhysics : ModuleRules
         if (Target.Configuration == UnrealTargetConfiguration.Debug) // untested
         {
             cmakeOptions += " -DCMAKE_BUILD_TYPE=Debug ";
-            cmakeOptions += " -DUSE_ASSERTS=ON ";
             cmakeOptions += " -DGENERATE_DEBUG_SYMBOLS=ON ";
             cmakeOptions += " -DOVERRIDE_CXX_FLAGS=OFF "; // probably may be omitted
             cmakeOptions += " -DCMAKE_CXX_FLAGS_RELEASE=\" /GS /Od /Ob0 /RTC1\" "; // probably may be omitted
-            cmakeOptions += " -DDEBUG_RENDERER=ON ";
-            cmakeOptions += " -DPROFILE_ENABLED=ON ";
-            cmakeOptions += " -DENABLE_ASSERTS=ON ";
+            cmakeOptions += " -DDEBUG_RENDERER=OFF ";
+            cmakeOptions += " -DPROFILE_ENABLED=OFF ";
+            cmakeOptions += " -DENABLE_ASSERTS=OFF ";
         }
         else if (Target.Configuration == UnrealTargetConfiguration.DebugGame || Target.Configuration == UnrealTargetConfiguration.Development)
         {
             cmakeOptions += " -DCMAKE_BUILD_TYPE=Release ";
-            cmakeOptions += " -DUSE_ASSERTS=ON ";
             cmakeOptions += " -DGENERATE_DEBUG_SYMBOLS=ON ";
             cmakeOptions += " -DOVERRIDE_CXX_FLAGS=OFF "; // probably may be omitted
             cmakeOptions += " -DCMAKE_CXX_FLAGS_RELEASE=\" /GS /Od /Ob0 /RTC1\" "; // probably may be omitted

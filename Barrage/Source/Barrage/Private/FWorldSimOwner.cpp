@@ -38,9 +38,9 @@ FWorldSimOwner::FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadIniti
 
 		// We need a job system that will execute physics jobs on multiple threads. Typically
 		// you would implement the JobSystem interface yourself and let Jolt Physics run on top
-		// of your own job scheduler. JobSystemThreadPool is an example implementation.
+		// of your own job scheduler. JobSystemThreadPool is a (pretty good) example implementation.
 		job_system = MakeShareable(
-			new JobSystemThreadPool(cMaxPhysicsJobs, cMaxPhysicsBarriers, 4));
+			new JobSystemThreadPool(cMaxPhysicsJobs, cMaxPhysicsBarriers, 5));
 		job_system->SetThreadInitFunction(JobThreadInitializer);
 		// Now we can create the actual physics system.
 		physics_system->Init(cMaxBodies, cNumBodyMutexes, cMaxBodyPairs, cMaxContactConstraints,
@@ -51,7 +51,7 @@ FWorldSimOwner::FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadIniti
 		physics_system->SetContactListener(contact_listener.Get());
 
 		// The main way to interact with the bodies in the physics system is through the body interface. There is a locking and a non-locking
-		// variant of this. We're going to use the locking version (even though we're not planning to access bodies from multiple threads)
+		// variant of this. We're going to use the locking version.
 		body_interface = &physics_system->GetBodyInterface();
 
 
@@ -135,13 +135,6 @@ FWorldSimOwner::FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadIniti
 		uint32* OutFoundObjectCount,
 		TArray<uint32>& OutFoundObjectIDs) const
 	{
-		// const DefaultBroadPhaseLayerFilter default_broadphase_layer_filter = physics_system->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY);
-		// const BroadPhaseLayerFilter &broadphase_layer_filter = default_broadphase_layer_filter;
-		// const DefaultObjectLayerFilter default_object_layer_filter = physics_system->GetDefaultLayerFilter(Layers::CAST_QUERY);
-		// const ObjectLayerFilter &object_layer_filter = default_object_layer_filter;
-		// const IgnoreSingleBodyFilter default_body_filter(CastingBody);
-		// const BodyFilter &body_filter = default_body_filter;
-		
 		JPH::Vec3 JoltLocation = CoordinateUtils::ToJoltCoordinates(Location);
 		
 		SphereSearchCollector Collector(physics_system.Get()->GetBodyLockInterfaceNoLock(), BodiesFilter);

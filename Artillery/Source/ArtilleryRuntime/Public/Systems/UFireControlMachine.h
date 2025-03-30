@@ -97,17 +97,53 @@ public:
 		PushGunToFireMapping(key);
 	}
 
-	void RegisterGunPatternPair(Intents::Intent BindIntent, TSharedPtr<FArtilleryGun> Gun, IPM::CanonPattern Pattern)
+	FGunKey RegisterGun(TSharedPtr<FArtilleryGun> Gun) const
 	{
 		if (Gun.IsValid())
 		{
-			FActionBitMask IntentBitPattern;
-			IntentBitPattern.buttons = BindIntent;
 			Gun->UpdateProbableOwner(ParentKey);
 			Gun->Initialize(Gun->MyGunKey, false);
-			FGunKey key = MyDispatch->RegisterExistingGun(Gun, ParentKey);
-			pushPatternToRunner(Pattern, APlayer::CABLE, IntentBitPattern, key);
-			PushGunToFireMapping(key);
+			return MyDispatch->RegisterExistingGun(Gun, ParentKey);
+		}
+		return FGunKey::Invalid();
+	}
+
+	void UnregisterGun(FGunKey GunKey) const
+	{
+		MyDispatch->UnregisterExistingGun(GunKey);
+	}
+
+	void RegisterPattern(FGunKey GunKey, Intents::Intent BindIntent, IPM::CanonPattern Pattern)
+	{
+		FActionBitMask IntentBitPattern;
+		IntentBitPattern.buttons = BindIntent;
+		pushPatternToRunner(Pattern, APlayer::CABLE, IntentBitPattern, GunKey);
+		PushGunToFireMapping(GunKey);
+	}
+
+	void UnregisterPattern(FGunKey GunKey, Intents::Intent BindIntent, IPM::CanonPattern Pattern)
+	{
+		FActionBitMask IntentBitPattern;
+		IntentBitPattern.buttons = BindIntent;
+		popPatternFromRunner(Pattern, APlayer::CABLE, IntentBitPattern, GunKey);
+		PopGunFromFireMapping(GunKey);
+	}
+
+	void RegisterGunPatternPair(Intents::Intent BindIntent, TSharedPtr<FArtilleryGun> Gun, IPM::CanonPattern Pattern)
+	{
+		FGunKey key = RegisterGun(Gun);
+		if (key.IsValidInstance())
+		{
+			RegisterPattern(key, BindIntent, Pattern);
+		}
+	}
+
+	void UnregisterGunPatternPair(FGunKey GunKey, Intents::Intent BindIntent, IPM::CanonPattern Pattern)
+	{
+		if (GunKey.IsValidInstance())
+		{
+			UnregisterPattern(GunKey, BindIntent, Pattern);
+			UnregisterGun(GunKey);
 		}
 	}
 

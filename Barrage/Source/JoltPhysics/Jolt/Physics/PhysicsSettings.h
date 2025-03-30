@@ -7,19 +7,19 @@
 JPH_NAMESPACE_BEGIN
 
 /// If objects are closer than this distance, they are considered to be colliding (used for GJK) (unit: meter)
-constexpr float cDefaultCollisionTolerance = 1.0e-5f;
+constexpr float cDefaultCollisionTolerance = 1.0e-3f;
 
 /// A factor that determines the accuracy of the penetration depth calculation. If the change of the squared distance is less than tolerance * current_penetration_depth^2 the algorithm will terminate. (unit: dimensionless)
-constexpr float cDefaultPenetrationTolerance = 1.0e-4f; ///< Stop when there's =< 1% change
+constexpr float cDefaultPenetrationTolerance = 1.0e-3f; ///< Stop when there's =< 1% change
 
 /// How much padding to add around objects
-constexpr float cDefaultConvexRadius = 0.05f;
+constexpr float cDefaultConvexRadius = 0.08f;
 
 /// Used by (Tapered)CapsuleShape to determine when supporting face is an edge rather than a point (unit: meter)
 static constexpr float cCapsuleProjectionSlop = 0.02f;
 
 /// Maximum amount of jobs to allow
-constexpr int cMaxPhysicsJobs = 2048;
+constexpr int cMaxPhysicsJobs = 4096;
 
 /// Maximum amount of barriers to allow
 constexpr int cMaxPhysicsBarriers = 8;
@@ -30,7 +30,7 @@ struct PhysicsSettings
 
 	/// Size of body pairs array, corresponds to the maximum amount of potential body pairs that can be in flight at any time.
 	/// Setting this to a low value will use less memory but slow down simulation as threads may run out of narrow phase work.
-	int			mMaxInFlightBodyPairs = 16384;
+	int			mMaxInFlightBodyPairs = 32768;
 
 	/// How many PhysicsStepListeners to notify in 1 batch
 	int			mStepListenersBatchSize = 8;
@@ -75,7 +75,7 @@ struct PhysicsSettings
 
 	/// Number of solver velocity iterations to run
 	/// Note that this needs to be >= 2 in order for friction to work (friction is applied using the non-penetration impulse from the previous iteration)
-	uint		mNumVelocitySteps = 10;
+	uint		mNumVelocitySteps = 6;
 
 	/// Number of solver position iterations to run
 	uint		mNumPositionSteps = 2;

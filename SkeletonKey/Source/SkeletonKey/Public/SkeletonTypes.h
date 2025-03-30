@@ -175,6 +175,8 @@ public:
 	// you cannot cross the typetree here. if you wish to do this, you must explicitly discard by going up to skeletonkey
 	// and down to bonekey. The reverse is not permitted at all, as bonekey offers fewer guarantees than actorkey.
 	ActorKey& operator=(const FBoneKey& rhs) = delete;
+
+	static ActorKey Invalid() { return ActorKey(); }
 };
 static bool operator<(ActorKey const& lhs, FSkeletonKey const& rhs) {
 	return (lhs.Obj < rhs.Obj);

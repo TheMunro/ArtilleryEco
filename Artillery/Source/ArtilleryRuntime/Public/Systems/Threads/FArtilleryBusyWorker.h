@@ -51,6 +51,7 @@ class FArtilleryBusyWorker : public FRunnable {
 	virtual uint32 Run() override;
 	virtual void Exit() override;
 	virtual void Stop() override;
+	void RunFrameProcessingLoop(bool missedPrior, uint64_t currentIndexCabling, bool burstDropDetected, bool sent, uint32_t LastIncrementWindow, uint32_t lsbTime, const uint32_t SendHertzFactor, const uint32_t Period, const std::chrono::microseconds HalfStep, UArtilleryDispatch* ArtilleryDispatch);
 	// stop me if you've heard this one before
 	
 	//this is a hack and MIGHT be replaced with an ECS lookup

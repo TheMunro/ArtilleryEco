@@ -290,7 +290,7 @@ public:
 
 	// This determines how many mutexes to allocate to protect rigid bodies from concurrent access. Set it to 0 for the default settings.
 	// mutexes are cheap! (they aren't)
-	const unsigned int cNumBodyMutexes = 0;
+	const unsigned int cNumBodyMutexes = 128;//for a LOT of reasons, we actually want the locks on the bodies to be quite granular.
 
 	// This is the max amount of body pairs that can be queued at any time (the broad phase will detect overlapping
 	// body pairs based on their bounding boxes and will insert them into a queue for the narrowphase). If you make this buffer

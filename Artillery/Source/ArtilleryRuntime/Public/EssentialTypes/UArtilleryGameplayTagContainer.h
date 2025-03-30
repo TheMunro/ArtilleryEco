@@ -24,6 +24,8 @@ namespace ArtilleryGameplayTagChange {
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnArtilleryGameplayTagChanged, const FSkeletonKey, TargetKey, const FGameplayTag, Tag, const ArtilleryGameplayTagChange::Type, TagChangeType);
 
+//ArtilleryGameplayTagContainers serve as a wrapper for the more general borrow-based lifecycle we offer for the
+//fgameplaytagcontainer. This assumes ownership and causes the underlying tagcontainer to share its lifecycle.
 UCLASS(BlueprintType)
 class ARTILLERYRUNTIME_API UArtilleryGameplayTagContainer : public UObject
 {
@@ -32,28 +34,37 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	FSkeletonKey ParentKey;
-	FGameplayTagContainer MyTags;
+	TSharedPtr<FGameplayTagContainer> MyTags;
 	UArtilleryDispatch* MyDispatch = nullptr;
 	bool ReadyToUse = false;
-
+	bool ReferenceOnlyMode = true;
 	// Don't use this default constructor, this is a bad
 	UArtilleryGameplayTagContainer()
 	{
+		MyTags = MakeShareable<FGameplayTagContainer>(new FGameplayTagContainer());
+	};
+
+	//reference only mode changes the container to act more like you might expect in a blueprint, by not taking ownership of the
+	//underlying tag collection. Instead, it will bind to the existing tag collection, if any, and the tag collection will survive
+	//the destruction of that container. I've spent a bit of time thinking about this, and it's a pretty despicable hack.
+	//On the other hand, it vastly simplifies rollback. On the grasping hand, due to the nature of the key lifecycle, we really need
+	//to pick what level construct the tags share their lifecycle with. I don't want to get into a situation where we have a full owner
+	//system, either. I think we'll probably end up splitting this into separate ContainerOwner, ContainerRef, and ContainerDisplay
+	//classes. That seems the sanest.
+	//TODO: revisit NLT 6/8/25
+	UArtilleryGameplayTagContainer(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn, bool ReferenceOnly = false)
+	{
+		MyTags = MakeShareable<FGameplayTagContainer>(new FGameplayTagContainer());
+		Initialize(ParentKeyIn, MyDispatchIn, ReferenceOnly);
+	};
+
+	void Initialize(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn, bool ReferenceOnly = false)
+	{
 		
-	};
-
-	UArtilleryGameplayTagContainer(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn)
-	{
-		Initialize(ParentKeyIn, MyDispatchIn);
-	};
-
-	void Initialize(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn)
-	{
 		this->ParentKey = ParentKeyIn;
 		this->MyDispatch = MyDispatchIn;
-
-		MyDispatch->RegisterGameplayTags(ParentKeyIn, this);
-
+		MyTags = MyDispatch->GetGameplayTagContainerAndAddIfNotExists(ParentKeyIn, MyTags);
+		ReferenceOnlyMode = ReferenceOnly;
 		ReadyToUse = true;
 	};
 
@@ -61,9 +72,9 @@ public:
 	void AddTag(const FGameplayTag& TagToAdd)
 	{
 		// Only add if the tag doesn't already exist
-		if (!MyTags.HasTag(TagToAdd))
+		if (!MyTags->HasTag(TagToAdd))
 		{
-			MyTags.AddTag(TagToAdd);
+			MyTags->AddTag(TagToAdd);
 		}
 	}
 
@@ -71,58 +82,44 @@ public:
 	void RemoveTag(const FGameplayTag& TagToRemove)
 	{
 		// Only remove if the tag does already exist
-		if (MyTags.HasTag(TagToRemove))
+		if (MyTags->HasTag(TagToRemove))
 		{
-			MyTags.RemoveTag(TagToRemove);
+			MyTags->RemoveTag(TagToRemove);
 		}
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerHasTag", DisplayName = "Does Container have tag?"),  Category="Artillery|Tags")
 	bool HasTag(const FGameplayTag& TagToCheck) const
 	{
-		return MyTags.HasTag(TagToCheck);
+		return MyTags->HasTag(TagToCheck);
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerHasTag", DisplayName = "Does Container have tag?"),  Category="Artillery|Tags")
 	bool HasTagExact(const FGameplayTag& TagToCheck) const
 	{
-		return MyTags.HasTagExact(TagToCheck);
+		return MyTags->HasTagExact(TagToCheck);
 	}
 
-	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerHasAny", DisplayName = "Does Container share any tags with other container?"),  Category="Artillery|Tags")
-	bool HasAny(const UArtilleryGameplayTagContainer* OtherContainer) const
-	{
-		return MyTags.HasAny(OtherContainer->MyTags);
-	}
-
-	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerHasAll", DisplayName = "Does Container have all tags of other container?"),  Category="Artillery|Tags")
-	bool HasAll(const UArtilleryGameplayTagContainer* OtherContainer) const
-	{
-		return MyTags.HasAll(OtherContainer->MyTags);
-	}
-
-	bool HasAll(const FGameplayTagContainer& OtherContainer) const
-	{
-		return MyTags.HasAll(OtherContainer);
-	}
-
+	
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerNumTags", DisplayName = "Number of tags in container"),  Category="Artillery|Tags")
 	int32 Num() const
 	{
-		return MyTags.Num();
+		return MyTags->Num();
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerMatchesQuery", DisplayName = "Does Container match gameplay tag query?"),  Category="Artillery|Tags")
 	bool MatchesQuery(const FGameplayTagQuery& Query) const
 	{
-		return MyTags.MatchesQuery(Query);
+		return MyTags->MatchesQuery(Query);
 	}
+
+	
 
 	// TODO: expose more of the gameplay tag container's functionality
 
 	~UArtilleryGameplayTagContainer()
 	{
-		if (MyDispatch)
+		if (MyDispatch && !ReferenceOnlyMode)
 		{
 			MyDispatch->DeregisterGameplayTags(ParentKey);
 		}

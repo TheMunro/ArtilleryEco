@@ -219,5 +219,3 @@ public:
 	virtual void RegisterWithDispatch(FSkeletonKey MyKey) override {}
 	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(); }
 };
-
-
