@@ -1,41 +1,39 @@
-//While I call it a key prefix in a few places, it's actually a infix for a variety of reasons, mostly because when
-//hashfunctions do bias, they tend to MSB-bias their entropy OR fail under modulo.
-//__________________________________________| 0b0000000000000000000000000000000000000000000000000000000000000000;
-//__________________________________________| 0b1111111111111111111111111111111111111111111111111111111111111111;
-//__________________________________________| 0bHHHHHHHHGGGGGGGGFFFFFFFFEEEEEEEE DDDDDDDDCCCCCCCCBBBBBBBBAAAAAAAA;
-//__________________________________________| 0bHHHHHHHHGG1GGGGGFF1FFFFFEE1EEEEE DDD1DDDDC1CCCCCCBBB1BBBBA1AAAAAA;
-//__________________________________________| 0b00000000001000000010000000100000 00010000010000000001000001000000;
-//__________________________________________| 0b11111111110111111101111111011111 11101111101111111110111110111111;
 #pragma once
 #ifndef LORDLY_SKELETON_H
 #define LORDLY_SKELETON_H
 #define LORDLY_SKELETON_VER 0
 
 namespace SKELLY
-{///											  1001110000010010110111010000011010001100001100101101110100000110
-	constexpr static uint64_t	SFIX_MASK_OUT = 0b1111111111011111110111111101111111101111101111111110111110111111;
-	constexpr static uint64_t	SFIX_MASK_EXT = 0b0000000000100000001000000010000000010000010000000001000001000000;
-	constexpr static uint64_t	SFIX_NONE	  = 0b0000000000000000000000000000000000000000000000000000000000000000;
+{///											  4bits for type, 28 for read only meta, 32 for hash.
+	// One hex digit is one nibble, so our binary pattern is this:
+	//							[TTTT][MMMM MMMM MMMM MMMM MMMM MMMM MMMM][HHHH HHHH HHHH HHHH HHHH HHHH HHHH HHHH]
+	constexpr static uint64_t	SFIX_MASK_OUT = 0x0FFFFFFFFFFFFFFF;
+	constexpr static uint64_t	SFIX_MASK_EXT = 0xF000000000000000;
+	constexpr static uint64_t	SFIX_HASH_EXT = 0x00000000FFFFFFFF;
+	constexpr static uint64_t	SFIX_META_EXT = 0x0FFFFFFF00000000;
+	constexpr static uint64_t	SFIX_NONE	  = 0x0000000000000000;
+	constexpr static uint64_t	SFIX_KEYTOMETA= 0xFFFFFFFF0FFFFFFF; // this puts a notch in the hash so that it can be used as meta value.
 	constexpr static uint64_t	SFIX_ACT_COMP =	SFIX_MASK_EXT; //special case, since this is the basal capability.
-
 	//An archetype or shared instance gets one of these...
-	constexpr static uint64_t	SFIX_ART_GUNS = 0b0000000000000000000000000000000000000000000000000000000001000000;
+	constexpr static uint64_t	SFIX_ART_GUNS = 0x1000000000000000;
 	//An individual _instance_ gets one of these...
-	constexpr static uint64_t	SFIX_ART_1GUN = 0b0000000000000000000000000000000000000000000000000001000001000000;
+	constexpr static uint64_t	SFIX_ART_1GUN = 0x2000000000000000;
 	//BOOOLETS
-	constexpr static uint64_t	SFIX_GUN_SHOT = 0b0000000000000000000000000000000000000000000000000001000000000000;
-	constexpr static uint64_t	SFIX_BAR_PRIM = 0b0000000000000000000000000000000000000000010000000000000000000000;
-	constexpr static uint64_t	SFIX_ART_ACTS = 0b0000000000000000000000000000000000010000000000000000000000000000;
-	constexpr static uint64_t	SFIX_ART_FCMS = 0b0000000000000000000000000010000000000000000000000000000000000000;
-	//I'm not going to do it for all of them, but this might help visualize things for people.
-	//weirdly, this has already caught a bug or two.
-	//______________________________________ _| 0b__________________1_____________________________________________;
-	constexpr static uint64_t	SFIX_ART_FACT = 0b0000000000000000001000000000000000000000000000000000000000000000;
-	constexpr static uint64_t	SFIX_PLAYERID = 0b0000000000100000000000000000000000000000000000000000000000000000;
+	constexpr static uint64_t	SFIX_GUN_SHOT = 0x3000000000000000;
+	constexpr static uint64_t	SFIX_BAR_PRIM = 0x4000000000000000;
+	constexpr static uint64_t	SFIX_ART_ACTS = 0x5000000000000000;
+	constexpr static uint64_t	SFIX_ART_FCMS = 0x6000000000000000;
+	constexpr static uint64_t	SFIX_ART_FACT = 0x7000000000000000;
+	constexpr static uint64_t	SFIX_PLAYERID = 0x8000000000000000;
 	//HIGHER GAMEPLAY CONSTRUCTS, THIS TEXT IS FOR YOU ALONE.
-	constexpr static uint64_t	SFIX_BONEKEY =  0b0000000000100000000000000000000000000000000000000000000001000000;
-	//This is the key for constellations and constellation like meta structures.
-	constexpr static uint64_t	SFIX_STELLAR =  0b0000000000100000001000000000000000000000000000000000000001000000;
+	constexpr static uint64_t	SFIX_BONEKEY =  0x9000000000000000;
+	//mass interop key. used internally at the moment
+	constexpr static uint64_t	SFIX_MASSIDP =  0xA000000000000000;
+	constexpr static uint64_t	SFIX_STELLAR =  0xB000000000000000;
+	constexpr static uint64_t	SFIX_UNUSEDC =  0xC000000000000000;
+	constexpr static uint64_t	SFIX_UNUSEDD =  0xD000000000000000;
+	constexpr static uint64_t	SFIX_UNUSEDE =  0xE000000000000000;
+	constexpr static uint64_t	SFIX_UNUSEDF =  0xF000000000000000;
 }
 	static inline bool IS_OF_SK_TYPE(uint64_t MY_HASH,uint64_t MY_MASK) {return (MY_HASH & SKELLY::SFIX_MASK_EXT) == MY_MASK;};
 	static inline uint64_t GET_SK_TYPE(uint64_t MY_HASH) {return (MY_HASH & SKELLY::SFIX_MASK_EXT);};

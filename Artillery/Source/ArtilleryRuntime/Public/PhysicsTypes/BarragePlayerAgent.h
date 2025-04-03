@@ -43,9 +43,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement, meta=(ClampMin="0", UIMin="0"))
 	float TurningBoost = 1.1;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	float MaxStickVelocity = 685;
+	float MaxStickVelocity = 955;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	float HardMaxVelocity = 1100;
+	float HardMaxVelocity = 1500;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float Deceleration = 12;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
@@ -53,13 +53,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float AirAcceleration = 3;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	float DeadzoneDecel = 12;
+	float DeadzoneDecel = 13;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float GroundDecel = Deceleration * 0.75;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float AirDecel =  AirAcceleration * 0.6;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	float JumpImpulse = 850;
+	float JumpImpulse = 1100;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float JumpDelay = 55;
 
@@ -70,7 +70,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float WallClingGravity = 200;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	float NormalGravity = 1180;
+	float NormalGravity = 1880;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	float GroundingForceCoefficient = 0.08;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)

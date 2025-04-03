@@ -384,11 +384,9 @@ public:
 	}
 	
 	explicit FGunInstanceKey(const unsigned int rhs) {
-		Obj = rhs;
-		Obj <<= 32;
-		//this doesn't seem like it should work, but because the SFIX bit patterns are intentionally asym
-		//we actually do reclaim a bit of randomness.
-		Obj += rhs; 
+		Obj = 0;
+		Obj |= GetTypeHash(rhs); //en-bloody-sure that's hashed
+		Obj &= SKELLY::SFIX_KEYTOMETA; //notch the key. a true hash can lose any bit without losing validity.
 		Obj = FORGE_SKELETON_KEY(Obj, GunInstance_Infix);
 	}
 	

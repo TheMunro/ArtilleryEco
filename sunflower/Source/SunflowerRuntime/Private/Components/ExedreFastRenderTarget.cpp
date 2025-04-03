@@ -5,9 +5,6 @@ UExedreWidgetRenderTarget::UExedreWidgetRenderTarget(
 	const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	FString Path = "Texture2D'/Game/UI/txt_LogoUE4.txt_LogoUE4'";
-	static ConstructorHelpers::FObjectFinder<UTexture2D> Texture(*Path);
-	DefaultTexture = Texture.Object;
 
 	ImageBrush = FSlateBrush();
 	ImageBrush.SetResourceObject(DefaultTexture);
@@ -16,8 +13,10 @@ UExedreWidgetRenderTarget::UExedreWidgetRenderTarget(
 }
 
 
-void UExedreWidgetRenderTarget::SetRenderMaterial( UMaterialInterface* Material )
+void UExedreWidgetRenderTarget::SetRenderMaterial( UMaterialInterface* Material , FString Path)
 {
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Texture(*Path);
+	DefaultTexture = Texture.Object;
 	if( Material != nullptr && RenderingMaterial != Material )
 	{
 		// Store new reference
