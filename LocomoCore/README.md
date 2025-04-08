@@ -6,3 +6,6 @@ Originally, LocomoCore was GPLv3, however I cannot in good conscience write more
 Unfortunately, it is the most powerful corporations that benefit most from GPLv3 now, as they are able to use it illegally with impunity or place it behind network and process barriers that exempt the code from virality. For a long time, I rejected this as cruel cynicism, but sadly, recent litigations have made it a matter of public record. But on top of the existing proven indignities, the rise of generative AI systems trained on GPLv3 code is an indisputable fact. My opinion on the rightness or wrongness of that is utterly irrelevant. This is not an argument founded on emotion. Instead, I want to underscore the simple fact of the matter: it has made the license pointless, or worse than pointless.  
 
 If you can generate equivalent code that is not covered by training on code that is covered, then we must assume the license means nothing.
+
+### Upcoming
+The next six months will see some additions of more simple movement functions, likely some from [Tribes](https://floodyberry.wordpress.com/2008/04/11/tribes-1-physics-part-three-collision/). In particular, cur-tick versus prev-tick.
