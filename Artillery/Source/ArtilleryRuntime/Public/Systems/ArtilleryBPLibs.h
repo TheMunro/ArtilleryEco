@@ -294,7 +294,7 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "GetGameplayTagsByKey", DisplayName = "Get Gameplay Tags for Key", ExpandBoolAsExecs="bFound"),  Category="Artillery|Tags")
 	static UArtilleryGameplayTagContainer* K2_GetTagsByKey(FSkeletonKey Key, bool& bFound)
 	{
-		GameplayTagContainerPtr Tags = UArtilleryDispatch::SelfPtr->GetGameplayTagContainer(Key);
+		FConservedTags Tags = UArtilleryDispatch::SelfPtr->GetExistingConservedTags(Key);
 		if (Tags.IsValid())
 		{
 			bFound = true;
@@ -308,17 +308,11 @@ public:
 	}
 
 
-	static GameplayTagContainerPtr InternalTagsByKey(FSkeletonKey Key, bool& bFound)
+	static FConservedTags InternalTagsByKey(FSkeletonKey Key, bool& bFound)
 	{
-		GameplayTagContainerPtr Tags = UArtilleryDispatch::SelfPtr->GetGameplayTagContainer(Key);
-		if (Tags.IsValid())
-		{
-			bFound = true;
-			
-			return Tags;
-		}
-		bFound = false;
-		return nullptr;
+		auto ret = UArtilleryDispatch::SelfPtr->GetOrRegisterConservedTags(Key);
+		bFound = ret.IsValid();
+		return ret;
 	}
 	
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "GetPlayerGameplayTags", DisplayName = "Get Local Player's Gameplay Tags", WorldContext = "WorldContextObject", HidePin = "WorldContextObject", ExpandBoolAsExecs="bFound"),  Category="Artillery|Tags")
@@ -466,7 +460,7 @@ public:
 	}
 
 	//differs from tombstone primitive ONLY in that it will NOT kill non-projectiles.
-	static bool DeleteProjectile(FSkeletonKey Target)
+	static bool SafelyDeleteProjectile(FSkeletonKey Target)
 	{
 		if(UArtilleryDispatch::SelfPtr && UArtilleryProjectileDispatch::SelfPtr && UArtilleryProjectileDispatch::SelfPtr->IsArtilleryProjectile(Target))
 		{
@@ -479,7 +473,7 @@ public:
 	UFUNCTION(BlueprintPure, meta = (ScriptName = "DeleteArtilleryProjectile", DisplayName = "Kills a projectile without asking enough questions. True if found."),  Category="Artillery|Physics")
 	static bool K2_DeleteProjectile(FSkeletonKey Target)
 	{
-		return DeleteProjectile(Target);
+		return SafelyDeleteProjectile(Target);
 	}
 
 	static bool TombstonePrimitive(FSkeletonKey Target)

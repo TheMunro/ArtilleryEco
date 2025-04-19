@@ -45,6 +45,7 @@ JPH::BodyID FBCharacter::Create(JPH::CharacterVsCharacterCollision* CVCColliderS
 
 void FBCharacter::StepCharacter()
 {
+
 	// Determine new basic velocity
 	Vec3 MyVelo = mCharacter->GetLinearVelocity();
 	Vec3 current_vertical_velocity = Vec3(0, MyVelo.GetY(), 0);
@@ -78,30 +79,38 @@ void FBCharacter::StepCharacter()
 	{
 		new_velocity += mGravity * mDeltaTime * mThrottleModel.GetY();
 	}
+	
 	new_velocity += mLocomotionUpdate * mThrottleModel.GetZ();
 	mLocomotionUpdate = Vec3::sZero();
 	new_velocity += mForcesUpdate * mThrottleModel.GetW();
 	mForcesUpdate = Vec3::sZero();
 	
-	auto SpeedLimit = min(new_velocity.Length(), mMaxSpeed);
-	auto clamped = (new_velocity.Normalized() * SpeedLimit);
-	// Update character velocity
-	mCharacter->SetLinearVelocity(clamped);
-	
 	RVec3 start_pos = GetPosition();
+	//allow single frame exccession
+	//TODO: factor this into a stupid constant.
+	auto SpeedLimit = min(new_velocity.Length(), (mMaxSpeed * 1.20f));
+	auto clamped = (new_velocity.Normalized() * SpeedLimit);
+	
+	mCharacter->SetLinearVelocity(clamped);
+		// Update the character position. splitting this into two half-length updates allows you to get VERY
+		// fine grained control by moving them around with respect to the clamp and update.
+    	{
+    		TempAllocatorMalloc allocator;
+    		mCharacter->ExtendedUpdate(mDeltaTime,
+    								   mGravity,
+    								   mUpdateSettings,
+    								   World->GetDefaultBroadPhaseLayerFilter(Layers::MOVING),
+    								   World->GetDefaultLayerFilter(Layers::MOVING),
+    								   IgnoreSingleBodyFilter(mCharacter->GetInnerBodyID()),
+    								   {},
+    								   allocator);
+    	}
 
-	// Update the character position
-	TempAllocatorMalloc allocator;
-	mCharacter->ExtendedUpdate(mDeltaTime,
-	                           mGravity,
-	                           mUpdateSettings,
-	                           World->GetDefaultBroadPhaseLayerFilter(Layers::MOVING),
-	                           World->GetDefaultLayerFilter(Layers::MOVING),
-	                           IgnoreSingleBodyFilter(mCharacter->GetInnerBodyID()),
-	                           {},
-	                           allocator);
-
-	// Calculate effective velocity in this step
+	// Update character velocity for carry over.
+	SpeedLimit = min(new_velocity.Length(), (mMaxSpeed));
+	clamped = (new_velocity.Normalized() * SpeedLimit);
+	
+	mCharacter->SetLinearVelocity(clamped);
 	mEffectiveVelocity = Vec3(GetPosition() - start_pos) / mDeltaTime;
 }
 

@@ -98,7 +98,7 @@ public:
 	bool registerPattern(IPM::CanonPattern ToBind, FActionPatternParams FCM_Owner_ActorParams);
 	bool removePattern(IPM::CanonPattern ToBind, FActionPatternParams FCM_Owner_ActorParams);
 	TPair<ActorKey, InputStreamKey> RegisterKeysToParentActorMapping( FireControlKey MachineKey,
-	                                                                 bool IsActorForLocalPlayer, const ActorKey& ParentKey);
+	                                                                 bool IsActorForLocalPlayer, const ActorKey ParentKey);
 
 	//this is the most portable way to do a folding region in C++.
 #ifndef ARTILLERYECS_CLASSES_REGION_MARKER

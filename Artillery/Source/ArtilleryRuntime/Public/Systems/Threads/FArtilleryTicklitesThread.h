@@ -286,7 +286,8 @@ public:
 
 	virtual void Stop() override
 	{
-		FRunnable::Stop();
+		UE_LOG(LogTemp, Display, TEXT("Artillery:TicklitesWorker: Stopping Artillery Ticklites thread."));
+		Cleanup();
 	}
 
 
@@ -294,7 +295,11 @@ public:
 	//CURRENTLY ONLY SUPPORTS GUNS AND ACTORS
 	SKLiveness IsLiveKey(FSkeletonKey Test)
 	{
-		return DispatchOwner->IsLiveKey(Test);
+		if (DispatchOwner)
+		{
+			return DispatchOwner->IsLiveKey(Test);
+		}
+		return SKLiveness::UNKNOWN;
 	}
 	
 	

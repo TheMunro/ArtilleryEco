@@ -267,11 +267,14 @@ FWorldSimOwner::FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadIniti
 	}
 
 	//we need the coordinate utils, but we don't really want to include them in the .h
-	inline FBarrageKey FWorldSimOwner::CreatePrimitive(FBBoxParams& ToCreate, uint16 Layer, bool IsSensor, bool forceDynamic)
+	inline FBarrageKey FWorldSimOwner::CreatePrimitive(FBBoxParams& ToCreate, uint16 Layer, bool IsSensor, bool forceDynamic, bool isMovable)
 	{
 
 		BodyID BodyIDTemp = BodyID();
-		EMotionType MovementType = forceDynamic ? EMotionType::Dynamic : LayerToMotionTypeMapping(Layer);
+	//if movable, check if dynamic. if not movable but dynamic, come on guys.
+		EMotionType MovementType = isMovable ?
+			(forceDynamic ? EMotionType::Dynamic : LayerToMotionTypeMapping(Layer))
+	: EMotionType::Static;
 		EMotionQuality MotionQuality = LayerToMotionQualityMapping(Layer);
 
 		Vec3 HalfExtent = Vec3(ToCreate.JoltX, ToCreate.JoltY, ToCreate.JoltZ);
@@ -299,6 +302,8 @@ FWorldSimOwner::FWorldSimOwner(float cDeltaTime, InitExitFunction JobThreadIniti
 		box_body_settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
 		box_body_settings.mIsSensor = IsSensor;
 		box_body_settings.mMotionQuality = MotionQuality;
+		box_body_settings.mRestitution = 0.08;
+		
 
 		// IMPORTANT! If this isn't set, sensors don't collide with static stuff (like level geometry!)
 		if (IsSensor)

@@ -34,14 +34,15 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	FSkeletonKey ParentKey;
-	TSharedPtr<FGameplayTagContainer> MyTags;
+	TSharedPtr<FGameplayTagContainer> TagsToAddDuringInitialization;
+	FConservedTags MyTags;
 	UArtilleryDispatch* MyDispatch = nullptr;
 	bool ReadyToUse = false;
 	bool ReferenceOnlyMode = true;
 	// Don't use this default constructor, this is a bad
 	UArtilleryGameplayTagContainer()
 	{
-		MyTags = MakeShareable<FGameplayTagContainer>(new FGameplayTagContainer());
+		TagsToAddDuringInitialization = MakeShareable(new FGameplayTagContainer());
 	};
 
 	//reference only mode changes the container to act more like you might expect in a blueprint, by not taking ownership of the
@@ -54,7 +55,6 @@ public:
 	//TODO: revisit NLT 6/8/25
 	UArtilleryGameplayTagContainer(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn, bool ReferenceOnly = false)
 	{
-		MyTags = MakeShareable<FGameplayTagContainer>(new FGameplayTagContainer());
 		Initialize(ParentKeyIn, MyDispatchIn, ReferenceOnly);
 	};
 
@@ -63,8 +63,9 @@ public:
 		
 		this->ParentKey = ParentKeyIn;
 		this->MyDispatch = MyDispatchIn;
-		MyTags = MyDispatch->GetGameplayTagContainerAndAddIfNotExists(ParentKeyIn, MyTags);
+		auto reference = MyDispatch->GetOrRegisterConservedTags(ParentKeyIn);
 		ReferenceOnlyMode = ReferenceOnly;
+		MyTags = reference;
 		ReadyToUse = true;
 	};
 
@@ -72,9 +73,9 @@ public:
 	void AddTag(const FGameplayTag& TagToAdd)
 	{
 		// Only add if the tag doesn't already exist
-		if (!MyTags->HasTag(TagToAdd))
+		if (!MyTags->Find(TagToAdd))
 		{
-			MyTags->AddTag(TagToAdd);
+			MyDispatch->AddTagToEntity(ParentKey, TagToAdd);
 		}
 	}
 
@@ -82,38 +83,23 @@ public:
 	void RemoveTag(const FGameplayTag& TagToRemove)
 	{
 		// Only remove if the tag does already exist
-		if (MyTags->HasTag(TagToRemove))
+		if (MyTags->Find(TagToRemove))
 		{
-			MyTags->RemoveTag(TagToRemove);
+			MyDispatch->RemoveTagFromEntity(ParentKey, TagToRemove);
 		}
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerHasTag", DisplayName = "Does Container have tag?"),  Category="Artillery|Tags")
 	bool HasTag(const FGameplayTag& TagToCheck) const
 	{
-		return MyTags->HasTag(TagToCheck);
+		return MyTags->Find(TagToCheck);
 	}
 
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerHasTag", DisplayName = "Does Container have tag?"),  Category="Artillery|Tags")
 	bool HasTagExact(const FGameplayTag& TagToCheck) const
 	{
-		return MyTags->HasTagExact(TagToCheck);
+		return MyTags->Find(TagToCheck);
 	}
-
-	
-	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerNumTags", DisplayName = "Number of tags in container"),  Category="Artillery|Tags")
-	int32 Num() const
-	{
-		return MyTags->Num();
-	}
-
-	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerMatchesQuery", DisplayName = "Does Container match gameplay tag query?"),  Category="Artillery|Tags")
-	bool MatchesQuery(const FGameplayTagQuery& Query) const
-	{
-		return MyTags->MatchesQuery(Query);
-	}
-
-	
 
 	// TODO: expose more of the gameplay tag container's functionality
 

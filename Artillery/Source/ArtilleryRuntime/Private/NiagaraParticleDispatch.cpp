@@ -49,7 +49,7 @@ void UNiagaraParticleDispatch::Deinitialize()
 		Iter.Value().Key->ClearInternalFlags(EInternalObjectFlags::Async);
 	}
 	ProjectileNameToNDCAsset->Empty();
-	KeyToParticleRecordMapping->Empty();
+	KeyToParticleRecordMapping->clear();
 	NDCAssetTOProjectileName->Empty();
 	MyDispatch = nullptr;
 }
@@ -258,11 +258,11 @@ void UNiagaraParticleDispatch::UpdateNDCChannels() const
 	check(World);
 	UTransformDispatch* TD = World->GetSubsystem<UTransformDispatch>();
 	check(TD);
-	
-	for (auto KeyToNDCAssetIter = KeyToParticleRecordMapping->CreateIterator(); KeyToNDCAssetIter; ++KeyToNDCAssetIter)
+		
+	for (auto KeyToNDCAssetIter : KeyToParticleRecordMapping->lock_table())
 	{
-		FSkeletonKey Key = KeyToNDCAssetIter.Key();
-		ParticleRecord& Record = KeyToNDCAssetIter.Value();
+		FSkeletonKey Key = KeyToNDCAssetIter.first;
+		ParticleRecord& Record = KeyToNDCAssetIter.second;
 
 		TOptional<FTransform3d> KeyTransform = TD->CopyOfTransformByObjectKey(Key);
 		TWeakObjectPtr<UNiagaraDataChannelAsset> ParticleNDCAsset = Record.NDCAssetPtr;

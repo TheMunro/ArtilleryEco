@@ -37,11 +37,10 @@ bool UThistleBehavioralist::RegistrationImplementation()
 void UThistleBehavioralist::BounceTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration) const
 {
 	bool found = false;
-	auto tagc = UArtilleryLibrary::InternalTagsByKey(Key, found);
 	auto stamp = DeadlinerTime+Duration;
 	if (found)
 	{
-		tagc->RemoveTag(Tag);
+		MyDispatch->RemoveTagFromEntity(Key, Tag);
 	}
 	if (!ExpirationDeadliner->Contains(stamp))
 	{
@@ -69,11 +68,10 @@ void UThistleBehavioralist::DelayedTag(FSkeletonKey Key, FNativeGameplayTag& Tag
 void UThistleBehavioralist::ExpireTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration)
 {
 	bool found = false;
-	auto tagc = UArtilleryLibrary::InternalTagsByKey(Key, found);
 	auto stamp = DeadlinerTime+Duration;
 	if (found)
 	{
-		tagc->AddTag(Tag);
+		MyDispatch->AddTagToEntity(Key, Tag);
 	}
 	if (!ExpirationDeadliner->Contains(stamp))
 	{
@@ -99,11 +97,11 @@ void UThistleBehavioralist::TimedTagsMaintenance(int CurrentTck)
 			{
 				if (Goner.Get<2>())
 				{
-					tagc->AddTag( Goner.Get<1>());
+					tagc->Add( Goner.Get<1>());
 				}
 				else
 				{
-					tagc->RemoveTag( Goner.Get<1>());
+					tagc->Add( Goner.Get<1>());
 				}
 			}
 		}

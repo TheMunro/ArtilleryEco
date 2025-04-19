@@ -16,7 +16,7 @@
 bool UArtilleryDispatch::RegistrationImplementation()
 {
 	
-	GameplayTagContainerToDataMapping->Empty();//it's oddly safest to do this here. isn't that fun?
+	GameplayTagContainerToDataMapping->Init();
 	UE_LOG(LogTemp, Warning, TEXT("ArtilleryDispatch:Subsystem: Online"));
 	AttributeSetToDataMapping = MakeShareable(new AttrCuckoo());
 	RequestRouter = MakeShareable(new F_INeedA());
@@ -56,9 +56,10 @@ bool UArtilleryDispatch::RegistrationImplementation()
 	ArtilleryAsyncWorldSim.RequestorQueue_Abilities_TripleBuffer = RequestorQueue_Abilities_TripleBuffer;
 	//OH BOY. REFERENCE TIME. GWAHAHAHA.
 	ArtilleryAsyncWorldSim.Locomos_BufferNotThreadSafe = RequestorQueue_Locomos;
+	GunToFiringFunctionMapping->Empty();
 	ThreadSetup();
 
-	WorldSim_Thread.Reset(FRunnableThread::Create(&ArtilleryAsyncWorldSim, TEXT("ARTILLERY_WORLDSIM_ONLINE.")));
+	WorldSim_Thread.Reset(FRunnableThread::Create(&ArtilleryAsyncWorldSim, TEXT("ARTILLERY_WORLDSIM_ONLINE."),0, TPri_AboveNormal));
 	WorldSim_AI_Thread.Reset(FRunnableThread::Create(&ArtilleryAIWorker_LockstepToWorldSim, TEXT("ARTILLERY_AISIM_ONLINE.")));
 	WorldSim_Ticklites_Thread.Reset(
 		FRunnableThread::Create(&ArtilleryTicklitesWorker_LockstepToWorldSim,TEXT("ARTILLERY_TICKLITES_ONLINE.")));
@@ -147,6 +148,7 @@ void UArtilleryDispatch::Deinitialize()
 	ArtilleryTicklitesWorker_LockstepToWorldSim.Exit();
 	ArtilleryAIWorker_LockstepToWorldSim.Exit();
 	ArtilleryAsyncWorldSim.Exit();
+	GameplayTagContainerToDataMapping->Empty();
 	
 
 	
@@ -176,7 +178,6 @@ void UArtilleryDispatch::Deinitialize()
 	IdentSetToDataMapping->Empty();
 	KeyToControlliteMapping->Empty();
 	VectorSetToDataMapping->Empty();
-	GunToFiringFunctionMapping->Empty();
 	GunByKey->Empty();
 	HoldOpen.Reset();
 }
@@ -362,19 +363,7 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 								Request.Layer,
 								Request.CanExpire,
 								Request.TicksDuration);
-							GameplayTagContainerPtr TagContainer = this->GetGameplayTagContainerAndAddIfNotExists(
-								Request.SourceOrSelf);
-							if (TagContainer.IsValid())
-							{
-								TagContainer->AddTag(InitState_GameplayReady);
-							}
-							else
-							{
-								UE_LOG(LogTemp, Warning, TEXT(
-									       "ArtilleryRequestType::SpawnStaticMesh: Could not get tag container for [%lld]"
-								       ), Request.SourceOrSelf.Obj);
-								throw;
-							}
+							AddTagToEntity(Request.SourceOrSelf,InitState_GameplayReady);
 						}
 						break;
 					default:
@@ -533,11 +522,14 @@ AttrMapPtr UArtilleryDispatch::GetAttribMap(const FSkeletonKey Owner) const
 AttrPtr UArtilleryDispatch::GetAttrib(const FSkeletonKey Owner, AttribKey Attrib) const
 {
 	AttrMapPtr AttributeMap;
-	AttributeSetToDataMapping->find(Owner, AttributeMap);
-	if (AttributeMap != nullptr)
+	if (AttributeSetToDataMapping != nullptr)
 	{
-		TSharedPtr<FConservedAttributeData>* AttributeData = AttributeMap->Find(Attrib);
-		return AttributeData != nullptr ? *AttributeData : nullptr;
+		AttributeSetToDataMapping->find(Owner, AttributeMap);
+		if (AttributeMap != nullptr)
+		{
+			TSharedPtr<FConservedAttributeData>* AttributeData = AttributeMap->Find(Attrib);
+			return AttributeData != nullptr ? *AttributeData : nullptr;
+		}
 	}
 	return nullptr;
 }
@@ -618,33 +610,6 @@ Attr3Ptr UArtilleryDispatch::GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib)
 	return nullptr;
 }
 
-GameplayTagContainerPtr UArtilleryDispatch::GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner)
-{
-	GameplayTagContainerPtrInternal* TagContainer = GameplayTagContainerToDataMapping->Find(Owner);
-	if (TagContainer == nullptr)
-	{
-		GameplayTagContainerPtrInternal UnderlyingContainer = MakeShareable(new FGameplayTagContainer());
-		return GameplayTagContainerToDataMapping->Add(Owner, UnderlyingContainer);
-	}
-	return *TagContainer;
-}
-
-GameplayTagContainerPtr UArtilleryDispatch::GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner, GameplayTagContainerPtr AddIfAbsent)
-{
-	GameplayTagContainerPtrInternal* TagContainer = GameplayTagContainerToDataMapping->Find(Owner);
-	if (TagContainer == nullptr)
-	{
-		return GameplayTagContainerToDataMapping->Add(Owner, AddIfAbsent);
-	}
-	return *TagContainer;
-}
-
-
-GameplayTagContainerPtr UArtilleryDispatch::GetGameplayTagContainer(const FSkeletonKey& Owner) const
-{
-	GameplayTagContainerPtrInternal* TagContainerPtr = GameplayTagContainerToDataMapping->Find(Owner);
-	return TagContainerPtr != nullptr ? *TagContainerPtr : nullptr;
-}
 
 UArtilleryDispatch::~UArtilleryDispatch()
 {
@@ -676,30 +641,19 @@ UArtilleryDispatch::~UArtilleryDispatch()
 
 void UArtilleryDispatch::AddTagToEntity(const FSkeletonKey Owner, const FGameplayTag& TagToAdd) const
 {
-	GameplayTagContainerPtrInternal* GameplayTagContainer = GameplayTagContainerToDataMapping->Find(Owner);
-	if (GameplayTagContainer != nullptr && GameplayTagContainer)
-	{
-		GameplayTagContainer->Get()->AddTag(TagToAdd);
-	}
+	GameplayTagContainerToDataMapping->Add(Owner, TagToAdd);
+
 }
 
 void UArtilleryDispatch::RemoveTagFromEntity(const FSkeletonKey Owner, const FGameplayTag& TagToRemove) const
 {
-	GameplayTagContainerPtrInternal* GameplayTagContainer = GameplayTagContainerToDataMapping->Find(Owner);
-	if (GameplayTagContainer != nullptr && GameplayTagContainer)
-	{
-		GameplayTagContainer->Get()->RemoveTag(TagToRemove);
-	}
+	GameplayTagContainerToDataMapping->Remove(Owner, TagToRemove);
+
 }
 
 bool UArtilleryDispatch::DoesEntityHaveTag(const FSkeletonKey Owner, const FGameplayTag& TagToCheck) const
 {
-	GameplayTagContainerPtrInternal* GameplayTagContainer = GameplayTagContainerToDataMapping->Find(Owner);
-	if (GameplayTagContainer != nullptr && GameplayTagContainer)
-	{
-		return GameplayTagContainer->Get()->HasTag(TagToCheck);
-	}
-	return false;
+	return GameplayTagContainerToDataMapping->Find(Owner, TagToCheck);
 }
 
 void UArtilleryDispatch::RunGuns() const

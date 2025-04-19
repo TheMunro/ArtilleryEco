@@ -45,7 +45,10 @@ void UCablingWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld) {
 
 void UCablingWorldSubsystem::Deinitialize() {
 	UE_LOG(LogTemp, Warning, TEXT("UCablingWorldSubsystem: Deinitializing Cabling subsystem"));
-	controller_runner.Stop();
+	if (controller_thread)
+	{
+		controller_thread->Kill();
+	}
 	Super::Deinitialize();
 }
 

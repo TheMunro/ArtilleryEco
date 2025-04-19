@@ -25,3 +25,4 @@ UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Status_Multimode_Rallying, "Status.Multimode.
 UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Status_Multimode_NoRallying, "Status.Multimode.NoRallying", "This permits all modes except rally. Used to cool down rally.");
 UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Status_Multimode_Assault, "Status.Multimode.Assault", "The entity is in the assault behavior mode.");
 UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Object_Supports_Rallying, "Object.Supports.Rallying", "This object, generally a smart object, supports rallying behavior attempts.");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Enemy, "Enemy", "This object supports trying to murder the player.");

@@ -12,7 +12,7 @@ EStateTreeRunStatus FScoot::Tick(FStateTreeExecutionContext& Context, const floa
 		return EStateTreeRunStatus::Failed;
 	}
 		//run on cadence.
-	if (UArtilleryLibrary::GetTotalsTickCount() % ArtilleryTickHertz*5 == 0)
+	if (UArtilleryLibrary::GetTotalsTickCount() % ArtilleryTickHertz*3 == 0)
 	{
 		bool found = false;
 		auto HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
@@ -43,7 +43,7 @@ EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context
 		auto tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
 		if (found)
 		{
-			tagc->RemoveTag(TAG_Orders_Move_Needed);
+			tagc->Remove(TAG_Orders_Move_Needed);
 		}
 
 		UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,
@@ -53,7 +53,7 @@ EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context
 		{
 			if (found)
 			{
-				tagc->AddTag(TAG_Orders_Move_Needed);
+				tagc->Add(TAG_Orders_Move_Needed);
 			}
 			return EStateTreeRunStatus::Succeeded;
 		}
@@ -65,7 +65,7 @@ EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context
 		{
 			if (found)
 			{
-				tagc->AddTag(TAG_Orders_Move_Needed);
+				tagc->Add(TAG_Orders_Move_Needed);
 			}
 			return EStateTreeRunStatus::Failed;
 		}
@@ -88,7 +88,7 @@ EStateTreeRunStatus FBreakOff::Tick(FStateTreeExecutionContext& Context, const f
 		return EStateTreeRunStatus::Failed;
 	}
 	//run on cadence.
-	if (UArtilleryLibrary::GetTotalsTickCount() % 8 == 0)
+	if (UArtilleryLibrary::GetTotalsTickCount() % 4 == 0)
 	{
 		bool found = false;
 		auto HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
@@ -112,7 +112,6 @@ EStateTreeRunStatus FBreakOff::Tick(FStateTreeExecutionContext& Context, const f
 				}           
 				return EStateTreeRunStatus::Succeeded;
 			}
-			// ReSharper disable once CppRedundantElseKeywordInsideCompoundStatement
 			else
 			{
 				return EStateTreeRunStatus::Running;
@@ -124,5 +123,5 @@ EStateTreeRunStatus FBreakOff::Tick(FStateTreeExecutionContext& Context, const f
 			return EStateTreeRunStatus::Succeeded;
 		}
 	}
-	return EStateTreeRunStatus::Running;
+	return EStateTreeRunStatus::Succeeded;
 }

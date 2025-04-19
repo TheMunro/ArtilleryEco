@@ -7,6 +7,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "UCablingWorldSubsystem.h"
 #include "ArtilleryCommonTypes.h"
+#include "AtomicTagArray.h"
 #include "FArtilleryStateTreesThread.h"
 #include "Containers/TripleBuffer.h"
 #include "FArtilleryBusyWorker.h"
@@ -100,6 +101,7 @@ public:
 
 	UArtilleryDispatch()
 	{
+		GameplayTagContainerToDataMapping = MakeShareable(new AtomicTagArray());
 		RequestorQueue_Abilities_TripleBuffer = MakeShareable(new BufferedEvents());
 		RequestorQueue_Locomos = MakeShareable(new BufferedMoveEvents());
 		GunToFiringFunctionMapping = MakeShareable(new TMap<FGunKey, FArtilleryFireGunFromDispatch>());
@@ -107,7 +109,6 @@ public:
 		IdentSetToDataMapping = MakeShareable(new TMap<FSkeletonKey, IdMapPtr>());
 		KeyToControlliteMapping = MakeShareable(new TMap<FSkeletonKey, Machlet>());
 		VectorSetToDataMapping = MakeShareable(new TMap<FSkeletonKey, Attr3MapPtr>());
-		GameplayTagContainerToDataMapping = MakeShareable(new TMap<FSkeletonKey, GameplayTagContainerPtrInternal>());
 		GunByKey = MakeShareable(new TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>());
 	};
 	
@@ -173,7 +174,7 @@ protected:
 	TSharedPtr<TMap<FSkeletonKey, Attr3MapPtr>> VectorSetToDataMapping;
 	
 	/** skeleton key to map of gameplay tags */
-	TSharedPtr<TMap<FSkeletonKey, GameplayTagContainerPtrInternal>> GameplayTagContainerToDataMapping;
+	TSharedPtr<AtomicTagArray> GameplayTagContainerToDataMapping;
 	
 	TSharedPtr<TransformUpdatesForGameThread> TransformUpdateQueue;
 	
@@ -274,7 +275,7 @@ public:
 	bool IsActorTransformAlive(ActorKey Key) const;
 	
 	//CURRENTLY ONLY SUPPORTS GUNS AND ACTORS
-	SKLiveness IsLiveKey(const FSkeletonKey& Test)
+	SKLiveness IsLiveKey(const FSkeletonKey Test)
 	{
 		switch (GET_SK_TYPE(Test.Obj))
 		{
@@ -308,15 +309,12 @@ public:
 
 		return attrib ? lambda(attrib) : false;
 	}
-	
+
+	//TODO: ensure that the use of FSkeletonKey& is safe here.
 	IdentPtr GetIdent(const FSkeletonKey& Owner, Ident Attrib) const;
 	IdentPtr GetOrAddIdent(const FSkeletonKey& Owner, Ident Attrib) const;
 	IdMapPtr* GetRelationships(const FSkeletonKey& Owner) const;
 	Attr3Ptr GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib) const;
-	// TODO - Add a mirrored `remove` function for temporary use (like with instanced meshes)
-	GameplayTagContainerPtr GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner);
-	GameplayTagContainerPtr GetGameplayTagContainerAndAddIfNotExists(const FSkeletonKey& Owner, GameplayTagContainerPtr AddIfAbsent);
-	GameplayTagContainerPtr GetGameplayTagContainer(const FSkeletonKey& Owner) const;
 	virtual ~UArtilleryDispatch() override;
 
 	//due to peculiarities in our object lifecycle, these should not be switched to reference parameters.
@@ -377,9 +375,51 @@ public:
 	}
 
 	//adds or assumes responsibility for the lifecycle of a tag container keyed to this SK
-	void RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags)
+	// ReSharper disable once CppMemberFunctionMayBeConst
+	FConservedTags RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags)
 	{
-		GameplayTagContainerToDataMapping->Add(in, GameplayTags);
+		auto TerrorModuleOnline = GameplayTagContainerToDataMapping->NewTagContainer(in);
+		if (this && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid() && GameplayTags)
+		{
+			for (auto tag : GameplayTags->GetGameplayTagArray())
+			{
+				GameplayTagContainerToDataMapping->Add(in, tag);
+			}
+		}
+		RequestRouter->TagReferenceModel(in,  GetShadowNow(), TerrorModuleOnline);
+		return TerrorModuleOnline; // this is the only good way to get a fast reference.
+	}
+
+	// ReSharper disable once CppMemberFunctionMayBeConst
+	FConservedTags GetExistingConservedTags(FSkeletonKey in)
+	{
+		if (GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
+		{
+			return GameplayTagContainerToDataMapping->GetReference(in);
+		}
+		return nullptr;
+	}
+
+	FConservedTags GetOrRegisterConservedTags(FSkeletonKey in)
+	{
+		auto GetExistingConservedTagsResult = GetExistingConservedTags(in);
+		if (GetExistingConservedTagsResult != nullptr)
+		{
+			return GetExistingConservedTagsResult;
+		}
+		else
+		{
+			return RegisterGameplayTags(in, nullptr);
+		}
+	}
+	
+	void DeregisterGameplayTags(FSkeletonKey in)
+	{
+		if (this && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
+		{
+			GameplayTagContainerToDataMapping->Erase(in);
+		}
+		RequestRouter->NoTagReferenceModel(in,  GetShadowNow());
 	}
 	
 	void DeregisterAttributes(FSkeletonKey in)
@@ -400,13 +440,7 @@ public:
 		VectorSetToDataMapping->Remove(in);
 	}
 	
-	void DeregisterGameplayTags(FSkeletonKey in)
-	{
-		if (GameplayTagContainerToDataMapping)
-		{
-			GameplayTagContainerToDataMapping->Remove(in);
-		}
-	}
+
 	
 	std::atomic_bool UseNetworkInput;
 	bool missedPrior = false;

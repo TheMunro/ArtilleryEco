@@ -146,3 +146,20 @@ struct THISTLERUNTIME_API FArtilleryCompareKeys : public FThistleCondition
 	virtual bool TestCondition(FStateTreeExecutionContext& Context) const override;
 	
 };
+
+USTRUCT(meta = (DisplayName = "LOS Check"))
+struct THISTLERUNTIME_API FCheckLoStoPoI : public FThistleCondition
+{
+	GENERATED_BODY()
+
+	using FInstanceDataType = FThistleSphereCastInstanceData;
+	
+	FCheckLoStoPoI() = default;
+
+	UPROPERTY(EditAnywhere, Category = Condition, meta = (ToolTip = "This should be set generously. The target point will be the centroid. But we're comparing the target to the impact point."))
+	double DistanceFromTargetToTolerate = 10;
+protected:
+	
+	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
+	virtual bool TestCondition(FStateTreeExecutionContext& Context) const override;
+};

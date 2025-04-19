@@ -18,13 +18,14 @@ enum ArtilleryRequestType
 	SpawnParticleSystemAtLocation,
 	// Meshes
 	SpawnStaticMesh,
+	TagReferenceModel,
+	NoTagReferenceModel,
 };
 
 USTRUCT()
 struct ARTILLERYRUNTIME_API FRequestThing
 {
 	GENERATED_BODY()
-
 	FRequestThing(): Stamp(0)
 	{
 	}
@@ -58,6 +59,8 @@ struct ARTILLERYRUNTIME_API FRequestThing
 	bool ActivateIfPossible = true;
 	bool CanExpire = true;
 	Layers::EJoltPhysicsLayer Layer;
+	//Do Not Touch This unless you know what you are doing.
+	FConservedTags ConservedTags; 
 	
 protected:
 	ArtilleryRequestType Type;

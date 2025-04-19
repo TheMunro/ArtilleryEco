@@ -262,6 +262,8 @@ public:
 
 	virtual void Tick(float DeltaTime) override
 	{
+		//super tick this.
+		Super::Super::Super::Super::Tick(DeltaTime);
 		UpdateRotation(DeltaTime);
 	}
 

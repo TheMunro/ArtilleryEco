@@ -17,9 +17,8 @@ EStateTreeRunStatus FMoveOrder::AttemptMovePath(FStateTreeExecutionContext& Cont
 		auto tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
 		if (found)
 		{
-			tagc->RemoveTag(TAG_Orders_Move_Needed);
+			tagc->Remove(TAG_Orders_Move_Needed);
 		}
-
 		UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,
 		                                          UThistleBehavioralist::DelayBetweenMoveOrders);
 
@@ -27,7 +26,7 @@ EStateTreeRunStatus FMoveOrder::AttemptMovePath(FStateTreeExecutionContext& Cont
 		{
 			if (found)
 			{
-				tagc->AddTag(TAG_Orders_Move_Needed);
+				tagc->Add(TAG_Orders_Move_Needed);
 			}
 			return EStateTreeRunStatus::Succeeded;
 		}
@@ -36,7 +35,7 @@ EStateTreeRunStatus FMoveOrder::AttemptMovePath(FStateTreeExecutionContext& Cont
 		{
 			if (found)
 			{
-				tagc->AddTag(TAG_Orders_Move_Needed);
+				tagc->Add(TAG_Orders_Move_Needed);
 			}
 			return EStateTreeRunStatus::Failed;
 		}

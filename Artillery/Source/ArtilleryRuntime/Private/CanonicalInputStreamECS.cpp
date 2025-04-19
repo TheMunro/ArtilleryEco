@@ -141,7 +141,7 @@ bool UCanonicalInputStreamECS::removePattern(IPM::CanonPattern ToBind, FActionPa
 	}
 	return false;
 }
-TPair<ActorKey, InputStreamKey> UCanonicalInputStreamECS::RegisterKeysToParentActorMapping(FireControlKey MachineKey, bool IsActorForLocalPlayer , const ActorKey& ParentKey)
+TPair<ActorKey, InputStreamKey> UCanonicalInputStreamECS::RegisterKeysToParentActorMapping(FireControlKey MachineKey, bool IsActorForLocalPlayer , const ActorKey ParentKey)
 {
 	LocalActorToFireControlMapping->Add(ParentKey, MachineKey);
 

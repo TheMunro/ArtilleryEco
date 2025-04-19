@@ -194,6 +194,30 @@ public:
 	{
 		throw; //not implemented yet
 	};
+
+	FGrantWith TagReferenceModel(FSkeletonKey Target, ArtilleryTime Stamp, FConservedTags ValidSharedPtr)
+	{
+		if (this)
+		{
+			auto MyRequest = FRequestThing(ArtilleryRequestType::TagReferenceModel);
+			MyRequest.ConservedTags =  ValidSharedPtr;
+			MyRequest.Stamp = Stamp;
+			MyRequest.SourceOrSelf = Target;
+			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
+		}
+		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
+	};
+	FGrantWith NoTagReferenceModel(FSkeletonKey Target, ArtilleryTime Stamp)
+	{
+		if (this)
+		{
+			auto MyRequest = FRequestThing(ArtilleryRequestType::NoTagReferenceModel);
+			MyRequest.Stamp = Stamp;
+			MyRequest.SourceOrSelf = Target;
+			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
+		}
+		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
+	};
 	
 	FGrantWith GunFiredWhenATagGetsAdded()
 	{

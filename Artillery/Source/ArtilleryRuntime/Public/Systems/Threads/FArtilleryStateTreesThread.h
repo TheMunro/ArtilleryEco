@@ -40,7 +40,7 @@ public:
 					FRequestThing RouterQueue;
 					while (HoldOpen->Dequeue(RouterQueue))
 					{
-						//PINPOINT: YABUSYTHREADBOYRUNNETHREQUESTSHERE
+						//PINPOINT: YAAITHREADBOYRUNNETHREQUESTSHERE
 						if (RouterQueue.GetType() == ArtilleryRequestType::BindAI)
 						{
 							EnemyRegisterHook.ExecuteIfBound(RouterQueue.SourceOrSelf, RouterQueue.Stamp);
@@ -109,7 +109,8 @@ public:
 	{
 		
 		running = false;
-		FRunnable::Stop();
+		UE_LOG(LogTemp, Display, TEXT("Artillery:AIWorker: Stopping Artillery AI thread."));
+		Cleanup();
 	}
 
 	

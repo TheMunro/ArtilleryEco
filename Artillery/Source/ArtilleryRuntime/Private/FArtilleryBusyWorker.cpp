@@ -10,6 +10,7 @@
 FArtilleryBusyWorker::FArtilleryBusyWorker() : RequestorQueue_Abilities_TripleBuffer(nullptr), running(false)
 {
 	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Constructing Artillery"));
+	TagRollbackManagement = TSet<FConservedTags>();
 }
 
 FArtilleryBusyWorker::~FArtilleryBusyWorker()
@@ -164,11 +165,33 @@ void FArtilleryBusyWorker::ProcessRequestRouterBusyWorkerThread()
 			TSharedPtr<F_INeedA::ThreadFeed> HoldOpen;
 			if (WorkerFeedMap.Queue && ((HoldOpen = WorkerFeedMap.Queue)) && WorkerFeedMap.That != std::thread::id()) //if there IS a thread.
 			{
-				FRequestThing RouterQueue;
-				while (HoldOpen->Dequeue(RouterQueue))
+				FRequestThing Request;
+				while (HoldOpen->Dequeue(Request))
 				{
 					//PINPOINT: YABUSYTHREADBOYRUNNETHREQUESTSHERE
-
+					switch (Request.GetType())
+					{
+					case ArtilleryRequestType::TagReferenceModel:
+						{
+							TagRollbackManagement.Add(Request.ConservedTags);
+						}
+						break;
+					case ArtilleryRequestType::NoTagReferenceModel:
+						{
+							TagRollbackManagement.Remove(Request.ConservedTags);
+						}
+						break;
+					default:
+						UE_LOG(
+							LogTemp,
+							Fatal,
+							TEXT(
+								"ArtilleryDispatch::ProcessRequestRouterGameThread: Received Request Router request for unimplemented request type: [%d]"
+							),
+							Request.GetType());
+						throw;
+					}
+						
 				}
 			}
 		}
@@ -202,6 +225,16 @@ void FArtilleryBusyWorker::RunFrameProcessingLoop(bool missedPrior, uint64_t cur
 			TickliteNow = ContingentInputECSLinkage->Now(); // this updates ONCE PER CYCLE. ONCE. THIS IS INTENDED.
 
 			ProcessRequestRouterBusyWorkerThread();
+			//tag container save-off currently happens before player and player-like locomotion.
+			//this SHOULD be the right place, by my limited reasoning, but I could be wrong.
+			for (auto TagSet : TagRollbackManagement)
+			{
+				if (TagSet)
+				{
+					TagSet->CacheLayer();	
+				}
+			}
+			
 			ArtilleryDispatch->RunLocomotions();
 			//such a simple thing, after all this work.
 			if (ContingentPhysicsLinkage == nullptr) 
@@ -212,6 +245,7 @@ void FArtilleryBusyWorker::RunFrameProcessingLoop(bool missedPrior, uint64_t cur
 			else // yeah, I know it's optional, but stylistically, it's important.
 			{
 				ContingentPhysicsLinkage->StackUp();
+
 				StartTicklitesApply->Trigger();
 				StartRunAhead->Trigger();
 				ContingentPhysicsLinkage->StepWorld(TickliteNow, SeqNumber);
@@ -319,7 +353,7 @@ void FArtilleryBusyWorker::Exit()
 
 void FArtilleryBusyWorker::Stop()
 {
-	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Stopping Artillery thread."));
+	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Stopping Artillery Busyworker thread."));
 	Cleanup();
 }
 

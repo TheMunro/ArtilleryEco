@@ -30,6 +30,7 @@ class FArtilleryBusyWorker : public FRunnable {
 	TSharedPtr<BufferedMoveEvents>  Locomos_BufferNotThreadSafe;
 	TSharedPtr<BufferedEvents> RequestorQueue_Abilities_TripleBuffer;
 	TSharedPtr<BufferedAIMoveEvents> RequestorQueue_AI_Locomos_TripleBuffer;
+
 	ArtilleryTime TickliteNow = 0;
 	FSharedEventRef StartTicklitesSim;
 	FSharedEventRef StartTicklitesApply;
@@ -68,4 +69,9 @@ class FArtilleryBusyWorker : public FRunnable {
 private:
 	void Cleanup();
 	bool running;
+	//this needs to remain private and only be modified or used on this thread.
+	//if you want to add the ability to expose this off-thread, first, see if the ATA already present in ArtilleryDispatch is good enough.
+	//second, assess if you can use a shadow-copy-and-swap pattern identical to the one used for generating the quadtree we expose for radar.
+	//third, if neither is true, let me know what you come up with! just ping me on github -JMK
+	TSet<FConservedTags> TagRollbackManagement;
 };

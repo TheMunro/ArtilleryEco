@@ -19,7 +19,8 @@ constexpr static uint64_t FIELDMASK_4bits =	0x000000000000000F; //1111
 constexpr static uint64_t FIELDMASK_all =	0xFFFFFFFFFFFFFFFF;
 
 
-//BASETYPE
+//SWITCH TO GAMEPLAYTAGS using the AtomicTagArray!
+//DO NOT MAKE FURTHER USE OF THIS unless you are _positive_ it's the best fit.
 USTRUCT(BlueprintType)
 struct ARTILLERYRUNTIME_API FConservedStateData 
 {

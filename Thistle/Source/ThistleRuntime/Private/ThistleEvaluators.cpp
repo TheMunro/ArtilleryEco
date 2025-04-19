@@ -30,7 +30,7 @@ void FThistleSphereCast::Tick(FStateTreeExecutionContext& Context, const float D
 	bool Shucked = false;
 	auto Source = InstanceData.Source.ShuckPoi(Shucked);
 	if (!Shucked) { return; }
-	auto Target = InstanceData.Source.ShuckPoi(Shucked);
+	auto Target = InstanceData.Target.ShuckPoi(Shucked);
 	// ReSharper disable once CppRedundantControlFlowJump
 	if (!Shucked) { return; }
 	auto ToFrom = (Target - Source);
@@ -51,6 +51,7 @@ void FThistleSphereCast::Tick(FStateTreeExecutionContext& Context, const float D
 			UBarrageDispatch::SelfPtr->SphereCast(InstanceData.Radius, Length, Source, ToFrom.GetSafeNormal(),
 			                                      InstanceData.HitResultCache, default_broadphase_layer_filter,
 			                                      default_object_layer_filter, StopHittingYourself);
+			InstanceData.Outcome = *(InstanceData.HitResultCache);
 		}
 		else
 		{

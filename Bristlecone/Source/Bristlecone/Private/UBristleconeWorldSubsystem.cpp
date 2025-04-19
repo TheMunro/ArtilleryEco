@@ -109,7 +109,7 @@ void UBristleconeWorldSubsystem::Deinitialize()
 
 	if (sender_thread)
 	{
-		sender_runner.Stop();
+		sender_thread->Kill();
 		WakeSender->Trigger();
 	}
 	if (receiver_thread)

@@ -16,6 +16,12 @@
 #include "KeyedConcept.h"
 #include "ORDIN.h"
 #include "ParticleRecord.h"
+THIRD_PARTY_INCLUDES_START
+PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
+#include "libcuckoo/cuckoohash_map.hh"
+typedef libcuckoo::cuckoohash_map<FSkeletonKey, ParticleRecord> ParticleCuckoo;
+PRAGMA_POP_PLATFORM_DEFAULT_PACKING
+THIRD_PARTY_INCLUDES_END
 #include "NiagaraParticleDispatch.generated.h"
 
 /**
@@ -102,7 +108,7 @@ public:
 		KeyToParticleParamMapping = MakeShareable(new TMap<FBoneKey, TSharedPtr<TQueue<NiagaraVariableParam>>>());
 		ProjectileNameToNDCAsset = MakeShareable(new TMap<FString, ManagementPayload>());
 		NDCAssetTOProjectileName = MakeShareable(new TMap<TObjectPtr<UNiagaraDataChannelAsset>, FString>());
-		KeyToParticleRecordMapping = MakeShareable(new TMap<FSkeletonKey, ParticleRecord>);
+		KeyToParticleRecordMapping = MakeShareable(new ParticleCuckoo());
 	}
 
 	static inline UNiagaraParticleDispatch* SelfPtr = nullptr;
@@ -144,7 +150,10 @@ protected:
 	using ManagementPayload = TPair<TObjectPtr<UNiagaraDataChannelAsset>, TObjectPtr<UNiagaraDataChannelWriter>>;
 	TSharedPtr<TMap<FString, ManagementPayload>> ProjectileNameToNDCAsset;
 	TSharedPtr<TMap<TObjectPtr<UNiagaraDataChannelAsset>, FString>> NDCAssetTOProjectileName;
-	TSharedPtr<TMap<FSkeletonKey, ParticleRecord>> KeyToParticleRecordMapping;
+	//just a reminder, should it be relevant. find throws by default.
+	//if this is a source of slowdown, you may consider debugging and using the dreadful KeySlink. it's not debugged tho..
+	//good luck I guess lol.
+	TSharedPtr<ParticleCuckoo> KeyToParticleRecordMapping;
 
 public:
 	virtual void PostInitialize() override;
@@ -214,15 +223,18 @@ public:
 		return AssetPtr != nullptr ? TWeakObjectPtr<UNiagaraDataChannelAsset>(AssetPtr) : nullptr;
 	}
 
-	ParticleRecord& RegisterKeyForProcessing(FSkeletonKey ProjectileKey) const
+	void RegisterKeyForProcessing(FSkeletonKey ProjectileKey, TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr) const
 	{
 		ParticleRecord NewPR;
-		return KeyToParticleRecordMapping->Add(ProjectileKey, NewPR);
+		NewPR.NDCAssetPtr = ProjectileNDCAssetPtr;
+		NewPR.NDCIndex = -1;
+		KeyToParticleRecordMapping->insert_or_assign(ProjectileKey, NewPR);
+		
 	}
 
 	void CleanupKey(const FSkeletonKey Key)
 	{
-		KeyToParticleRecordMapping->Remove(Key);
+		KeyToParticleRecordMapping->erase(Key);
 	}
 };
 

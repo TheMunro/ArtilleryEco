@@ -585,19 +585,68 @@ inline bool UBarragePlayerAgent::CalculateAimVector(
 			FBLet AimAtFiblet = Physics->GetShapeRef(HitBarrageKey);
 			if (AimAtFiblet)
 			{
-	
 				UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
 				check(TransformDispatch);
 		
 				TWeakObjectPtr<AActor> AimTarget = TransformDispatch->GetAActorByObjectKey(AimAtFiblet->KeyOutOfBarrage);
 				UArtilleryDispatch* ADispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
-				if (AimTarget.IsValid() && ADispatch->DoesEntityHaveTag(AimAtFiblet->KeyOutOfBarrage, FGameplayTag::RequestGameplayTag("Enemy")))
+
+				if (AimTarget.IsValid())
 				{
-					OutTargetAimAtLocation = AimTarget->GetActorLocation();
-					TargetKey = AimAtFiblet->KeyOutOfBarrage;
-					TargetActor = AimTarget.Get();
-					//DrawDebugSphere(GetWorld(), AimTarget->GetActorLocation(), 10.f, 12, FColor::Yellow, true, 1, SDPG_Foreground, 1.f);
-					return true;
+					if (ADispatch->DoesEntityHaveTag(AimAtFiblet->KeyOutOfBarrage, FGameplayTag::RequestGameplayTag("Enemy")))
+					{
+						OutTargetAimAtLocation = AimTarget->GetActorLocation();
+						TargetKey = AimAtFiblet->KeyOutOfBarrage;
+						TargetActor = AimTarget.Get();
+						//DrawDebugSphere(GetWorld(), AimTarget->GetActorLocation(), 10.f, 12, FColor::Yellow, true, 1, SDPG_Foreground, 1.f);
+						return true;
+					}
+
+					const FVector SearchLocation = HitObjectResult.Get()->Location;
+					double DistanceToNearest = 1.f;
+					FSkeletonKey ClosestCurrent = FSkeletonKey::Invalid();
+					FVector ClosestCurrentLocation(0.f);
+					uint32 BodiesFoundNearTarget = 0;
+					TArray<uint32> BodyIDsFound;
+					BodyIDsFound.Reserve(MAX_FOUND_OBJECTS);
+					Physics->SphereSearch(
+						MyFiblet->KeyIntoBarrage,
+						SearchLocation,
+						0.15f,
+						BroadPhaseFilter,
+						ObjectLayerFilter,
+						BodyFilter,
+						&BodiesFoundNearTarget,
+						BodyIDsFound);
+
+					for (uint32 ActorIndex = 0; ActorIndex < BodiesFoundNearTarget; ++ActorIndex)
+					{
+						const uint32 BodyID = BodyIDsFound[ActorIndex];
+						FBarrageKey BodyBarrageKey = Physics->GenerateBarrageKeyFromBodyId(BodyID);
+						FBLet BodyObjectFiblet = Physics->GetShapeRef(BodyBarrageKey);
+						if (BodyObjectFiblet)
+						{
+							FSkeletonKey BodyObjectKey = BodyObjectFiblet->KeyOutOfBarrage;
+							if (ADispatch->DoesEntityHaveTag(BodyObjectKey, FGameplayTag::RequestGameplayTag("Enemy")))
+							{
+								const FVector3f CurrentBodyLoc = FBarragePrimitive::GetPosition(BodyObjectFiblet);
+								const double DistanceToCurrent = (SearchLocation - FVector(CurrentBodyLoc)).Length();
+								if (DistanceToCurrent < DistanceToNearest)
+								{
+									DistanceToNearest = DistanceToCurrent;
+									ClosestCurrent = BodyObjectKey;
+									ClosestCurrentLocation = FVector(CurrentBodyLoc);
+								}
+							}
+						}
+					}
+
+					if (ClosestCurrent.IsValid())
+					{
+						OutTargetAimAtLocation = ClosestCurrentLocation;
+						TargetKey = ClosestCurrent;
+						TargetActor = TransformDispatch->GetAActorByObjectKey(ClosestCurrent).Get();
+					}
 				}
 		
 				OutTargetAimAtLocation = HitObjectResult->Location;

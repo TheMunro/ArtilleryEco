@@ -203,12 +203,12 @@ FSkeletonKey UArtilleryProjectileDispatch::QueueProjectileInstance(const FName P
 		                                  Gun, MyDispatch->GetShadowNow(), Layer);
 		if (TagArray != nullptr)
 		{
-			GameplayTagContainerPtr TagContainer = MyDispatch->GetGameplayTagContainerAndAddIfNotExists(ProjectileKey);
+			FConservedTags TagContainer = MyDispatch->GetOrRegisterConservedTags(ProjectileKey);
 			if (TagContainer.IsValid())
 			{
 				for (FGameplayTag& Tag : *TagArray)
 				{
-					TagContainer->AddTag(Tag);
+					MyDispatch->AddTagToEntity(ProjectileKey, Tag);
 				}
 			}
 		}
@@ -247,9 +247,7 @@ FSkeletonKey UArtilleryProjectileDispatch::CreateProjectileInstance(FSkeletonKey
 					ProjectileDefinitionId.ToString());
 				if (ProjectileNDCAssetPtr.IsValid())
 				{
-					ParticleRecord& NewParticleRecord = NPD->RegisterKeyForProcessing(NewProjectileKey);
-					NewParticleRecord.NDCAssetPtr = ProjectileNDCAssetPtr;
-					NewParticleRecord.NDCIndex = -1;
+					NPD->RegisterKeyForProcessing(NewProjectileKey, ProjectileNDCAssetPtr);
 				}
 				if (CanExpire)
 				{

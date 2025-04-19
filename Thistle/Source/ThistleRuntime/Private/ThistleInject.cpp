@@ -19,7 +19,6 @@ void AThistleInject::PostInitializeComponents()
 	if (!IsDefaultSubobject())
 	{
 		LKeyCarry->AttemptRegister();
-		AttemptRegister();
 	}
 }
 
@@ -61,6 +60,7 @@ inline bool AThistleInject::RegistrationImplementation()
 		ArtilleryStateMachine->MyTags->AddTag(TAG_Orders_Attack_Available);
 		ArtilleryStateMachine->MyTags->AddTag(TAG_Orders_Target_Needed);
 		ArtilleryStateMachine->MyTags->AddTag(TAG_Orders_Rally_PreferSquad);
+		ArtilleryStateMachine->MyTags->AddTag(TAG_Enemy);
 		
 		return true;
 	}
@@ -228,7 +228,7 @@ void AThistleInject::LocomotionStateMachine()
 {
 	// I KNOW THIS LOOKS DUMB BUT ONE IS POINTER CHECK AND OTHER IS PATH VALIDITY CHECK (lol.)
 	auto selfpin = BarragePhysicsAgent->MyBarrageBody;
-	if(this && this->MyKey != 0 && Path.IsValid() && Path->IsValid() && selfpin)
+	if(this && this->MyKey != 0 && Path.IsValid() && selfpin)
 	{
 		
 		const auto Physics = UBarrageDispatch::SelfPtr;

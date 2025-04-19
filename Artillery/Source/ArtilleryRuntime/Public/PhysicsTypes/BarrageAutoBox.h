@@ -119,7 +119,7 @@ inline void UBarrageAutoBox::Register()
 			}
 			auto params = FBarrageBounder::GenerateBoxBounds(GetOwner()->GetActorLocation(),FMath::Max(extents.X, .1), FMath::Max(extents.Y, 0.1), FMath::Max( extents.Z, 0.1),
 				FVector3d(OffsetCenterToMatchBoundedShapeX, OffsetCenterToMatchBoundedShapeY, OffsetCenterToMatchBoundedShapeZ), MyMassClass.Category);
-			MyBarrageBody = Physics->CreatePrimitive(params, MyObjectKey, static_cast<uint16>(Layer));
+			MyBarrageBody = Physics->CreatePrimitive(params, MyObjectKey, static_cast<uint16>(Layer), false, false, isMovable);
 			//TransformECS->RegisterObjectToShadowTransform(MyObjectKey, const_cast<UE::Math::TTransform<double>*>(&GetOwner()->GetTransform()));
 			if(MyBarrageBody)
 			{

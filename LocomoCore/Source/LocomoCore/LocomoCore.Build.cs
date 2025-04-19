@@ -36,7 +36,7 @@ public class LocomoCore : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"ApplicationCore"
+				"ApplicationCore", "SkeletonKey", "GameplayTags"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -49,7 +49,7 @@ public class LocomoCore : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"ApplicationCore"
+				"ApplicationCore", "SkeletonKey", "GameplayTags"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
