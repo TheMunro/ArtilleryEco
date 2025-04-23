@@ -12,9 +12,9 @@ struct FProjectileDefinitionRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=ProjectileDefinition)
 	FString ProjectileDefinitionId;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=ProjectileDefinition)
-	FString ProjectileMeshLocation;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ProjectileDefinition)
+	TObjectPtr<UStaticMesh> ProjectileMesh = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=ProjectileDefinition)
-	FString ParticleEffectDataChannel;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ProjectileDefinition)
+	TObjectPtr<UNiagaraDataChannelAsset> ParticleEffectDataChannel;
 };

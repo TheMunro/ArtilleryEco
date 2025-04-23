@@ -59,17 +59,20 @@ void FConservedTagContainer::CacheLayer()
 {
 	auto index = CurrentHistory.GetNextIndex(CurrentWriteHead);
 	CurrentHistory[index] = FTagLayer();
-	for (auto tagcode : Tags->Tags)
+	auto WornRing = DecoderRing.Pin();
+	if (WornRing)
 	{
-		auto ATag = DecoderRing->Find(tagcode);
-		if (ATag != nullptr)
+		for (auto tagcode : Tags->Tags)
 		{
-			CurrentHistory[index]->Add(*ATag);
+			auto ATag = WornRing->Find(tagcode);
+			if (ATag != nullptr)
+			{
+				CurrentHistory[index]->Add(*ATag);
+			}
 		}
+		++CurrentWriteHead;
 	}
-	++CurrentWriteHead;
 }
-
 
 FConservedTags FConservedTagContainer::GetReference()
 {
@@ -149,14 +152,14 @@ bool RecordTags()
 
 AtomicTagArray::AtomicTagArray()
 {
-
-	SeenT = MakeShareable(new UnderlyingTagMapping());
-	Decoder = MakeShareable(new UnderlyingTagReverse());
 }
 
 
 void AtomicTagArray::Init()
 {
+	SeenT = MakeShareable(new UnderlyingTagMapping());
+	MasterDecoderRing = MakeShareable(new UnderlyingTagReverse());
+	FastEntities = MakeShareable(new Entities());
 	FGameplayTagContainer Container;
 	UGameplayTagsManager::Get().RequestAllGameplayTags(Container, false);
 	TArray<FGameplayTag> TagArray;
@@ -164,7 +167,7 @@ void AtomicTagArray::Init()
 	for (auto& Tag : TagArray)
 	{
 		SeenT->Emplace(Tag, ++Counter);
-		Decoder->Emplace(Counter,Tag);
+		MasterDecoderRing->Emplace(Counter,Tag);
 	}
 }
 
@@ -186,13 +189,14 @@ bool AtomicTagArray::Add(FSkeletonKey Top, FGameplayTag Bot)
 FConservedTags AtomicTagArray::NewTagContainer(FSkeletonKey Top)
 {
 	uint32_t Key = KeyToHash(Top);
-	if (FTagsPtr Tags; !FastEntities.find(Key, Tags))
+	auto HOpen = FastEntities;
+	if (FTagsPtr Tags; HOpen && !HOpen->find(Key, Tags))
 	{
 		Tags = MakeShareable<FTagStateRepresentation>(new FTagStateRepresentation());
-		FConservedTags That = MakeShareable(new FConservedTagContainer(Tags, Decoder, SeenT));
+		FConservedTags That = MakeShareable(new FConservedTagContainer(Tags, MasterDecoderRing, SeenT));
 		That->AccessRefController =  That.ToWeakPtr();
 		Tags->AccessRefController = That->AccessRefController;
-		FastEntities.insert_or_assign(Key, Tags);
+		FastEntities->insert_or_assign(Key, Tags);
 		return That; //this begins a chain of events that leads to everything getting reference counted correctly.
 	}
 	return nullptr; // this is a lot tidier but it's still a horror.
@@ -208,10 +212,12 @@ uint32_t AtomicTagArray::KeyToHash(FSkeletonKey Top)
 bool AtomicTagArray::Find(FSkeletonKey Top, FGameplayTag Bot)
 {
 	uint32_t Key = KeyToHash(Top);
-	if (auto search = SeenT->Find(Bot); search != nullptr)
+	
+	auto HOpen = FastEntities;
+	if (auto search = SeenT->Find(Bot); HOpen && search != nullptr)
 	{
 		auto Numerology = *search;
-		if (FTagsPtr Tags; !FastEntities.find(Key, Tags))
+		if (FTagsPtr Tags; !HOpen->find(Key, Tags))
 		{
 			return false;
 		}
@@ -223,25 +229,18 @@ bool AtomicTagArray::Find(FSkeletonKey Top, FGameplayTag Bot)
 	return false;
 }
 
-inline FConservedTags AtomicTagArray::GetReference(FSkeletonKey Top)
-{
-	FTagsPtr into = nullptr;
-	uint32_t Key = KeyToHash(Top);
-	if (FastEntities.find(Key, into))
-	{
-		if (into.IsValid())
-		{
-			return into->AccessRefController.Pin();
-		}
-	}
-	return FConservedTags();
-}
 
 
 bool AtomicTagArray::Erase(FSkeletonKey Top)
 {
 	uint32_t Key = KeyToHash(Top);
-	return FastEntities.erase(Key);
+	
+	auto HOpen = FastEntities;
+	if (HOpen)
+	{
+		return FastEntities->erase(Key);
+	}
+	return true;
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
@@ -250,10 +249,11 @@ bool AtomicTagArray::Erase(FSkeletonKey Top)
 bool AtomicTagArray::Remove(FSkeletonKey Top, FGameplayTag Bot)
 {
 	uint32_t Key = KeyToHash(Top);
+	auto HOpen = FastEntities;
 	if (auto search = SeenT->Find(Bot); search != nullptr)
 	{
 		auto Numerology = *search;
-		if (FTagsPtr Tags; !FastEntities.find(Key, Tags))
+		if (FTagsPtr Tags; HOpen && !HOpen->find(Key, Tags))
 		{
 			return true;
 		}
@@ -268,22 +268,49 @@ bool AtomicTagArray::Remove(FSkeletonKey Top, FGameplayTag Bot)
 bool AtomicTagArray::SkeletonKeyExists(FSkeletonKey Top)
 {
 	uint32_t Key = KeyToHash(Top);
-	return FastEntities.contains(Key);
+	
+	auto HOpen = FastEntities;
+	if (HOpen)
+	{
+		return HOpen->contains(Key);
+	}
+	return false;
+}
+
+inline FConservedTags AtomicTagArray::GetReference(FSkeletonKey Top)
+{
+	FTagsPtr into = nullptr;
+	uint32_t Key = KeyToHash(Top);
+	
+	auto HOpen = FastEntities;
+	if (HOpen && HOpen->find(Key, into))
+	{
+		if (into.IsValid())
+		{
+			return into->AccessRefController.Pin();
+		}
+	}
+	return FConservedTags();
 }
 
 bool AtomicTagArray::Empty()
 {
-	FastEntities.clear();
+	
+	auto HOpen = FastEntities;
+	FastEntities.Reset();
 	SeenT.Reset(); // let it go, but don't blast it.
+	MasterDecoderRing.Reset();
 	return true;
 }
 
 bool AtomicTagArray::AddImpl(uint32_t Key, FGameplayTag Bot)
 {
-	if (auto search = SeenT->Find(Bot); search != nullptr)
+	
+	auto HOpen = FastEntities;
+	if (auto search = SeenT->Find(Bot); HOpen && search != nullptr)
 	{
 		auto Numerology = *search;
-		if (FTagsPtr Tags; !FastEntities.find(Key, Tags))
+		if (FTagsPtr Tags; !HOpen->find(Key, Tags))
 		{
 			return false;
 		}

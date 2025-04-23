@@ -105,9 +105,15 @@ public:
 
 	~UArtilleryGameplayTagContainer()
 	{
-		if (MyDispatch && !ReferenceOnlyMode)
+		if (MyTags)
 		{
-			MyDispatch->DeregisterGameplayTags(ParentKey);
+			//this exploits a quirk of the GC collection sequencing for our mutual friend and allows us to detect
+			//a number of things we otherwise shouldn't know.
+			auto LiveCycle = MyTags->DecoderRing.Pin();
+			if (MyDispatch && !ReferenceOnlyMode && LiveCycle)
+			{
+				MyDispatch->DeregisterGameplayTags(ParentKey);
+			}
 		}
 	}
 };

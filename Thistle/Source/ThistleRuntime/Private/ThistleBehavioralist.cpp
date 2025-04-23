@@ -37,7 +37,7 @@ bool UThistleBehavioralist::RegistrationImplementation()
 void UThistleBehavioralist::BounceTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration) const
 {
 	bool found = false;
-	auto stamp = DeadlinerTime+Duration;
+	auto stamp = DeadlinerTime + Duration;
 	if (found)
 	{
 		MyDispatch->RemoveTagFromEntity(Key, Tag);
@@ -54,7 +54,7 @@ void UThistleBehavioralist::BounceTag(FSkeletonKey Key, FNativeGameplayTag& Tag,
 
 void UThistleBehavioralist::DelayedTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration)
 {
-	auto stamp = DeadlinerTime+Duration;
+	auto stamp = DeadlinerTime + Duration;
 	if (!ExpirationDeadliner->Contains(stamp))
 	{
 		ExpirationDeadliner->Add(stamp, {{Key, Tag, true}});
@@ -68,7 +68,7 @@ void UThistleBehavioralist::DelayedTag(FSkeletonKey Key, FNativeGameplayTag& Tag
 void UThistleBehavioralist::ExpireTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int Duration)
 {
 	bool found = false;
-	auto stamp = DeadlinerTime+Duration;
+	auto stamp = DeadlinerTime + Duration;
 	if (found)
 	{
 		MyDispatch->AddTagToEntity(Key, Tag);
@@ -85,7 +85,7 @@ void UThistleBehavioralist::ExpireTag(FSkeletonKey Key, FNativeGameplayTag& Tag,
 
 void UThistleBehavioralist::TimedTagsMaintenance(int CurrentTck)
 {
-	DeadlinerTime = CurrentTck;//odd, I know, but it allows for rollbacks.
+	DeadlinerTime = CurrentTck; //odd, I know, but it allows for rollbacks.
 	if (ExpirationDeadliner->Contains(CurrentTck))
 	{
 		auto AnyToExpire = ExpirationDeadliner->FindAndRemoveChecked(CurrentTck);
@@ -97,11 +97,11 @@ void UThistleBehavioralist::TimedTagsMaintenance(int CurrentTck)
 			{
 				if (Goner.Get<2>())
 				{
-					tagc->Add( Goner.Get<1>());
+					tagc->Add(Goner.Get<1>());
 				}
 				else
 				{
-					tagc->Add( Goner.Get<1>());
+					tagc->Add(Goner.Get<1>());
 				}
 			}
 		}
@@ -113,7 +113,8 @@ void UThistleBehavioralist::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	SET_INITIALIZATION_ORDER_BY_ORDINATEKEY_AND_WORLD
 	//huh, this idiom for breaking up ordered registration is actually really nice and provides a really obvious separation.
-	GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(ORDIN::E_D_C::EnemyTagState, &(this->TagRegistration), &(this->TagRegistration));
+	GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(ORDIN::E_D_C::EnemyTagState, &(this->TagRegistration),
+	                                                          &(this->TagRegistration));
 }
 
 void UThistleBehavioralist::OnWorldBeginPlay(UWorld& InWorld)
@@ -125,7 +126,8 @@ void UThistleBehavioralist::OnWorldBeginPlay(UWorld& InWorld)
 
 void UThistleBehavioralist::Deinitialize()
 {
-	EntityToArtilleryBehavior->Empty(); // unlike the others, we can't trust this one. Actually, we prolly can't trust them either.
+	EntityToArtilleryBehavior->Empty();
+	// unlike the others, we can't trust this one. Actually, we prolly can't trust them either.
 	ActorToAILocomotionMapping->Empty();
 	ExpirationDeadliner->Empty();
 	Super::Deinitialize();
@@ -150,7 +152,7 @@ bool UThistleBehavioralist::AttemptInvokePathingOnKey(FSkeletonKey Target, FVect
 {
 	if (UThistleBehavioralist::SelfPtr)
 	{
-		TSharedPtr< TMap<ActorKey, TObjectPtr<AThistleInject>>> HoldOpen =
+		TSharedPtr<TMap<ActorKey, TObjectPtr<AThistleInject>>> HoldOpen =
 			UThistleBehavioralist::SelfPtr->ActorToAILocomotionMapping;
 		if (HoldOpen)
 		{
@@ -165,11 +167,11 @@ bool UThistleBehavioralist::AttemptInvokePathingOnKey(FSkeletonKey Target, FVect
 	return false;
 }
 
-bool UThistleBehavioralist::AttemptAimFromKey(FSkeletonKey From, FRotator TargetRotation )
+bool UThistleBehavioralist::AttemptAimFromKey(FSkeletonKey From, FRotator TargetRotation)
 {
 	if (UThistleBehavioralist::SelfPtr)
 	{
-		TSharedPtr< TMap<ActorKey, TObjectPtr<AThistleInject>>> HoldOpen =
+		TSharedPtr<TMap<ActorKey, TObjectPtr<AThistleInject>>> HoldOpen =
 			UThistleBehavioralist::SelfPtr->ActorToAILocomotionMapping;
 		if (HoldOpen)
 		{
@@ -188,7 +190,7 @@ bool UThistleBehavioralist::AttemptAttackFromKey(FSkeletonKey From)
 {
 	if (UThistleBehavioralist::SelfPtr)
 	{
-		TSharedPtr< TMap<ActorKey, TObjectPtr<AThistleInject>>> HoldOpen =
+		TSharedPtr<TMap<ActorKey, TObjectPtr<AThistleInject>>> HoldOpen =
 			UThistleBehavioralist::SelfPtr->ActorToAILocomotionMapping;
 		if (HoldOpen)
 		{
@@ -208,11 +210,11 @@ void UThistleBehavioralist::RegisterEnemy(const ActorKey NewKey, uint64_t Stamp)
 {
 	CurrentEnemies.Add(NewKey);
 	UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
-	if(TransformDispatch)
+	if (TransformDispatch)
 	{
 		TWeakObjectPtr<AActor> EnemyActor = TransformDispatch->GetAActorByObjectKey(NewKey);
 		MyDispatch->AddTagToEntity(NewKey, FGameplayTag::RequestGameplayTag("Enemy"));
-		if(EnemyActor.Get())
+		if (EnemyActor.Get())
 		{
 			//YOU MUST CONSTRUCT. LMAO. scope this lol
 			//this might end up sandblasting the object when the pointer is destroyed. lmao.
@@ -226,7 +228,7 @@ void UThistleBehavioralist::RegisterEnemy(const ActorKey NewKey, uint64_t Stamp)
 	}
 	else
 	{
-		DeregisterEnemy(NewKey);//die. TODO: fix.
+		DeregisterEnemy(NewKey); //die. TODO: fix.
 	}
 }
 
@@ -262,10 +264,10 @@ TArray<AGenericSmartObject*> UThistleBehavioralist::GetSomeRallyPoints(FVector L
 	TArray<AGenericSmartObject*> RetSet;
 	for (TTuple<FSkeletonKey, TObjectPtr<AGenericSmartObject>>& x : ManagedRallyPointSmartObjects)
 	{
-		if((Location - x.Value->GetActorLocation()).Length() < Range)
+		if ((Location - x.Value->GetActorLocation()).Length() < Range)
 		{
 			RetSet.Add(x.Value);
-			if(RetSet.Num() > Some)
+			if (RetSet.Num() > Some)
 			{
 				return RetSet;
 			}
@@ -281,21 +283,21 @@ void UThistleBehavioralist::SightLinesUpdate(const TArray<AActor*>& VisibleByAct
 	{
 		return;
 	}
-	
+
 	//remove this when we want to do stuff involving enemies that can see each OTHER.
 	if (BehavioralistTagState->HasTag(TAG_Perception_Player_Seen))
 	{
 		return;
 	}
-	
+
 	RecentlyProcessed.Add(Perceptor, true);
-	
+
 	for (AActor* Seen : VisibleByActor)
 	{
 		if (Seen && Seen->Implements<UGenericTeamAgentInterface>())
 		{
 			IGenericTeamAgentInterface* BindIntFunc = reinterpret_cast<IGenericTeamAgentInterface*>(Seen);
-			if ( BindIntFunc->GetGenericTeamId() == 1)
+			if (BindIntFunc->GetGenericTeamId() == 1)
 			{
 				//player
 				BehavioralistTagState->AddTag(TAG_Perception_Player_Seen);
@@ -320,39 +322,41 @@ FSkeletonKey UThistleBehavioralist::GetCurrentPlayer()
 
 void UThistleBehavioralist::ProcessRallyPoint()
 {
-	for(TTuple<FSkeletonKey, TObjectPtr<AGenericSmartObject>>& RallyKeyAndSmartObject : ManagedRallyPointSmartObjects)
+	for (TTuple<FSkeletonKey, TObjectPtr<AGenericSmartObject>>& RallyKeyAndSmartObject : ManagedRallyPointSmartObjects)
 	{
-		USmartObjectComponent* Smartness =  RallyKeyAndSmartObject.Value->GetComponentByClass<USmartObjectComponent>();
-		if(Smartness && SmartObjectSubsystem)
+		USmartObjectComponent* Smartness = RallyKeyAndSmartObject.Value->GetComponentByClass<USmartObjectComponent>();
+		if (Smartness && SmartObjectSubsystem)
 		{
 			const FSmartObjectHandle LiveHandle = Smartness->GetRegisteredHandle();
-			if(!LiveHandle.IsValid())
+			if (!LiveHandle.IsValid())
 			{
 				continue; // a problem for later
 			}
-			
+
 			FSmartObjectRequestFilter Claimed = FSmartObjectRequestFilter();
 			Claimed.bShouldIncludeClaimedSlots = true;
 			TArray<FSmartObjectSlotHandle> Slots;
 			SmartObjectSubsystem->FindSlots(LiveHandle, Claimed, Slots);
-			
+
 			float count = 0; // currently, we just check to see if a rally is "fullish" before dispatching.
-			for(FSmartObjectSlotHandle& slot : Slots)
+			for (FSmartObjectSlotHandle& slot : Slots)
 			{
-				if (slot.IsValid()) {
+				if (slot.IsValid())
+				{
 					FSmartObjectSlotView that = SmartObjectSubsystem->GetSlotView(slot);
 					count += that.GetState() == ESmartObjectSlotState::Claimed || !that.IsEnabled();
 				}
 			}
-			
+
 			const bool RallyReady = count / Slots.Num() >= RallyWatermark;
-			if(RallyReady)
+			if (RallyReady)
 			{
-				FBox box =  Smartness->GetSmartObjectBounds();
-				int radius = box.GetSize().Length();//we effectively double the size of the rally point by doing this. this is intended.
+				FBox box = Smartness->GetSmartObjectBounds();
+				int radius = box.GetSize().Length();
+				//we effectively double the size of the rally point by doing this. this is intended.
 				ActorKeyArray AxisPowers;
 				AxisPowers.Init(ActorKey(), MAX_ENEMY_COUNT);
-				
+
 				const uint32 EnemyCount = GetEnemiesWithinRangeOfPoint(box.GetCenter(), radius, AxisPowers);
 				for (uint32 EnemyIndex = 0; EnemyIndex < EnemyCount; ++EnemyIndex)
 				{
@@ -374,7 +378,6 @@ void UThistleBehavioralist::ProcessRallyPoint()
 
 void UThistleBehavioralist::DeregisterEnemy(const ActorKey& KeyToRemove)
 {
-	
 	EntityToArtilleryBehavior->Remove(KeyToRemove);
 	// TODO - Validate this is what we want to do. To note: This is a perf concern as 'remove' causes a reshuffling
 	//		  of elements in a TArray<T>, which could lead to perf issues if done often
@@ -383,7 +386,8 @@ void UThistleBehavioralist::DeregisterEnemy(const ActorKey& KeyToRemove)
 	//		  After all, how many enemies could we possibly have in a single map? Haha.
 	//I'm not sure that's true --J
 	ActorToAILocomotionMapping->Remove(KeyToRemove);
-	CurrentEnemies.Remove(KeyToRemove); //this is a strong tobject ptr, so we actually won't kill the actor til this is released.
+	CurrentEnemies.Remove(KeyToRemove);
+	//this is a strong tobject ptr, so we actually won't kill the actor til this is released.
 }
 
 void UThistleBehavioralist::CueEmptyRecent()
@@ -406,7 +410,7 @@ void UThistleBehavioralist::EmptyRecent()
 				BehavioralistTagState->RemoveTag(TAG_Perception_Player_Seen);
 			}
 		}
-		
+
 		EmptyRecentCued = false;
 	}
 }
@@ -416,7 +420,7 @@ void UThistleBehavioralist::EmptyRecent()
 void UThistleBehavioralist::Update(uint64_t CurrentTck)
 {
 	//this maybe be replaced by a full Harvester.
-	if(CurrentTck % WIDE_CADENCE == 0)
+	if (CurrentTck % WIDE_CADENCE == 0)
 	{
 		ProcessRallyPoint();
 		CueEmptyRecent();
@@ -446,7 +450,6 @@ void UThistleBehavioralist::RunStateTrees(uint64_t CurrentTck) const
 	{
 		for (auto& Entry : *EntityToArtilleryBehavior)
 		{
-
 			//we'll actually want to pass these in, but getting them here is out of scope at the moment.
 			//TODO: use prior-prior tick and prior tick instead of current to increase determinability of the AI system
 			//and give players the slimmest fighting chance if someone decides input reading is a good idea.
@@ -469,7 +472,7 @@ uint32 UThistleBehavioralist::GetEnemiesWithinRangeOfPoint(
 	{
 		return 0;
 	}
-	
+
 	UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
 	if (TransformDispatch == nullptr)
 	{
@@ -490,7 +493,6 @@ uint32 UThistleBehavioralist::GetEnemiesWithinRangeOfPoint(
 		// TODO - add 'dead' enemy keys to a dead array so we can clean up the array later
 		if (CurrentEnemyHealth > 0.f)
 		{
-			
 			TWeakObjectPtr<AActor> EnemyActor = TransformDispatch->GetAActorByObjectKey(EnemyKey);
 			if (EnemyActor.IsValid())
 			{
@@ -528,46 +530,49 @@ uint32 UThistleBehavioralist::GetEnemiesWithinRangeOfPoint(
 // update enemy status
 void UThistleBehavioralist::CullDeadEnemies()
 {
-	for(int32 EnemyIndex = 0; EnemyIndex < CurrentEnemies.Num(); EnemyIndex++)
+	if (MyDispatch)
 	{
-		if (CurrentEnemies[EnemyIndex] != 0)
+		for (int32 EnemyIndex = 0; EnemyIndex < CurrentEnemies.Num(); EnemyIndex++)
 		{
-			MyDispatch->GetAttribAndApplyIf(CurrentEnemies[EnemyIndex], HEALTH, [this, EnemyIndex](AttrPtr Health)
+			if (CurrentEnemies[EnemyIndex] != 0)
 			{
-				if (Health->GetCurrentValue() <= 0.f)
+				MyDispatch->GetAttribAndApplyIf(CurrentEnemies[EnemyIndex], HEALTH, [this, EnemyIndex](AttrPtr Health)
 				{
-					DeadEnemies.Add(CurrentEnemies[EnemyIndex]);
-					CurrentEnemies.RemoveAtSwap(EnemyIndex);
-					return true;
-				}
-				return false;
-			});
+					if (Health->GetCurrentValue() <= 0.f)
+					{
+						DeadEnemies.Add(CurrentEnemies[EnemyIndex]);
+						CurrentEnemies.RemoveAtSwap(EnemyIndex);
+						return true;
+					}
+					return false;
+				});
+			}
 		}
-	}
-	
-	UTransformDispatch* TransformDispatch = UTransformDispatch::SelfPtr;
-	UBarrageDispatch* Physics = UBarrageDispatch::SelfPtr;
-	if (TransformDispatch == nullptr || Physics == nullptr)
-	{
-		return; //can't shake'em.
-	}
-	for (ActorKey DeadEnemy : DeadEnemies)
-	{
-		DeregisterEnemy(DeadEnemy); //actor destruction is keyed to the destruction of the barrage object.
-		TransformDispatch->ReleaseKineByKey(DeadEnemy); //if we do not release the kine, bad things happen.
-		MyDispatch->DeregisterAttributes(DeadEnemy);
-		MyDispatch->DeregisterRelationships(DeadEnemy);
-		MyDispatch->DeregisterVecAttribs(DeadEnemy);
-		MyDispatch->DeregisterGameplayTags(DeadEnemy);
-		
-		FBLet posit = Physics->GetShapeRef(DeadEnemy);
-		if(posit)
+
+		UTransformDispatch* TransformDispatch = UTransformDispatch::SelfPtr;
+		UBarrageDispatch* Physics = UBarrageDispatch::SelfPtr;
+		if (TransformDispatch == nullptr || Physics == nullptr)
 		{
-			// ReSharper disable once CppExpressionWithoutSideEffects
-			Physics->SuggestTombstone(posit);
+			return; //can't shake'em.
 		}
-		// call proper OnDeath method in future versions
+		for (ActorKey DeadEnemy : DeadEnemies)
+		{
+			DeregisterEnemy(DeadEnemy); //actor destruction is keyed to the destruction of the barrage object.
+			TransformDispatch->ReleaseKineByKey(DeadEnemy); //if we do not release the kine, bad things happen.
+			MyDispatch->DeregisterAttributes(DeadEnemy);
+			MyDispatch->DeregisterRelationships(DeadEnemy);
+			MyDispatch->DeregisterVecAttribs(DeadEnemy);
+			MyDispatch->DeregisterGameplayTags(DeadEnemy);
+
+			FBLet posit = Physics->GetShapeRef(DeadEnemy);
+			if (posit)
+			{
+				// ReSharper disable once CppExpressionWithoutSideEffects
+				Physics->SuggestTombstone(posit);
+			}
+			// call proper OnDeath method in future versions
+		}
 	}
-	
+
 	DeadEnemies.Reset();
 }

@@ -33,10 +33,11 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 		{
 			UNiagaraParticleDispatch* NPD = GetWorld()->GetSubsystem<UNiagaraParticleDispatch>();
 			check(NPD);
-			if (UStaticMesh* StaticMeshPtr = LoadObject<UStaticMesh>(
-				nullptr, *ProjectileDefinition.ProjectileMeshLocation))
+			if (UStaticMesh* StaticMeshPtr = ProjectileDefinition.ProjectileMesh)
 			{
-				if (!MeshAssetToMeshManagerMapping->Contains(*ProjectileDefinition.ProjectileMeshLocation))
+				FString ProjectileName = ProjectileDefinition.ProjectileMesh.GetName();
+				TWeakObjectPtr<AInstancedMeshManager>* MeshManager = MeshAssetToMeshManagerMapping->Find(ProjectileName);
+				if (!MeshManager)
 				{
 					AInstancedMeshManager* NewMeshManager = GetWorld()->SpawnActor<AInstancedMeshManager>();
 					if (NewMeshManager == nullptr)
@@ -58,11 +59,10 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 					ManagerKeyToMeshManagerMapping->Add(NewMeshManager->GetMyKey(), NewMeshManager);
 					ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
 					                                        NewMeshManager);
-					MeshAssetToMeshManagerMapping->Add(*ProjectileDefinition.ProjectileMeshLocation, NewMeshManager);
-					if (!ProjectileDefinition.ParticleEffectDataChannel.IsEmpty())
+					MeshAssetToMeshManagerMapping->Add(*ProjectileDefinition.ProjectileMesh.GetName(), NewMeshManager);
+					if (ProjectileDefinition.ParticleEffectDataChannel)
 					{
-						NPD->AddNamedNDCReference(*ProjectileDefinition.ProjectileDefinitionId,
-						                          *ProjectileDefinition.ParticleEffectDataChannel);
+						NPD->AddNDCReference(*ProjectileDefinition.ProjectileDefinitionId, ProjectileDefinition.ParticleEffectDataChannel);
 					}
 
 					//these are standing in for a pretty messy body of more specific work we could do instead.
@@ -78,17 +78,7 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 				}
 				else
 				{
-					TWeakObjectPtr<AInstancedMeshManager>* MeshManager = MeshAssetToMeshManagerMapping->Find(
-						*ProjectileDefinition.ProjectileMeshLocation);
-					if (MeshManager)
-					{
-						ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
-						                                        *MeshManager);
-					}
-					else
-					{
-						throw; // we just checked this, you monster. 
-					}
+					ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId), *MeshManager);
 				}
 			}
 		});
@@ -277,16 +267,19 @@ bool UArtilleryProjectileDispatch::IsArtilleryProjectile(const FSkeletonKey Mayb
 
 void UArtilleryProjectileDispatch::DeleteProjectile(const FSkeletonKey Target)
 {
-	TWeakObjectPtr<AInstancedMeshManager> MeshManager;
-	ProjectileKeyToMeshManagerMapping->find(Target, MeshManager);
-	UArtilleryDispatch::SelfPtr->DeregisterGameplayTags(Target);
-	if (MeshManager.IsValid())
+	if (UArtilleryDispatch::SelfPtr)
 	{
-		MeshManager->CleanupInstance(Target);
-		ProjectileKeyToMeshManagerMapping->erase(Target);
-		ProjectileToGunMapping->erase(Target);
+		TWeakObjectPtr<AInstancedMeshManager> MeshManager;
+		ProjectileKeyToMeshManagerMapping->find(Target, MeshManager);
+		UArtilleryDispatch::SelfPtr->DeregisterGameplayTags(Target);
+		if (MeshManager.IsValid())
+		{
+			MeshManager->CleanupInstance(Target);
+			ProjectileKeyToMeshManagerMapping->erase(Target);
+			ProjectileToGunMapping->erase(Target);
+		}
+		UNiagaraParticleDispatch::SelfPtr->CleanupKey(Target);
 	}
-	UNiagaraParticleDispatch::SelfPtr->CleanupKey(Target);
 }
 
 TWeakObjectPtr<AInstancedMeshManager> UArtilleryProjectileDispatch::GetProjectileMeshManagerByManagerKey(

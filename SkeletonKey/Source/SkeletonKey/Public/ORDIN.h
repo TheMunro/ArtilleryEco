@@ -44,10 +44,8 @@ namespace ORDIN
 	static constexpr int Step = 100;
 	//if you have more than 1000000 subsystems you need online before you can begin
 	//setting up your ability system, I don't think an ordering system like this is your answer.
-	//generally, this will be your physics system. for us, it's Barrage.
 
 	//I've seen things you people wouldn't believe...
-
 
 	//Enum DeCircularizing
 	enum E_D_C
@@ -62,6 +60,38 @@ namespace ORDIN
 		LastSuperstructureKey = ArtilleryOnline + LastSubstrateKey
 	};
 }
+
+//we need a long-lived record divorced from the lifecycle of the world to provide verity in certain exigent cases.
+
+UCLASS()
+class SKELETONKEY_API ULongLivedRecords : public UEngineSubsystem
+{
+	GENERATED_BODY()
+	//an awful lot of work to go to for this...
+	TSharedPtr<TCircularBuffer<std::shared_ptr<WorldRecord>>> WorldRecords;
+	std::atomic<uint32> WorldRecordCount;
+
+public:
+	ULongLivedRecords()
+		: WorldRecordCount(0)
+	{
+		WorldRecords = MakeShared<TCircularBuffer<std::shared_ptr<WorldRecord>>>(1024);
+	}
+	//this should never be called from outside the WORLD lifecycle as we must guarantee that it will never hit a dead LLR.
+	std::shared_ptr<WorldRecord> WorldRecordStart()
+	{
+		if (WorldRecords)
+		{
+			auto MyIndex = WorldRecords->GetNextIndex(WorldRecordCount.fetch_add(1, std::memory_order_relaxed));
+			std::shared_ptr<WorldRecord> NewRecord(new WorldRecord());
+			(*WorldRecords)[MyIndex] = NewRecord;
+			return NewRecord;
+		}
+		return nullptr;
+	}
+
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+};
 
 
 #define SET_INITIALIZATION_ORDER_BY_ORDINATEKEY_AND_WORLD GetWorld()->GetSubsystem<UOrdinatePillar>()->REGISTERLORD(OrdinateSeqKey, this, this);
@@ -78,30 +108,36 @@ namespace ORDIN
 //Additionally, each client would otherwise likely not possess the correct order as the local player object
 //needs to be created in a totally different place and way from the proxies.
 //Hopefully, as we learn more, we can remove this pillar, but I unfortunately doubt that.
+
+//this will need, eventually, to be reworked to use the MassSubsystemAccess.h design for both sanity andd compatibility reasons.
 UCLASS()
 class SKELETONKEY_API UOrdinatePillar : public UWorldSubsystem, public ISkeletonLord, public ICanReady
 {
 	GENERATED_BODY()
 	FSkeletonKey DefaultObjectKey = FSkeletonKey();
-	
 	UOrdinatePillar();
 	virtual ~UOrdinatePillar() override;
 	virtual void Deinitialize() override;
+	
+	std::shared_ptr<WorldRecord> MyWorld;
 
 public:
+
+	//TODO: move the blob structure into the world record structure.
+	//atm, want to change as little as I can.
 	struct ORDIN_Blob
 	{
-	 ORDIN::ForbiddenInitSequence Subsystems			= ORDIN::ForbiddenInitSequence();		
-	 ORDIN::InitSequence PlayerKeyCarries	= ORDIN::InitSequence();
-	 ORDIN::InitSequence KeyCarries			= ORDIN::InitSequence();
+	 ORDIN::ForbiddenInitSequence Subsystems	= ORDIN::ForbiddenInitSequence();		
+	 ORDIN::InitSequence PlayerKeyCarries		= ORDIN::InitSequence();
+	 ORDIN::InitSequence KeyCarries				= ORDIN::InitSequence();
 	 ORDIN::InitSequence Players				= ORDIN::InitSequence();
-	 ORDIN::InitSequence G1					= ORDIN::InitSequence();
+	 ORDIN::InitSequence G1						= ORDIN::InitSequence();
 	 ORDIN::InitSequence G1R					= ORDIN::InitSequence();
-	 ORDIN::InitSequence G2					= ORDIN::InitSequence();
+	 ORDIN::InitSequence G2						= ORDIN::InitSequence();
 	 ORDIN::InitSequence G2R					= ORDIN::InitSequence();
-	 ORDIN::InitSequence G3					= ORDIN::InitSequence();
+	 ORDIN::InitSequence G3						= ORDIN::InitSequence();
 	 ORDIN::InitSequence G3R					= ORDIN::InitSequence();
-	 ORDIN::InitSequence AllStarted			= ORDIN::InitSequence();
+	 ORDIN::InitSequence AllStarted				= ORDIN::InitSequence();
 	
 	 ORDIN::InitSequence* GROUPS[10] = {
 		&PlayerKeyCarries,

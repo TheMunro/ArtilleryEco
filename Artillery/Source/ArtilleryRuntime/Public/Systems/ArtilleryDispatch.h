@@ -165,7 +165,6 @@ protected:
 	//We can actually map this quite directly.
 	FArtilleryUpdateEnemyControllerSubsystem EnemyUpdateHook;
 	FArtilleryAddEnemyToControllerSubsystem EnemyRegisterHook;
-	// NOTTODO: It's built!
 	TSharedPtr<AttrCuckoo> AttributeSetToDataMapping;
 	//TODO: Figure out how to apply the learnings from the design of the controller with the defaulting.
 	//It'll be necessary, I'm afraid. This can't use raw pointers safely. Likely we can use defaulting + the fblet design.
@@ -339,109 +338,34 @@ public:
 		EnemyRegisterHook = Register;
 	}
 	
-	void Deregister(const FGunKey& Key) const
-	{
-		TSharedPtr<TMap<FGunKey, FArtilleryFireGunFromDispatch>> holdopen = GunToFiringFunctionMapping;
-		if(holdopen && holdopen.IsValid())
-		{
-			GunToFiringFunctionMapping->Remove(Key);
-			GunByKey->Remove(Key);
-		}
-		//TODO: add the rest of the wipe here?
-	}
+	void Deregister(const FGunKey& Key) const;
 
-	void RegisterControllite(const FSkeletonKey& in, Machlet LaputanMachine) const
-	{
-		//for now, you can't remove these. right now, this is ONLY used by the player, but this will proliferate and fuck us
-		KeyToControlliteMapping->Add(in, LaputanMachine); //I spill my drink.
-	}
-	
-	void RegisterAttributes(FSkeletonKey in, AttrMapPtr Attributes)
-	{
-		if (auto hold = AttributeSetToDataMapping)
-		{
-			AttributeSetToDataMapping->insert_or_assign(in, Attributes);
-		}
-	}
-	
-	void RegisterRelationships(FSkeletonKey in, IdMapPtr Relationships)
-	{
-		IdentSetToDataMapping->Add(in, Relationships);
-	}
-	
-	void RegisterVecAttribs(FSkeletonKey in, Attr3MapPtr Vectors)
-	{
-		VectorSetToDataMapping->Add(in, Vectors);
-	}
+	void RegisterControllite(const FSkeletonKey& in, Machlet LaputanMachine) const;
+
+	void RegisterAttributes(FSkeletonKey in, AttrMapPtr Attributes);
+
+	void RegisterRelationships(FSkeletonKey in, IdMapPtr Relationships);
+
+	void RegisterVecAttribs(FSkeletonKey in, Attr3MapPtr Vectors);
 
 	//adds or assumes responsibility for the lifecycle of a tag container keyed to this SK
 	// ReSharper disable once CppMemberFunctionMayBeConst
-	FConservedTags RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags)
-	{
-		auto TerrorModuleOnline = GameplayTagContainerToDataMapping->NewTagContainer(in);
-		if (this && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid() && GameplayTags)
-		{
-			for (auto tag : GameplayTags->GetGameplayTagArray())
-			{
-				GameplayTagContainerToDataMapping->Add(in, tag);
-			}
-		}
-		RequestRouter->TagReferenceModel(in,  GetShadowNow(), TerrorModuleOnline);
-		return TerrorModuleOnline; // this is the only good way to get a fast reference.
-	}
+	FConservedTags RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags);
 
 	// ReSharper disable once CppMemberFunctionMayBeConst
-	FConservedTags GetExistingConservedTags(FSkeletonKey in)
-	{
-		if (GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
-		{
-			return GameplayTagContainerToDataMapping->GetReference(in);
-		}
-		return nullptr;
-	}
+	FConservedTags GetExistingConservedTags(FSkeletonKey in);
 
-	FConservedTags GetOrRegisterConservedTags(FSkeletonKey in)
-	{
-		auto GetExistingConservedTagsResult = GetExistingConservedTags(in);
-		if (GetExistingConservedTagsResult != nullptr)
-		{
-			return GetExistingConservedTagsResult;
-		}
-		else
-		{
-			return RegisterGameplayTags(in, nullptr);
-		}
-	}
-	
-	void DeregisterGameplayTags(FSkeletonKey in)
-	{
-		if (this && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
-		{
-			GameplayTagContainerToDataMapping->Erase(in);
-		}
-		RequestRouter->NoTagReferenceModel(in,  GetShadowNow());
-	}
-	
-	void DeregisterAttributes(FSkeletonKey in)
-	{
-		if (auto hold = AttributeSetToDataMapping)
-		{
-			hold->erase(in);
-		}
-	}
-	
-	void DeregisterRelationships(FSkeletonKey in)
-	{
-		IdentSetToDataMapping->Remove(in);
-	}
-	
-	void DeregisterVecAttribs(FSkeletonKey in)
-	{
-		VectorSetToDataMapping->Remove(in);
-	}
-	
+	FConservedTags GetOrRegisterConservedTags(FSkeletonKey in);
 
-	
+	void DeregisterGameplayTags(FSkeletonKey in);
+
+	void DeregisterAttributes(FSkeletonKey in);
+
+	void DeregisterRelationships(FSkeletonKey in);
+
+	void DeregisterVecAttribs(FSkeletonKey in);
+
+
 	std::atomic_bool UseNetworkInput;
 	bool missedPrior = false;
 	bool burstDropDetected = false;

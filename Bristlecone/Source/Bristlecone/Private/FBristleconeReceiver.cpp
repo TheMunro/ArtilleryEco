@@ -2,7 +2,7 @@
 
 
 
-FBristleconeReceiver::FBristleconeReceiver() : running(false), MySeen(0x0b1) {
+FBristleconeReceiver::FBristleconeReceiver() : MySeen(0x0b1), running(false) {
 	UE_LOG(LogTemp, Display, TEXT("Bristlecone:Receiver: Constructing Bristlecone Receiver"));
 }
 

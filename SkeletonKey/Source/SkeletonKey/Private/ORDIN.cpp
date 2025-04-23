@@ -1,10 +1,28 @@
 ﻿#include "ORDIN.h"
 
-#include "Math/UnitConversion.h"
+/**
+* Please note the following special memory values. All of these are BAD, some are worse.
+* 0xABABABAB : Used by Microsoft's HeapAlloc() to mark "no man's land" guard bytes after allocated heap memory
+* 0xABADCAFE : A startup to this value to initialize all free memory to catch errant pointers
+* 0xBAADF00D : Used by Microsoft's LocalAlloc(LMEM_FIXED) to mark uninitialised allocated heap memory
+* 0xBADCAB1E : Error Code returned to the Microsoft eVC debugger when connection is severed to the debugger
+* 0xBEEFCACE : Used by Microsoft .NET as a magic number in resource files
+* 0xCCCCCCCC : Used by Microsoft's C++ debugging runtime library to mark uninitialised stack memory
+* 0xCDCDCDCD : Used by Microsoft's C++ debugging runtime library to mark uninitialised heap memory
+* 0xDDDDDDDD : Used by Microsoft's C++ debugging heap to mark freed heap memory
+* 0xDEADDEAD : A Microsoft Windows STOP Error code used when the user manually initiates the crash.
+* 0xFDFDFDFD : Used by Microsoft's C++ debugging heap to mark "no man's land" guard bytes before and after allocated heap memory
+* 0xFEEEFEEE : Used by Microsoft's HeapFree() to mark freed heap memory 
+ */
+void ULongLivedRecords::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+}
 
 UOrdinatePillar::UOrdinatePillar()
 {
 	SelfPtr = this;
+	MyWorld = nullptr;
 	if (!ORDINATION_Fallback.burnt)
 	{
 		ORDINATION_Fallback.burnt = true;
@@ -17,6 +35,11 @@ UOrdinatePillar::UOrdinatePillar()
 UOrdinatePillar::~UOrdinatePillar()
 {
 	//we share our lifetime with all world subsystems.
+	if (MyWorld != nullptr)
+	{
+		MyWorld->IsForbidden = true;
+		MyWorld->IsReady = false;
+	}
 	ORDINATION_Fallback.burnt = false;
 	Data.Subsystems.Empty();
 	//and the fallback
@@ -25,6 +48,11 @@ UOrdinatePillar::~UOrdinatePillar()
 
 void UOrdinatePillar::Deinitialize()
 {
+	if (MyWorld != nullptr)
+	{
+		MyWorld->IsForbidden = true;
+		MyWorld->IsReady = false;
+	}
 	Super::Deinitialize();
 	//we clear on fire so this is a precaution.
 	for (ORDIN::InitSequence* Group : Data.GROUPS)
@@ -36,6 +64,8 @@ void UOrdinatePillar::Deinitialize()
 	{
 		Group->Empty();
 	}
+	MyWorld->IsForbidden = true;
+	MyWorld->IsReady = false;
 }
 
 //extremely crude bit of trickery to avoid the weird code gen chicanery of UE. normally, i'd diamond these or use concepts
@@ -48,7 +78,7 @@ void UOrdinatePillar::REGISTERLORD(int RegisterAs, ISkeletonLord* YourThisPointe
 	}
 	else if (!ORDINATION_Fallback.burnt)
 	{
-		ORDINATION_Fallback.Subsystems.Add(ORDIN::SubsystemKey(RegisterAs, YourThisPointerAgain));
+		ORDINATION_Fallback.Subsystems.Add(ORDIN::SubsystemKey( RegisterAs, YourThisPointerAgain));
 	}
 }
 
@@ -79,14 +109,43 @@ void UOrdinatePillar::REGISTERORDER(int RegisterAs, int group, IKeyedConstruct* 
 
 void UOrdinatePillar::PostInitialize()
 {
-	if (GetWorld() && GetWorld()->IsGameWorld())
+	
+	if (GetWorld() && GetWorld()->IsGameWorld() && GEngine)
 	{
-		Super::PostInitialize();
-		Data.Subsystems.Sort();
+		auto uplink = GEngine->GetEngineSubsystem<ULongLivedRecords>();
+		if (uplink) // if uplink is not valid during the postinitialization of world subsystems, we are either in CDO build or a degraded state.
+		{
+			MyWorld = uplink->WorldRecordStart();
+			MyWorld->IsReady = true;
+			MyWorld->IsForbidden = false;
+			Super::PostInitialize();
+			Data.Subsystems.Sort();
+			for (ORDIN::SubsystemKey Register : Data.Subsystems)
+			{
+				if (auto PossibleLord = Cast<ISkeletonLord>(Register.Value ))
+				{
+					PossibleLord->MyWorldState = MyWorld;
+				}
+				Register.Value->IsReady = false;
+				Register.Value->AttemptRegister();
+				MyWorld->IsReady = MyWorld->IsReady && Register.Value->IsReady;
+			}
+			MyWorld->IsReady = true;
+			MyWorld->IsForbidden = false;
+			MyWorldState = MyWorld;//setty set.
+		}
+	}
+	else
+	{
+		//if we are NOT in a game world, we'll set it up so we cannot engage with the Artillery Machinery.
+		MyWorld = std::make_shared<WorldRecord>(false, true, true);
 		for (ORDIN::SubsystemKey Register : Data.Subsystems)
 		{
 			Register.Value->IsReady = false;
-			Register.Value->AttemptRegister();
+			if (auto PossibleLord = Cast<ISkeletonLord>(Register.Value ))
+			{
+				PossibleLord->MyWorldState = MyWorld;
+			}
 		}
 	}
 }

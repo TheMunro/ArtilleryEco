@@ -33,7 +33,7 @@ namespace SKELLY
 	constexpr static uint64_t	SFIX_UNUSEDC =  0xC000000000000000;
 	constexpr static uint64_t	SFIX_UNUSEDD =  0xD000000000000000;
 	constexpr static uint64_t	SFIX_UNUSEDE =  0xE000000000000000;
-	constexpr static uint64_t	SFIX_UNUSEDF =  0xF000000000000000;
+	constexpr static uint64_t	SFIX_SK_LORD =  0xF000000000000000;
 }
 	static inline bool IS_OF_SK_TYPE(uint64_t MY_HASH,uint64_t MY_MASK) {return (MY_HASH & SKELLY::SFIX_MASK_EXT) == MY_MASK;};
 	static inline uint64_t GET_SK_TYPE(uint64_t MY_HASH) {return (MY_HASH & SKELLY::SFIX_MASK_EXT);};

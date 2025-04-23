@@ -243,13 +243,11 @@ void UNiagaraParticleDispatch::QueueParticleSystemParameter(const FBoneKey& Key,
 	}
 }
 
-void UNiagaraParticleDispatch::AddNamedNDCReference(FString Name, FString NDCAssetName) const
+void UNiagaraParticleDispatch::AddNDCReference(FString Name, TObjectPtr<UNiagaraDataChannelAsset> DataChannelAssetPtr) const
 {
-	UNiagaraDataChannelAsset* LoadedSystem = LoadObject<UNiagaraDataChannelAsset>(nullptr, *NDCAssetName, nullptr, LOAD_None, nullptr);
-	TObjectPtr<UNiagaraDataChannelWriter> MyWriter = UNiagaraDataChannelLibrary::CreateDataChannelWriter(GetWorld(), LoadedSystem->Get(), FNiagaraDataChannelSearchParameters(), 1, true, true, true, "Held Writer");
-	TObjectPtr<UNiagaraDataChannelAsset>  LoadedSystemPtr = TObjectPtr<UNiagaraDataChannelAsset>(LoadedSystem);
-	ProjectileNameToNDCAsset->Add(Name, ManagementPayload(LoadedSystemPtr, MyWriter));
-	NDCAssetTOProjectileName->Add(LoadedSystemPtr, Name);
+	TObjectPtr<UNiagaraDataChannelWriter> MyWriter = UNiagaraDataChannelLibrary::CreateDataChannelWriter(GetWorld(), DataChannelAssetPtr->Get(), FNiagaraDataChannelSearchParameters(), 1, true, true, true, "Held Writer");
+	ProjectileNameToNDCAsset->Add(Name, ManagementPayload(DataChannelAssetPtr, MyWriter));
+	NDCAssetTOProjectileName->Add(DataChannelAssetPtr, Name);
 }
 
 void UNiagaraParticleDispatch::UpdateNDCChannels() const

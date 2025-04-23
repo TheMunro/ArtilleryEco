@@ -15,6 +15,8 @@ typedef TMap<uint16_t, FGameplayTag> UnderlyingTagReverse;
 typedef TSharedPtr<TMap<FGameplayTag, uint16_t>> TagsSeen;
 typedef TSharedPtr<UnderlyingTagReverse> TagsByCode;
 
+typedef TWeakPtr<UnderlyingTagReverse> Flimsy;
+
 
 //TODO: add tag rollback in Artillery Dispatch
 //TODO: add save-all or copy-all for the tag representations themselves.
@@ -89,6 +91,8 @@ struct ARTILLERYRUNTIME_API FConservedTagContainer
 	TSharedPtr<TArray<FGameplayTag>> GetAllTags(uint64_t FrameNumber);
 	virtual bool Remove(FGameplayTag Bot);
 	virtual bool Add(FGameplayTag Bot);
+	
+	Flimsy DecoderRing; // use at your own risk, but you might need this in some really narrow cases.
 protected:
 
 
@@ -106,7 +110,6 @@ private:
 	TSharedPtr<FTagStateRepresentation> Tags;
 	uint64_t CurrentWriteHead = 0;
 	TagsSeen SeenT;
-	TagsByCode DecoderRing;
 };
 
 
@@ -115,12 +118,13 @@ class ARTILLERYRUNTIME_API AtomicTagArray
 {
 	friend class UArtilleryDispatch;
 public:
-	AtomicTagArray(const TagsSeen& SeenT, const Entities& FastEntities)
+	AtomicTagArray(const TagsSeen& SeenT)
 		:
-		SeenT(SeenT),
-		FastEntities(FastEntities)
+		SeenT(SeenT)
 	{
+		FastEntities = MakeShareable(new Entities());
 	}
+	
 
 	AtomicTagArray();
 	bool Add(FSkeletonKey Top, FGameplayTag Bot);
@@ -144,8 +148,8 @@ private:
 
 	unsigned short Counter = 1; //magicify 0.
 	TagsSeen SeenT;
-	TagsByCode Decoder;
-	Entities FastEntities;
+	TagsByCode MasterDecoderRing;
+	TSharedPtr<Entities> FastEntities;
 	constexpr static uint8 STARTED = 1;
 	constexpr static uint8 FINISHED = 2;
 };

@@ -16,11 +16,6 @@
 //it is also made available to autoguns as a way of shimming out some pretty nasty concurrency problems.
 
 constexpr int ALLOWED_THREADS_FOR_ARTILLERY = 64;
-//if we could make a promise about when threads are allocated, we could probably get rid of this
-//since the accumulator is in the world subsystem and so gets cleared when the world spins down.
-//This is identical to the design found in Barrage, since it ended up working beautifully.
-thread_local static uint32 MyARTILLERYIndex = ALLOWED_THREADS_FOR_ARTILLERY + 1;
-
 
 //these functions all create and enqueue a thing request and can be called from any thread that has called Feed().
 //When F_INeedA is set up, these requests will go into the Threaded Accumulator (the BusyWorkerAcc machinery)...
@@ -108,32 +103,13 @@ public:
 	uint8 ThreadAccTicker = 0;
 	mutable FCriticalSection GrowOnlyAccLock;
 	
-	void Feed()
-	{
-		FScopeLock GrantFeedLock(&GrowOnlyAccLock);
-		
-		//TODO: expand if we need for rollback powers. could be sliiiick
-		BusyWorkerAcc[ThreadAccTicker] = FeedMap(std::this_thread::get_id(), 2048);
-		GameThreadAcc[ThreadAccTicker] = GameFeedMap(std::this_thread::get_id(), 2048);
-		AIThreadAcc[ThreadAccTicker] = FeedMap(std::this_thread::get_id(), 2048);
-		MyARTILLERYIndex = ThreadAccTicker;
-		++ThreadAccTicker;
-	}
+	void Feed();
 
 	// Gun Handling
 	// This requests a new gun by name which will then be bound by attribute key to skeletonkey provided.
 	// When your get attrib for the relationship type returns something usable, it can be used.
 	// TODO: Get this off the fucking main thread or we'll never be deterministic.
-	FGrantWith NewUnboundGun(FSkeletonKey Self, FGunKey NameSetIDUnset,  FARelatedBy EquippedAs, ArtilleryTime Stamp)
-	{
-		auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::GetAnUnboundGun);
-		MyRequest.Stamp = Stamp;
-		MyRequest.SourceOrSelf = Self;
-		MyRequest.Gun = NameSetIDUnset;
-		MyRequest.Relationship = EquippedAs;
-		GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-		return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Bound | FGrantWith::GameThread);
-	};
+	FGrantWith NewUnboundGun(FSkeletonKey Self, FGunKey NameSetIDUnset,  FARelatedBy EquippedAs, ArtilleryTime Stamp);
 	
 	FGrantWith NewAutoGun()
 	{
@@ -145,49 +121,15 @@ public:
 		throw; //not implemented yet
 	};
 
-	FGrantWith MobileAI(FSkeletonKey AIEntity, ArtilleryTime Stamp)
-	{
-		auto MyRequest = FRequestThing(ArtilleryRequestType::BindAI);
-		MyRequest.Stamp = Stamp;
-		MyRequest.SourceOrSelf = AIEntity;
-		AIThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-		return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-	}
+	FGrantWith MobileAI(FSkeletonKey AIEntity, ArtilleryTime Stamp);
+	
 	//the following statement must return a non-null element
 	//GunToFiringFunctionMapping->Find(Request.Gun)->ExecuteIfBound(GunByKey->FindRef(Request.Gun), false);
 	//in other words, it MUST be bound already as per any other gun you wish to fire. globspeebcormbrad
-	FGrantWith GunFired(FGunKey Target, ArtilleryTime Stamp)
-	{
-		if(this)
-		{
-			///////////////////
-			//build request
-			//////////////////
-			auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::FireAGun);
-			MyRequest.Stamp = Stamp;
-			MyRequest.Gun = Target;
-			GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-		}
-		return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::GameThread);
-	}
+	FGrantWith GunFired(FGunKey Target, ArtilleryTime Stamp);
 	
 	//this will just create a lil ticklite that has the number of ticks as its duration, and fires the gun on expire
-	FGrantWith GunFiredAtTime(FGunKey Target, ArtilleryTime Stamp)
-	{
-		if(this)
-		{
-			///////////////////
-			//build request
-			//////////////////
-			auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::CreateATicklite);
-			MyRequest.Stamp = Stamp;
-			MyRequest.Gun = Target;
-			GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-		}
-		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	};
+	FGrantWith GunFiredAtTime(FGunKey Target, ArtilleryTime Stamp);
 
 	//this will just create a lil ticklite that has the number of ticks as its duration, and fires the gun on expire
 	FGrantWith GunFiredFromATicklite(FRequestGameThreadThing FireMeElmo)
@@ -199,115 +141,73 @@ public:
 	{
 		if (this)
 		{
-			auto MyRequest = FRequestThing(ArtilleryRequestType::TagReferenceModel);
+			FRequestThing MyRequest(ArtilleryRequestType::TagReferenceModel);
 			MyRequest.ConservedTags =  ValidSharedPtr;
 			MyRequest.Stamp = Stamp;
 			MyRequest.SourceOrSelf = Target;
 			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
 		}
 		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	};
+	}
+	
 	FGrantWith NoTagReferenceModel(FSkeletonKey Target, ArtilleryTime Stamp)
 	{
 		if (this)
 		{
-			auto MyRequest = FRequestThing(ArtilleryRequestType::NoTagReferenceModel);
+			FRequestThing MyRequest(ArtilleryRequestType::NoTagReferenceModel);
 			MyRequest.Stamp = Stamp;
 			MyRequest.SourceOrSelf = Target;
 			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
 		}
 		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	};
+	}
 	
 	FGrantWith GunFiredWhenATagGetsAdded()
 	{
 		throw; //not implemented yet
-	};
+	}
 	
 	FGrantWith GunFiredWhenATagExpires()
 	{
 		throw; //not implemented yet
-	};
+	}
 	
 	bool AutoGunTurnedOff(FGunKey Target)
 	{
 		throw;
 	}
+	
 	bool AutoGunTurnedOn(FGunKey Target)
 	{
 		throw; //not implemented yet
-	};
+	}
 
 	// Particle Systems
-	FGrantWith ParticleSystemActivatedOrDeactivated(FParticleID PID, bool ShouldBeActive, ArtilleryTime Stamp)
-	{
-		if (this)
-		{
-			auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::ParticleSystemActivateOrDeactivate);
-			// Munging the uint32 we use for a Particle ID into the uint64 we use for a skeleton key should be safe
-			MyRequest.SourceOrSelf = PID.ParticleId;
-			MyRequest.Stamp = Stamp;
-			MyRequest.ActivateIfPossible = ShouldBeActive;
-			GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-		}
-		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	}
+	FGrantWith ParticleSystemActivatedOrDeactivated(FParticleID PID, bool ShouldBeActive, ArtilleryTime Stamp);
 	
-	FGrantWith ParticleSystemSpawnedAttached(FName ThingName, const FSkeletonKey& ComponentToAttachTo, const FSkeletonKey& Owner, ArtilleryTime Stamp, bool CreateSceneComponentOnKey = false)
-	{
-		if (this)
-		{
-			auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::SpawnParticleSystemAttached);
-			MyRequest.ThingName = ThingName;
-			MyRequest.Stamp = Stamp;
-			MyRequest.SourceOrSelf = ComponentToAttachTo;
-			MyRequest.TargetOrNonSelfAffected = Owner;
-			MyRequest.ActivateIfPossible = CreateSceneComponentOnKey;
-			GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-		}
-		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	}
+	FGrantWith ParticleSystemSpawnedAttached(
+		FName ThingName,
+		const FSkeletonKey& ComponentToAttachTo,
+		const FSkeletonKey& Owner,
+		ArtilleryTime Stamp,
+		bool CreateSceneComponentOnKey = false);
 
-	FGrantWith ParticleSystemSpawnAtLocation(FName ThingName, const FVector& Location, const FRotator& Rotation, ArtilleryTime Stamp)
-	{
-		if (this)
-		{
-			auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::SpawnParticleSystemAtLocation);
-			MyRequest.ThingName = ThingName;
-			MyRequest.Stamp = Stamp;
-			MyRequest.ThingVector = Location;
-			MyRequest.ThingRotator = Rotation;
-			GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-		}
-		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	}
+	FGrantWith ParticleSystemSpawnAtLocation(FName ThingName, const FVector& Location, const FRotator& Rotation, ArtilleryTime Stamp);
 
 	// Mesh Creation AND Barrage object creation. Later, this will be split for better sim rollback and faster sim responsivity.
 	// The game thread should pretty much never directly be responsible for creating barrage objects, its timing is too variable.
 	// -1 ticks is default
-	FGrantWith Bullet(FName ThingName, FVector Location, double Scale, FVector StartingVelocity, FSkeletonKey NewProjectileKey, const FGunKey& Gun, ArtilleryTime Stamp, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, int LifeInTicks = -1, bool HasExpiration = true)
-	{
-		if (this)
-		{
-			auto MyRequest = FRequestGameThreadThing(ArtilleryRequestType::SpawnStaticMesh);
-			MyRequest.ThingName = ThingName;
-			MyRequest.Stamp = Stamp;
-			MyRequest.ThingVector = Location;			// Start Location
-			MyRequest.ThingVector2.X = Scale;			// Spawn Scale
-			MyRequest.ThingVector3 = StartingVelocity;	// Spawn Velocity
-			MyRequest.SourceOrSelf = NewProjectileKey;
-			MyRequest.Gun = Gun;
-			MyRequest.Layer = Layer;
-			MyRequest.CanExpire = true;
-			MyRequest.TicksDuration = LifeInTicks;
-			GameThreadAcc[MyARTILLERYIndex].Queue->Enqueue(MyRequest);
-			return FGrantWith(Stamp).Set(FGrantWith::Eventual | FGrantWith::Within1Tick);
-		}
-		return FGrantWith(Stamp).Set(FGrantWith::Nullable);
-	}
+	FGrantWith Bullet(
+		FName ThingName,
+		FVector Location,
+		double Scale,
+		FVector StartingVelocity,
+		FSkeletonKey NewProjectileKey,
+		const FGunKey& Gun,
+		ArtilleryTime Stamp,
+		Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE,
+		int LifeInTicks = -1,
+		bool HasExpiration = true);
 };
 
 

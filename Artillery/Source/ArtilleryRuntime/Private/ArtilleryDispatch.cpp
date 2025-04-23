@@ -15,7 +15,6 @@
 
 bool UArtilleryDispatch::RegistrationImplementation()
 {
-	
 	GameplayTagContainerToDataMapping->Init();
 	UE_LOG(LogTemp, Warning, TEXT("ArtilleryDispatch:Subsystem: Online"));
 	AttributeSetToDataMapping = MakeShareable(new AttrCuckoo());
@@ -59,10 +58,9 @@ bool UArtilleryDispatch::RegistrationImplementation()
 	GunToFiringFunctionMapping->Empty();
 	ThreadSetup();
 
-	WorldSim_Thread.Reset(FRunnableThread::Create(&ArtilleryAsyncWorldSim, TEXT("ARTILLERY_WORLDSIM_ONLINE."),0, TPri_AboveNormal));
-	WorldSim_AI_Thread.Reset(FRunnableThread::Create(&ArtilleryAIWorker_LockstepToWorldSim, TEXT("ARTILLERY_AISIM_ONLINE.")));
-	WorldSim_Ticklites_Thread.Reset(
-		FRunnableThread::Create(&ArtilleryTicklitesWorker_LockstepToWorldSim,TEXT("ARTILLERY_TICKLITES_ONLINE.")));
+	WorldSim_Thread->Create(&ArtilleryAsyncWorldSim, TEXT("ARTILLERY_WORLDSIM_ONLINE."),0, TPri_AboveNormal);
+	WorldSim_AI_Thread->Create(&ArtilleryAIWorker_LockstepToWorldSim, TEXT("ARTILLERY_AISIM_ONLINE."));
+	WorldSim_Ticklites_Thread->Create(&ArtilleryTicklitesWorker_LockstepToWorldSim,TEXT("ARTILLERY_TICKLITES_ONLINE."));
 	
 	SelfPtr = this;
 	return true;
@@ -111,7 +109,7 @@ void UArtilleryDispatch::ThreadSetup()
 	{
 		PhysicsECSPillar->GrantClientFeed();
 	}
-		
+	
 	if(RequestRouter)
 	{
 		RequestRouter->Feed();
@@ -138,20 +136,18 @@ void UArtilleryDispatch::OnWorldBeginPlay(UWorld& InWorld)
 
 void UArtilleryDispatch::Deinitialize()
 {
-	SelfPtr = nullptr;
+	
 	IsReady = false;
-	Super::Deinitialize();
+	SelfPtr = nullptr;
+	if (__LIVE__)
+	{
+		___LIVING->IsReady = false;
+	}
 	StartTicklitesSim->Trigger();
 	ArtilleryAIWorker_LockstepToWorldSim.Stop();
 	ArtilleryTicklitesWorker_LockstepToWorldSim.Stop();
-	ArtilleryAsyncWorldSim.Stop();
 	ArtilleryTicklitesWorker_LockstepToWorldSim.Exit();
 	ArtilleryAIWorker_LockstepToWorldSim.Exit();
-	ArtilleryAsyncWorldSim.Exit();
-	GameplayTagContainerToDataMapping->Empty();
-	
-
-	
 	StartTicklitesApply->Trigger();
 	StartRunAhead->Trigger();
 	//We have to wait on worldsim, but we actually can just hard kill ticklites.
@@ -160,26 +156,34 @@ void UArtilleryDispatch::Deinitialize()
 	{
 		//otoh, we need to hard kill the ticklites, so far as I can tell, and keep rolling. This should actually generally
 		//not proc.
-		WorldSim_Ticklites_Thread->Kill(false);
+		WorldSim_Ticklites_Thread->Kill(true);
 		WorldSim_Ticklites_Thread.Reset();
 	}
 	if (WorldSim_AI_Thread.IsValid())
 	{
-		WorldSim_AI_Thread->Kill((false));
+		WorldSim_AI_Thread->Kill((true));
 		WorldSim_AI_Thread.Reset();
 	}
+	ArtilleryAsyncWorldSim.Stop();
+	ArtilleryAsyncWorldSim.Exit();
+
+	//we save the world sim for last. this means we'll always have a thread to cycle the events, in case we miss our timing.
 	if (WorldSim_Thread.IsValid())
 	{
 		//if we don't wait, this will crash when ECS facts are referenced. That's just... uh... the facts.
 		WorldSim_Thread->Kill(true);
 		WorldSim_Thread.Reset();
 	}
+	
 	AttributeSetToDataMapping = nullptr;
+	GameplayTagContainerToDataMapping->Empty();
 	IdentSetToDataMapping->Empty();
 	KeyToControlliteMapping->Empty();
 	VectorSetToDataMapping->Empty();
 	GunByKey->Empty();
 	HoldOpen.Reset();
+	
+	Super::Deinitialize();
 }
 
 AttrMapPtr UArtilleryDispatch::GetAttribSetShadowByObjectKey(const FSkeletonKey& Target,
@@ -206,7 +210,7 @@ Attr3MapPtr UArtilleryDispatch::GetVectorSetShadowByObjectKey(const FSkeletonKey
 //to fix this, we'll need to enforce orderings in a LOT of places OR sort by time then order by target, I think.
 void UArtilleryDispatch::ProcessRequestRouterGameThread()
 {
-	if (RequestRouter)
+	if (__LIVE__ && RequestRouter)
 	{
 		for (F_INeedA::GameFeedMap& FeedMap : RequestRouter->GameThreadAcc)
 		{
@@ -466,19 +470,27 @@ FGunKey UArtilleryDispatch::RegisterExistingGun(const TSharedPtr<FArtilleryGun>&
 
 bool UArtilleryDispatch::IsGunLive(FSkeletonKey Key)
 {
-	TSharedPtr<TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>> HoldOpenGuns = GunByKey;
-
-	if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns.IsValid() && GunByKey && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
+	if (__LIVE__)
 	{
-		return HoldOpenGuns->IsEmpty() ? false : HoldOpenGuns->Contains(Key);
+		TSharedPtr<TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>> HoldOpenGuns = GunByKey;
+
+		if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns.IsValid() && GunByKey && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
+		{
+			return HoldOpenGuns->IsEmpty() ? false : HoldOpenGuns->Contains(Key);
+		}
+		return false;
 	}
 	return false;
 }
 
 bool UArtilleryDispatch::IsActorTransformAlive(ActorKey Key) const
 {
-	UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
-	return TransformDispatch ? TransformDispatch->GetActorKineByObjectKey(Key) != nullptr : false;
+	if (__LIVE__)
+	{
+		UTransformDispatch* TransformDispatch = GetWorld()->GetSubsystem<UTransformDispatch>();
+		return TransformDispatch ? TransformDispatch->GetActorKineByObjectKey(Key) != nullptr : false;
+	}
+	return false;
 }
 
 //returns false if already released.
@@ -486,11 +498,14 @@ bool UArtilleryDispatch::ReleaseGun(const FGunKey& Key)
 {
 	//We know it. We have known it. We continue to know it.
 	//See you soon, Chief.
-	TSharedPtr<FArtilleryGun> tracker = nullptr;
-	if (GunByKey->RemoveAndCopyValue(Key, tracker))
+	if (__LIVE__)
 	{
-		PooledGuns.Add(Key.GunDefinitionID, tracker);
-		return true;
+		TSharedPtr<FArtilleryGun> tracker = nullptr;
+		if (GunByKey->RemoveAndCopyValue(Key, tracker))
+		{
+			PooledGuns.Add(Key.GunDefinitionID, tracker);
+			return true;
+		}
 	}
 	return false;
 }
@@ -613,6 +628,15 @@ Attr3Ptr UArtilleryDispatch::GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib)
 
 UArtilleryDispatch::~UArtilleryDispatch()
 {
+		
+	auto holdopen = GameplayTagContainerToDataMapping;
+	if (auto mandius = MyWorldState.lock()) //despair lol
+	{
+		mandius->IsReady = false;
+		mandius->IsReady = true;
+	}
+	
+	IsReady = false;
 	//These should NEVER come up. Deinit always runs before decon, but just in case, we do want to handle it here.
 	if (WorldSim_Thread)
 	{
@@ -656,9 +680,141 @@ bool UArtilleryDispatch::DoesEntityHaveTag(const FSkeletonKey Owner, const FGame
 	return GameplayTagContainerToDataMapping->Find(Owner, TagToCheck);
 }
 
+void UArtilleryDispatch::Deregister(const FGunKey& Key) const
+{
+	if (__LIVE__)
+	{
+		TSharedPtr<TMap<FGunKey, FArtilleryFireGunFromDispatch>> holdopen = GunToFiringFunctionMapping;
+		if(holdopen && holdopen.IsValid())
+		{
+			GunToFiringFunctionMapping->Remove(Key);
+			GunByKey->Remove(Key);
+		}
+		//TODO: add the rest of the wipe here?
+	}
+}
+
+void UArtilleryDispatch::RegisterControllite(const FSkeletonKey& in, Machlet LaputanMachine) const
+{
+	//for now, you can't remove these. right now, this is ONLY used by the player, but this will proliferate and fuck us
+	KeyToControlliteMapping->Add(in, LaputanMachine); //I spill my drink.
+}
+
+void UArtilleryDispatch::RegisterAttributes(FSkeletonKey in, AttrMapPtr Attributes)
+{
+	if (__LIVE__)
+	{
+		if (auto hold = AttributeSetToDataMapping)
+		{
+			AttributeSetToDataMapping->insert_or_assign(in, Attributes);
+		}
+	}
+}
+
+void UArtilleryDispatch::RegisterRelationships(FSkeletonKey in, IdMapPtr Relationships)
+{
+	if (__LIVE__ && IsReady)
+	{
+		IdentSetToDataMapping->Add(in, Relationships);
+	}
+}
+
+void UArtilleryDispatch::RegisterVecAttribs(FSkeletonKey in, Attr3MapPtr Vectors)
+{
+	VectorSetToDataMapping->Add(in, Vectors);
+}
+
+FConservedTags UArtilleryDispatch::RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags)
+{
+	auto TerrorModuleOnline = GameplayTagContainerToDataMapping->NewTagContainer(in);
+	if (__LIVE__ && this && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid() && GameplayTags)
+	{
+		for (auto tag : GameplayTags->GetGameplayTagArray())
+		{
+			GameplayTagContainerToDataMapping->Add(in, tag);
+		}
+	}
+	RequestRouter->TagReferenceModel(in,  GetShadowNow(), TerrorModuleOnline);
+	return TerrorModuleOnline; // this is the only good way to get a fast reference.
+}
+
+FConservedTags UArtilleryDispatch::GetExistingConservedTags(FSkeletonKey in)
+{
+	if (__LIVE__)
+	{
+		if (GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
+		{
+			return GameplayTagContainerToDataMapping->GetReference(in);
+		}
+	}
+	return nullptr;
+}
+
+FConservedTags UArtilleryDispatch::GetOrRegisterConservedTags(FSkeletonKey in)
+{
+	if (__LIVE__)
+	{
+		auto GetExistingConservedTagsResult = GetExistingConservedTags(in);
+		if (GetExistingConservedTagsResult != nullptr)
+		{
+			return GetExistingConservedTagsResult;
+		}
+		else
+		{
+			return RegisterGameplayTags(in, nullptr);
+		}
+	}
+	return nullptr;
+}
+
+void UArtilleryDispatch::DeregisterGameplayTags(FSkeletonKey in)
+{
+	TSharedPtr<AtomicTagArray> GTCHOpen;
+
+	
+	if (__LIVE__ && IsReady && GameplayTagContainerToDataMapping
+		&& GameplayTagContainerToDataMapping.IsValid()
+		&& GameplayTagContainerToDataMapping.Get())// note the assign.
+	{
+		GTCHOpen = GameplayTagContainerToDataMapping;
+		if (GTCHOpen && IsReady)
+		{
+			GTCHOpen->Erase(in);
+		}
+	}
+	RequestRouter->NoTagReferenceModel(in,  GetShadowNow());
+}
+
+void UArtilleryDispatch::DeregisterAttributes(FSkeletonKey in)
+{
+	TSharedPtr<AttrCuckoo> hold;
+	if (__LIVE__ && IsReady && AttributeSetToDataMapping && ((hold = AttributeSetToDataMapping)))
+	{
+		hold->erase(in);
+	}
+}
+
+void UArtilleryDispatch::DeregisterRelationships(FSkeletonKey in)
+{
+	TSharedPtr<TMap<FSkeletonKey, IdMapPtr>> hold;
+	if (__LIVE__ && IsReady && IdentSetToDataMapping && ((hold = IdentSetToDataMapping)))
+	{
+		IdentSetToDataMapping->Remove(in);
+	}
+}
+
+void UArtilleryDispatch::DeregisterVecAttribs(FSkeletonKey in)
+{
+	TSharedPtr<TMap<FSkeletonKey, Attr3MapPtr>> hold;
+	if (__LIVE__ &&  VectorSetToDataMapping && ((hold = VectorSetToDataMapping)))
+	{
+		VectorSetToDataMapping->Remove(in);
+	}
+}
+
 void UArtilleryDispatch::RunGuns() const
 {
-	if (RequestorQueue_Abilities_TripleBuffer && RequestorQueue_Abilities_TripleBuffer->IsDirty())
+	if (__LIVE__ && RequestorQueue_Abilities_TripleBuffer && RequestorQueue_Abilities_TripleBuffer->IsDirty())
 	//Sort is not stable. Sortedness appears to be lost for operations I would not expect.
 	{
 		RequestorQueue_Abilities_TripleBuffer->SwapReadBuffers();
@@ -677,7 +833,7 @@ void UArtilleryDispatch::RunGuns() const
 //TODO: add smear support.
 void UArtilleryDispatch::RunLocomotions() const
 {
-	if (RequestorQueue_Locomos)
+	if (__LIVE__ && RequestorQueue_Locomos)
 	{
 		//Sort is not stable. Sortedness appears to be lost for operations I would not expect.
 		for (LocomotionParams& Params : *RequestorQueue_Locomos)
@@ -717,7 +873,7 @@ void UArtilleryDispatch::CheckFutures()
 
 void UArtilleryDispatch::RERunGuns()
 {
-	if (ActionsToReconcile && ActionsToReconcile.IsValid())
+	if (__LIVE__ && ActionsToReconcile && ActionsToReconcile.IsValid())
 	{
 		//throw;
 	}
@@ -736,7 +892,7 @@ void UArtilleryDispatch::LoadGunData()
 //unused atm, but will be the way to ask for an eventish or triggered gun to fire, probably.
 void UArtilleryDispatch::QueueFire(FGunKey Key, ArtilleryTime Time)
 {
-	if (ActionsToOrder && ActionsToOrder.IsValid())
+	if (__LIVE__ && ActionsToOrder && ActionsToOrder.IsValid())
 	{
 		ActionsToOrder->Enqueue(std::pair(Key, Time));
 	}

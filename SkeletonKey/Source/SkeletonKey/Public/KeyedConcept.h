@@ -40,7 +40,7 @@ class SKELETONKEY_API ICanReady
 		
 	};
 	// override this:
-	virtual bool RegistrationImplementation() { return true; };
+	virtual bool RegistrationImplementation() { return false; };
 };
 
 UINTERFACE(NotBlueprintable)
@@ -73,24 +73,31 @@ class SKELETONKEY_API IKeyedConstruct : public ICanReady
 	}
 };
 
+struct WorldRecord
+{
+	bool IsReady = false;
+	bool IsForbidden = false;
+	bool IsSubstrate = false;
+};
+
+
 //tag interface marking out that this is a system, pillar, entity, or external that provides facts about keys or manages keys
 UINTERFACE(NotBlueprintable)
 class USkeletonLord : public UInterface
 {
 	GENERATED_UINTERFACE_BODY()
-
 };
 
 
 inline USkeletonLord::USkeletonLord(const FObjectInitializer& ObjectInitializer)
-: Super(ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 }
 
-
+#define __LIVE__  std::shared_ptr<WorldRecord> ___LIVING = MyWorldState.expired() || this == nullptr ? nullptr : MyWorldState.lock(); GEngine && ___LIVING != nullptr && ___LIVING->IsReady == true && ___LIVING->IsForbidden == false
 //A Key Binder, Keyless Itself (These are used ONLY for subsystems or other ECS pillars that are system preconditions)
 class ISkeletonLord
 {
 	GENERATED_IINTERFACE_BODY()
-	
+	std::weak_ptr<WorldRecord> MyWorldState = std::weak_ptr<WorldRecord>();
 };

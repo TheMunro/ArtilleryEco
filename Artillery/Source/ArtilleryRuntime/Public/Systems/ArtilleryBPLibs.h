@@ -39,7 +39,7 @@ public:
 	}
 };
 
-UCLASS(meta=(ScriptName="AbilitySystemLibrary"))
+UCLASS(meta=(ScriptName="ArtillerySystemLibrary"))
 class ARTILLERYRUNTIME_API UArtilleryLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()

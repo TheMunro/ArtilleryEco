@@ -205,7 +205,7 @@ public:
 
 	void QueueParticleSystemParameter(const FBoneKey& Key, const NiagaraVariableParam& Param) const;
 
-	void AddNamedNDCReference(FString Name, FString NDCAssetName) const;
+	void AddNDCReference(FString Name, TObjectPtr<UNiagaraDataChannelAsset> DataChannelAssetPtr) const;
 
 	bool AssetUsesNDCParticles(FString Name) const
 	{

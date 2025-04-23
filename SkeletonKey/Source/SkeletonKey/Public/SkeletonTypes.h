@@ -482,3 +482,45 @@ public:
 	//bullets are real picky.
 	FProjectileInstanceKey& operator=(const FSkeletonKey& rhs) = delete;
 };
+
+
+USTRUCT(BlueprintType)
+struct SKELETONKEY_API FLordKey //FLord.
+{
+	GENERATED_BODY()
+public:
+	uint64_t Obj;
+	uint32_t WorldID;
+
+	//generally, these are used to uniquely identify subsystems, but you can also use them to uniquely identify world-bound
+	//objects for ease of use or for clarity. A good example might be the concept of the local player, though we don't currently
+	//use them for that. Another good example might be the set of stats and records that we expect to persist for world outcomes.
+	explicit FLordKey(unsigned int WorldHash, unsigned int HashOfWorldConstructPointer) 
+	{
+		Obj = WorldHash;
+		WorldID = WorldHash;
+		Obj <<= 32;
+		//this doesn't seem like it should work, but because the SFIX bit patterns are intentionally asym
+		//we actually do reclaim a bit of randomness.
+		Obj |= HashOfWorldConstructPointer; 
+		Obj = FORGE_SKELETON_KEY(Obj, SKELLY::SFIX_SK_LORD);
+	}
+	
+	explicit FLordKey(): WorldID(0)
+	{
+		//THIS FAILS THE OBJECT CHECK AND THE ACTOR CHECK. THIS IS INTENDED. THIS IS THE PURPOSE OF SKELETON KEY.
+		Obj = 0;
+	}
+
+	friend uint32 GetTypeHash(const FLordKey& Other)
+	{
+		return GetTypeHash(Other.Obj);
+	}
+
+	//Lordly Keys are super picky and can really only be assigned like this.
+	FLordKey& operator=(const FLordKey& rhs)
+	{
+		Obj = rhs.Obj;
+		return *this;
+	}
+};
