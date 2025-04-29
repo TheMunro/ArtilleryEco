@@ -37,8 +37,6 @@ public class Bristlecone : ModuleRules
             "InputCore",
             "Networking",
             "Sockets",
-            "Settings",
-            "DeveloperSettings",
             "Cabling", "SkeletonKey"
         });
 
@@ -55,10 +53,9 @@ public class Bristlecone : ModuleRules
                 "InputCore",
                 "Networking",
                 "Sockets",
-                "Settings",
                 "DeveloperSettings",
                 "NetCommon",
-            "Cabling"
+                "Cabling"
             });
 
 

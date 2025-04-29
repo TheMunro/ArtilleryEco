@@ -32,10 +32,6 @@ namespace TheCone {
 	//I do not know how yours will work, but I needed this during the build out of mine.
 	static uint64_t DummyGetBristleconeSessionID()
 	{
-		#if UE_BUILD_SHIPPING
-		UE_LOG(LogTemp, Error, TEXT("DummyGetBristleconeSessionID made into a shipped build."));
-		throw();// IF YOU SEE THIS, YOU SHIPPED WITHOUT ADDING SESSION MANAGEMENT.
-		#endif
 		return 0xDEADBEEF;
 	}
 

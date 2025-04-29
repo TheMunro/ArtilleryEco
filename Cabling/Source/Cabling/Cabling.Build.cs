@@ -64,7 +64,6 @@ public class Cabling : ModuleRules
             "InputCore",
             "Networking",
             "Sockets",
-            "Settings",
             "DeveloperSettings",
             "LocomoCore", "SkeletonKey"
         });
@@ -82,7 +81,6 @@ public class Cabling : ModuleRules
                 "InputCore",
                 "Networking",
                 "Sockets",
-                "Settings",
                 "DeveloperSettings",
                 "NetCommon",
                 "LocomoCore"

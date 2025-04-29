@@ -102,8 +102,11 @@ public:
 	EStateTreeRunStatus CurrentRunStatus;
 	UPROPERTY(EditAnywhere, Category = Parameter)
 	F_ArtilleryKeyInstanceData InstanceOwnerKey;
-	virtual FString GetDebugInfoString() const override;
 
+#if WITH_GAMEPLAY_DEBUGGER
+	virtual FString GetDebugInfoString() const override;
+#endif // WITH_GAMEPLAY_DEBUGGER
+	
 	virtual void InitializeComponent() override;
 	FOnCollectStateTreeExternalData BindDel;
 	virtual bool CollectExternalData(const FStateTreeExecutionContext& Context, const UStateTree* StateTree, TArrayView<const FStateTreeExternalDataDesc> Descs, TArrayView<FStateTreeDataView> OutDataViews) const override;

@@ -79,6 +79,7 @@ void UThistleStateTreeLease::OnUnregister()
 	Super::OnUnregister();
 }
 
+#if WITH_GAMEPLAY_DEBUGGER
 FString UThistleStateTreeLease::GetDebugInfoString() const
 {
 	if (this && GetOwner() && StateTreeRef.IsValid())
@@ -95,6 +96,7 @@ FString UThistleStateTreeLease::GetDebugInfoString() const
 		return FString("No StateTree to run.");
 	}
 }
+#endif // WITH_GAMEPLAY_DEBUGGER
 
 void UThistleStateTreeLease::InitializeComponent()
 {
