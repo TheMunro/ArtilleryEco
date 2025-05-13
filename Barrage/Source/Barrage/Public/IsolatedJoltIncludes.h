@@ -33,6 +33,9 @@ PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
 #include "Jolt/ConfigurationString.h"
 #include "libcuckoo/cuckoohash_map.hh"
 
+struct FSkeletonKey;
+struct FBarrageKey;
+
 typedef libcuckoo::cuckoohash_map<FSkeletonKey, FBarrageKey> KeyToKey;
 
 typedef libcuckoo::cuckoohash_map<uint64_t, JPH::Ref<JPH::Shape>> BoundsToShape;
