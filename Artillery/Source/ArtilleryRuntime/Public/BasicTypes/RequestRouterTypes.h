@@ -54,7 +54,7 @@ struct ARTILLERYRUNTIME_API FRequestThing
 	FVector ThingVector2;
 	FVector ThingVector3;
 	FRotator ThingRotator;
-	FARelatedBy Relationship;
+	Arty::FARelatedBy Relationship;
 	int TicksDuration = -1;
 	bool ActivateIfPossible = true;
 	bool CanExpire = true;
