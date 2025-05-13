@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "ArtilleryDispatch.h"
+#include "AtomicTagArray.h"
 #include "EAttributes.h"
 #include "EPhysicsLayer.h"
 #include "GameFramework/Actor.h"

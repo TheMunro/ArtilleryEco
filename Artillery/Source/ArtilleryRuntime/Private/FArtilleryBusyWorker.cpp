@@ -321,10 +321,10 @@ uint32 FArtilleryBusyWorker::Run()
 	PowerThrottling.StateMask = 0;
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
-	SetProcessInformation(GetCurrentProcess(), 
-						  ProcessPowerThrottling, 
-						  &PowerThrottling,
-						  sizeof(PowerThrottling));
+	// SetProcessInformation(GetCurrentProcess(), 
+	// 					  ProcessPowerThrottling, 
+	// 					  &PowerThrottling,
+	// 					  sizeof(PowerThrottling));
 	
 	//we can now start the sim. we latch only on the apply step.
 	StartTicklitesSim->Trigger();
