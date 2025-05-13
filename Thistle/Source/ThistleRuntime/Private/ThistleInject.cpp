@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "ThistleInject.h"
+
+#include "ArtilleryBPLibs.h"
 #include "ArtilleryDispatch.h"
 #include "UFireControlMachine.h"
 
