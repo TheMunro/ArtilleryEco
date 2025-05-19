@@ -97,19 +97,3 @@ public:
 
 	virtual Bigby* PackImpl() = 0;
 };
-
-template <class T> class TagPack16 :Packable16
-{
-	Bigby* PackImpl() override
-	{
-		return T.PackImpl();
-	};
-};
-
-template <class T> class TagPack8 :Packable8
-{
-	uint64_t* PackImpl() override
-	{
-		return T.PackImpl();
-	}
-};
