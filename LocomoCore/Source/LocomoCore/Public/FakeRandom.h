@@ -3,6 +3,7 @@
 #include <array>
 
 #include "CoreMinimal.h"
+#include "MashFunctions.h"
 #include "FakeRandom.generated.h"
 
 //FFakeRandom supplies some intentionally low entropy and deterministic nudges and dispersions.
@@ -14,6 +15,7 @@
 //and hertz is the tickrate of whatever you're using this with. this will produce a cycle longer than a second
 //that doesn't repeat every second. It won't actually be less regular, but most people won't be able to actually
 //tell that, and exploiting it will be quite difficult. Don't use this for loot. Do something actually smart there.
+//note that we use an internal hash function, as typehash actually has undesirable behavior.
 UCLASS()
 class LOCOMOCORE_API UFakeRandom : public UObject
 {
@@ -101,15 +103,15 @@ class LOCOMOCORE_API UFakeRandom : public UObject
 	static FVector2D GetDispersion(uint32_t Now, Scattering Type, uint8 Cycle)
 	{
 		const auto len = Type == Ring ? RingHRL : ConeHRL;
-		const auto initial = GetTypeHash(Now);
+		const auto initial = FMMM::FastHash32(Now);
 		const auto finalXY = (initial + Cycle) % len;
 		return Type == Ring ? FVector2D(RingX[finalXY], RingY[finalXY]) : FVector2D(ConeX[finalXY], ConeY[finalXY]);
 	}
 
 	static FVector2D GetNudge(uint32_t Now, uint8 Cycle)
 	{
-		const auto initialX = GetTypeHash(Now);
-		const auto initialY = GetTypeHash(Now+1011);
+		const auto initialX = FMMM::FastHash32(Now);
+		const auto initialY = FMMM::FastHash32(Now+1011);
 		const auto finalX = (initialX + Cycle) % NudgeTable;
 		const auto finalY = (initialY + Cycle) % NudgeTable;
 		return FVector2D(NudgeBy[finalX], NudgeBy[finalY]);
@@ -117,13 +119,13 @@ class LOCOMOCORE_API UFakeRandom : public UObject
 
 	static float SelectSlosh(uint32_t Now, uint8 Cycle)
 	{
-		const auto initialX = GetTypeHash(Now+Cycle);
+		const auto initialX = FMMM::FastHash32(Now+Cycle);
 		return CoinFlip(Now,Cycle) * .0125 * (initialX % 3);
 	}
 
 	static int8 CoinFlip(uint32_t Now, uint8 Cycle)
 	{
-		const auto initialX = GetTypeHash(Now+Cycle);
+		const auto initialX = FMMM::FastHash32(Now+Cycle);
 		return 1 - (2 * (initialX % 2));
 	}
 

@@ -6,10 +6,10 @@
 #include "Templates/SubclassOf.h"
 #include "UObject/UnrealType.h"
 #include "Engine/DataTable.h"
-#include "AttributeSet.h"
 #include "Containers/CircularBuffer.h"
 
 #include "ConservedStates.generated.h"
+
 /**
  * Conserved states group flags and record their last 128 changes as a group. This will be superseded by gameplay tags
  * around January of 25, but right now, we aren't totally sure how we want tag replication to work, so this lets us defer.
@@ -17,7 +17,6 @@
 //all fields are now 4 bits. Fight me.
 constexpr static uint64_t FIELDMASK_4bits =	0x000000000000000F; //1111
 constexpr static uint64_t FIELDMASK_all =	0xFFFFFFFFFFFFFFFF;
-
 
 //SWITCH TO GAMEPLAYTAGS using the AtomicTagArray!
 //DO NOT MAKE FURTHER USE OF THIS unless you are _positive_ it's the best fit.
@@ -64,7 +63,7 @@ struct ARTILLERYRUNTIME_API FConservedStateData
 
 	virtual void SetField(F offsetBy, char valueFor) {
 		CurrentHistory[CurrentHistory.GetNextIndex(CurrentHead)] = CurrentValue;
-		auto mask = FIELDMASK_4bits << static_cast<unsigned long long>(offsetBy)*4;
+		unsigned long long mask = FIELDMASK_4bits << static_cast<unsigned long long>(offsetBy)*4;
 		mask = ~mask;
 		CurrentValue &= mask;
 		CurrentValue |= (valueFor << static_cast<unsigned long long>(offsetBy)*4);
@@ -73,7 +72,7 @@ struct ARTILLERYRUNTIME_API FConservedStateData
 
 	virtual unsigned long long GetField(F field)
 	{
-		auto offsetBy = static_cast<unsigned long long>(field)*4;
+		unsigned long long offsetBy = static_cast<unsigned long long>(field)*4;
 		return (CurrentValue & (FIELDMASK_4bits << offsetBy)) >> offsetBy;
 	}
 

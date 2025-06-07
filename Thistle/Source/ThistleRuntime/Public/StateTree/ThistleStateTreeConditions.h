@@ -1,11 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
+
 #include "ThistleTypes.h"
 #include "StateTreeConditionBase.h"
-#include "ArtilleryDispatch.h"
 #include "ThistleStateTreeConditions.generated.h"
-
 
 using namespace ThistleTypes;
 
@@ -56,8 +55,6 @@ struct THISTLERUNTIME_API FArtilleryTagMatchCondition : public FThistleCondition
 	UPROPERTY(EditAnywhere, Category = Condition)
 	bool bInvert = false;
 };
-
-
 
 /**
  * Check Attribute condition
@@ -144,7 +141,6 @@ struct THISTLERUNTIME_API FArtilleryCompareKeys : public FThistleCondition
 	
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 	virtual bool TestCondition(FStateTreeExecutionContext& Context) const override;
-	
 };
 
 USTRUCT(meta = (DisplayName = "LOS Check"))
@@ -158,8 +154,8 @@ struct THISTLERUNTIME_API FCheckLoStoPoI : public FThistleCondition
 
 	UPROPERTY(EditAnywhere, Category = Condition, meta = (ToolTip = "This should be set generously. The target point will be the centroid. But we're comparing the target to the impact point."))
 	double DistanceFromTargetToTolerate = 10;
-protected:
 	
+protected:
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 	virtual bool TestCondition(FStateTreeExecutionContext& Context) const override;
 };

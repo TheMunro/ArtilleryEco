@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "CoreMinimal.h"
 #include "CoreTypes.h"
 #include "Engine/DataTable.h"
@@ -60,8 +61,6 @@ struct FGunDefinitionRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=GunDefinition)
 	int32 BaseRecoil;
-
-
 	
 	//Unsure at this point in implementation if this value will always be respected.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=GunDefinition)

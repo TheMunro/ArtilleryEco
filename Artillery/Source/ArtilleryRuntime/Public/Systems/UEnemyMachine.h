@@ -1,9 +1,9 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+
 #include "CoreTypes.h"
 #include "CoreMinimal.h"
-#include "AbilitySystemComponent.h"
 #include "ArtilleryControlComponent.h"
 
 #include "ArtilleryDispatch.h"
@@ -19,17 +19,17 @@ class ARTILLERYRUNTIME_API UEnemyMachine : public UArtilleryFireControl
 	GENERATED_BODY()
 
 public:
-
 	//IF YOU DO NOT CALL THIS FROM THE GAMETHREAD, YOU WILL HAVE A BAD TIME.
 	ActorKey CompleteRegistrationWithAILocomotionAndParent(TMap<AttribKey, double> Attributes, ActorKey Key)
 	{
 		MyDispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
 		TransformDispatch =  GetWorld()->GetSubsystem<UTransformDispatch>();
 		CompleteRegAndUseKey(Attributes, Key);//modifies parentkey!!!
-		auto ArtilleryDispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
+		UArtilleryDispatch* ArtilleryDispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
 		ArtilleryDispatch->RequestRouter->MobileAI(Key, ArtilleryDispatch->GetShadowNow());
 		return ParentKey;
 	}
+	
 	//IF YOU DO NOT CALL THIS FROM THE GAMETHREAD, YOU WILL HAVE A BAD TIME.
 	ActorKey CompleteRegAndUseKey(TMap<AttribKey, double> Attributes, ActorKey Key)
 	{
@@ -48,9 +48,7 @@ public:
 		MyAttributes = MakeShareable(new FAttributeMap(ParentKey, MyDispatch, Attributes));
 		MyTags = NewObject<UArtilleryGameplayTagContainer>();
 		MyTags->Initialize(Key, MyDispatch);
-
 		//UE_LOG(LogTemp, Warning, TEXT("Enemy Mana: %f"), MyDispatch->GetAttrib(Key, Attr::Mana)->GetCurrentValue());
-		
 		return Key;
 	}                                
 
@@ -67,7 +65,7 @@ public:
 	virtual void InitializeComponent() override
 	{
 		Super::InitializeComponent();
-	};
+	}
 
 	//this happens post init but pre begin play, and the world subsystems should exist by this point.
 	virtual void ReadyForReplication() override
@@ -78,10 +76,10 @@ public:
 	virtual void BeginPlay() override
 	{
 		Super::BeginPlay();
-	};
+	}
 
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override
 	{
 		Super::OnComponentDestroyed(bDestroyingHierarchy);
-	};
+	}
 };

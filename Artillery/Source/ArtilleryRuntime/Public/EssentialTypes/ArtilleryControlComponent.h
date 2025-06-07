@@ -1,6 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+
 #include "CoreTypes.h"
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
@@ -19,7 +20,8 @@ class ARTILLERYRUNTIME_API UArtilleryFireControl : public UAbilitySystemComponen
 {
 	friend FArtilleryGun;
 	GENERATED_BODY()
-	public:
+	
+public:
 	static inline int orderInInitialize = 0;
 	UPROPERTY(BlueprintReadOnly)
 	UArtilleryGameplayTagContainer* MyTags;
@@ -39,7 +41,7 @@ class ARTILLERYRUNTIME_API UArtilleryFireControl : public UAbilitySystemComponen
 	// I'm deferring the solve for how we use them for now, in a desperate effort to
 	// make sure we can preserve as much of the ability framework as possible
 	// but spec management is going to be mission critical for determinism
-	void FireGun(TSharedPtr<FArtilleryGun> Gun, bool InputAlreadyUsedOnce, ArtIPMKey FireAction);;
+	void FireGun(TSharedPtr<FArtilleryGun> Gun, bool InputAlreadyUsedOnce, EventBufferInfo BufferInfo);
 
 	virtual void PopGunFromFireMapping(const FGunKey& ToRemove);
 
@@ -54,5 +56,4 @@ class ARTILLERYRUNTIME_API UArtilleryFireControl : public UAbilitySystemComponen
 	virtual void BeginPlay() override;;
 	
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;;
-	
 };

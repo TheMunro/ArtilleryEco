@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
+
 //"IPropertyAccessEditor.h"
 //"StateTreeEditorPropertyBindings.h" // this defines interfaces for data collection on bindables
 //"StateTreeEditorData.h"	//this provides the editor-side implementation of the Property Owner
@@ -32,7 +35,6 @@ struct THISTLERUNTIME_API FTTaskBase : public FStateTreeTaskBase
 USTRUCT()
 struct THISTLERUNTIME_API FStoreRelationship : public FTTaskBase
 {
-
 	GENERATED_BODY()
 	using FInstanceDataType = F_SetRelatedKey;
 
@@ -44,12 +46,10 @@ protected:
 USTRUCT()
 struct THISTLERUNTIME_API FSetTagOfKey : public FTTaskBase
 {
-
 	GENERATED_BODY()
 	using FInstanceDataType = F_TTagInstanceData;
 	
 protected:
-
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 };
@@ -57,12 +57,10 @@ protected:
 USTRUCT()
 struct THISTLERUNTIME_API FRemoveTagFromKey : public FTTaskBase
 {
-
 	GENERATED_BODY()
 	using FInstanceDataType = F_TTagInstanceData;
 	
 protected:
-
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 };
@@ -70,16 +68,13 @@ protected:
 USTRUCT()
 struct THISTLERUNTIME_API FStoreToAttribute : public FTTaskBase
 {
-
 	GENERATED_BODY()
 	using FInstanceDataType = F_TAttributeSetData;
 	
 protected:
-
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 };
-
 
 ////////////////////////////////////////////////////////////////////////
 // Thistle State Tree Lease is a Cadenced StateTree holder. It provides registration and execution context support
@@ -91,6 +86,7 @@ UCLASS(Blueprintable, ClassGroup = AI, HideCategories = (Activation, Collision),
 class THISTLERUNTIME_API UThistleStateTreeLease : public UStateTreeComponent, public ITickHeavy
 {
 	GENERATED_BODY()
+	
 public:
 	virtual void BeginDestroy() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

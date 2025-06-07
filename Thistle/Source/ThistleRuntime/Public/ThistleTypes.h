@@ -1,6 +1,6 @@
-﻿#pragma once
-#include <iostream>
-#include <ostream>
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 #include "ArtilleryBPLibs.h"
 #include "EAttributes.h"
@@ -8,12 +8,10 @@
 #include "SkeletonTypes.h"
 #include "ThistleTypes.generated.h"
 
-
 namespace ThistleTypes
 {
 	const FName ContextKey = TEXT("Key Of Controlled Entity");
 }
-
 
 /** CurrentValue.[EAttribConditionOperand](TestValue)  */
 UENUM(BlueprintType)
@@ -21,16 +19,12 @@ enum class E_AttribConditionOperand : uint8
 {
 	/** > */
 	Greater,
-	
 	/** < */
 	Less,
-	
 	/** == */
 	Equal,
-
 	/** <= */
 	LessOrEqual,
-
 	/** >= */
 	GreaterOrEqual,
 };
@@ -40,12 +34,9 @@ UENUM(BlueprintType)
 enum  class  E_PointOfInterestMode : uint8
 {
 	VectorOnly, //The vector contains the exact worldspace position of the POI
-	
 	KeyOnly, //The PointOfInterestKey is set, and a valid transform can be retrieved from it
-	
 	KeyRelativeVec, //Both are set, and the vector is relative to the position of the key's transform.
 };
-
 
 USTRUCT(BlueprintType, meta = (DisplayName = "Skeleton Key"))
 struct THISTLERUNTIME_API F_ArtilleryKeyInstanceData
@@ -73,7 +64,6 @@ struct THISTLERUNTIME_API F_K2KInstanceData
 	/** Key to use. */
 	UPROPERTY(VisibleAnywhere, Category = Input)
 	FSkeletonKey InputKey;
-
 	UPROPERTY(EditAnywhere, Category = Output)
 	FSkeletonKey OutputKey;
 };
@@ -127,7 +117,6 @@ struct THISTLERUNTIME_API F_SetRelatedKey
 	FSkeletonKey UpdateToRelatedKey;
 };
 
-
 USTRUCT(BlueprintType)
 struct THISTLERUNTIME_API F_TTagInstanceData : public F_ArtilleryKeyInstanceData
 {
@@ -152,6 +141,7 @@ USTRUCT(BlueprintType)
 struct THISTLERUNTIME_API F_TAttributeSetData : public F_TAttributeInstanceData
 {
 	GENERATED_BODY()
+	
 	UPROPERTY(EditAnywhere, Category = Input)
 	float Value;
 };
@@ -190,7 +180,7 @@ struct THISTLERUNTIME_API F_TPOIInstanceData: public  F_ArtilleryKeyInstanceData
 		case E_PointOfInterestMode::KeyOnly:
 			return UArtilleryLibrary::K2_GetBarrageLocIfAny(PointOfInterestKey, ShuckedSuccessfully);
 		case E_PointOfInterestMode::KeyRelativeVec:
-			auto RequiresNANCheck = UArtilleryLibrary::K2_GetBarrageLocIfAny(PointOfInterestKey, ShuckedSuccessfully);
+			FVector RequiresNANCheck = UArtilleryLibrary::K2_GetBarrageLocIfAny(PointOfInterestKey, ShuckedSuccessfully);
 			if (ShuckedSuccessfully)
 			{
 				if (!Vec3.ContainsNaN())
@@ -198,11 +188,8 @@ struct THISTLERUNTIME_API F_TPOIInstanceData: public  F_ArtilleryKeyInstanceData
 					ShuckedSuccessfully = true; // this is already set, but this is C++. be explicit.
 					return RequiresNANCheck + Vec3;
 				}
-				else
-				{
-					ShuckedSuccessfully = false;
-					return RequiresNANCheck; // in THEORY you might be able to recover here, so we provide the most we can.
-				}
+				ShuckedSuccessfully = false;
+				return RequiresNANCheck; // in THEORY you might be able to recover here, so we provide the most we can.
 			}
 			break;
 		}
@@ -236,6 +223,7 @@ USTRUCT(BlueprintType)
 struct THISTLERUNTIME_API FThistleSphereCastInstanceData : public FPointToPoint
 {
 	GENERATED_BODY()
+	
 	UPROPERTY(EditAnywhere, Category = Parameter)
 	float Radius;
 
@@ -264,11 +252,11 @@ namespace ThistleTypes
 		{
 			return true;
 		}
-		else if (Value > Target && (Operation == TreeOperand::Greater || Operation == TreeOperand::GreaterOrEqual))
+		if (Value > Target && (Operation == TreeOperand::Greater || Operation == TreeOperand::GreaterOrEqual))
 		{
 			return true;
 		}
-		else if (Value < Target && (Operation == TreeOperand::Less || Operation == TreeOperand::LessOrEqual))
+		if (Value < Target && (Operation == TreeOperand::Less || Operation == TreeOperand::LessOrEqual))
 		{
 			return true;
 		}

@@ -3,19 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FMasks.h"
 #include "Templates/SubclassOf.h"
 #include "UObject/UnrealType.h"
 #include "Engine/DataTable.h"
-#include "AttributeSet.h"
 #include "Containers/CircularBuffer.h"
 #include "BristleconeCommonTypes.h"
 #include "ArtilleryCommonTypes.h"
-#include "FCablePackedInput.h"
 
 #include "ArtilleryShell.generated.h"
-
-
 
 /**
  Artillery provides an opaque storage optimized containerization for the bristlecone packed input, 
@@ -31,10 +26,6 @@ struct ARTILLERYRUNTIME_API FArtilleryShell
 {
 	GENERATED_BODY()
 public:
-
-
-
-	
 	//by this point, this is a record of the functions that should be triggered by the keymapping.
 	//Mapping from keys to gameplay outcomes (intents) happens outside of Artillery, in cabling.
 	//this means that you can reliably re-execute remote input without needing their control mappings, and is fairly essential
@@ -63,5 +54,4 @@ private:
 	
 	//TODO ADD METHODS FOR GET STICKS, GET BUTTONS, GET EVENTS.
 	//DO NOT LET THE BITBASHING OUT OF THE BOX.
-
 };

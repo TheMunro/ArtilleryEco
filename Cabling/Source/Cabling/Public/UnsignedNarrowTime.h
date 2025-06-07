@@ -1,6 +1,7 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
+
 #include <cstdint>
 #include <chrono>
 
@@ -10,8 +11,7 @@ class CABLING_API NarrowClock {
 public:
 	static uint32_t getSlicedMicrosecondNow()
 	{
-
 		using namespace std::chrono;
-		return duration_cast<std::chrono::duration<uint32_t, std::micro>>(system_clock::now().time_since_epoch()).count();
-	};
+		return duration_cast<duration<uint32_t, std::micro>>(system_clock::now().time_since_epoch()).count();
+	}
 };

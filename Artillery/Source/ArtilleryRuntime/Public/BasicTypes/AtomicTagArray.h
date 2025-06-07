@@ -3,9 +3,23 @@
 #include <atomic>
 #include <memory>
 #include <utility>
-#include <GameplayTagsManager.h>
 #include "NativeGameplayTags.h"
 #include "SkeletonTypes.h"
+
+#include "CoreMinimal.h"
+#include "Templates/SubclassOf.h"
+#include "UObject/UnrealType.h"
+#include "Engine/DataTable.h"
+#include "Containers/CircularBuffer.h"
+
+THIRD_PARTY_INCLUDES_START
+PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
+#include "libcuckoo/cuckoohash_map.hh"
+PRAGMA_POP_PLATFORM_DEFAULT_PACKING
+THIRD_PARTY_INCLUDES_END
+
+#include "AtomicTagArray.generated.h"
+
 struct FConservedTagContainer;
 typedef TSharedPtr<FGameplayTagContainer> FS_GameplayTagPtr;
 typedef TSharedPtr<TArray<FGameplayTag>> FTagLayer;
@@ -16,7 +30,6 @@ typedef TSharedPtr<TMap<FGameplayTag, uint16_t>> TagsSeen;
 typedef TSharedPtr<UnderlyingTagReverse> TagsByCode;
 
 typedef TWeakPtr<UnderlyingTagReverse> Flimsy;
-
 
 //TODO: add tag rollback in Artillery Dispatch
 //TODO: add save-all or copy-all for the tag representations themselves.
@@ -38,44 +51,32 @@ struct FTagStateRepresentation
 	uint16_t Tags[FAST_TAG_MAX_C];
 	std::atomic_uint32_t snagged = 0;
 	TWeakPtr<FConservedTagContainer> AccessRefController;
-	FTagStateRepresentation(): Tags{}
+	
+	FTagStateRepresentation() : Tags{}
 	{
 	}
+	
 	//This allows a held conserved tag container to be used directly
 	bool Find(uint16 Numerology);
 	bool Remove(uint16 Numerology);
 	bool Add(uint16 Numerology);
 };
 
-
 typedef TSharedPtr<FTagStateRepresentation> FTagsPtr;
 using FConservedTags = TSharedPtr<FConservedTagContainer> ;
 THIRD_PARTY_INCLUDES_START
 PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
-#include "libcuckoo/cuckoohash_map.hh"
 typedef libcuckoo::cuckoohash_map<uint32_t, FTagsPtr> Entities;
 typedef libcuckoo::cuckoohash_map<uint32_t, FS_GameplayTagPtr> SlowEntities;
 PRAGMA_POP_PLATFORM_DEFAULT_PACKING
 THIRD_PARTY_INCLUDES_END
-
-
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
-
-#include "CoreMinimal.h"
-#include "Templates/SubclassOf.h"
-#include "UObject/UnrealType.h"
-#include "Engine/DataTable.h"
-#include "Containers/CircularBuffer.h"
-
-#include "AtomicTagArray.generated.h"
 
 //the fetching tag container hides the existence of the AtomicTagArray from UE as a whole as best we can.
 USTRUCT(BlueprintType)
 struct ARTILLERYRUNTIME_API FConservedTagContainer 
 {
 	GENERATED_BODY()
+	
 	friend class UArtilleryDispatch;
 	friend class AtomicTagArray;
 	friend class FArtilleryBusyWorker;
@@ -93,11 +94,12 @@ struct ARTILLERYRUNTIME_API FConservedTagContainer
 	virtual bool Add(FGameplayTag Bot);
 	
 	Flimsy DecoderRing; // use at your own risk, but you might need this in some really narrow cases.
+	
 protected:
-
-
 	virtual void CacheLayer();
+	
 	TCircularBuffer<FTagLayer> CurrentHistory = TCircularBuffer<FTagLayer>(RollbackFrames);
+	
 	FConservedTagContainer(TSharedPtr<FTagStateRepresentation> Bind, TagsByCode TagsKnown, TagsSeen TagsSeen)
 	{
 		Tags = Bind;
@@ -112,19 +114,15 @@ private:
 	TagsSeen SeenT;
 };
 
-
-
 class ARTILLERYRUNTIME_API AtomicTagArray
 {
 	friend class UArtilleryDispatch;
+	
 public:
-	AtomicTagArray(const TagsSeen& SeenT)
-		:
-		SeenT(SeenT)
+	AtomicTagArray(const TagsSeen& SeenT) : SeenT(SeenT)
 	{
 		FastEntities = MakeShareable(new Entities());
 	}
-	
 
 	AtomicTagArray();
 	bool Add(FSkeletonKey Top, FGameplayTag Bot);
@@ -137,6 +135,7 @@ public:
 	FConservedTags GetReference(FSkeletonKey Top);
 	void Init();
 	bool Empty();
+	
 protected:
 	//it is STRONGLY advised that you NEVER call EITHER OF THESE directly.
 	//please instead use RegisterGameplayTags or DeregisterGameplayTags
@@ -153,4 +152,3 @@ private:
 	constexpr static uint8 STARTED = 1;
 	constexpr static uint8 FINISHED = 2;
 };
-

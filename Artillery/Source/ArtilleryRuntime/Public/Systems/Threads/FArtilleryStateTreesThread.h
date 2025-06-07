@@ -1,12 +1,11 @@
 ﻿#pragma once
+
 #include <thread>
 
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
 #include "ArtilleryCommonTypes.h"
 #include "NeedA.h"
-
-
 
 //this is a busy-style thread, which runs AI systems in predetermined order. 
 template <typename UDispatch>
@@ -16,14 +15,11 @@ class FStateTreesWorker : public FRunnable
 	friend class UArtilleryDispatch;
 	ArtilleryTime LocalNow;
 
-
 protected:
-	
 	FSharedEventRef RunAheadStateTrees;
+	
 public:
-	
 	TSharedPtr<F_INeedA> RequestRouter;
-	
 	FArtilleryAddEnemyToControllerSubsystem EnemyRegisterHook;
 	//Templating here is used to both make reparenting easier if needed later and to simplify our dependency tree
 	UDispatch* DispatchOwner;
@@ -51,8 +47,7 @@ public:
 		}
 	}
 
-	inline ArtilleryTime GetShadowNow()
-	const
+	ArtilleryTime GetShadowNow() const
 	{
 		return DispatchOwner->GetShadowNow();
 	}
@@ -60,7 +55,8 @@ public:
 	virtual ~FStateTreesWorker() override
 	{
 		UE_LOG(LogTemp, Display, TEXT("Artillery: Destructing AI thread."));
-	};
+	}
+	
 	virtual bool QueueRollback()
 	{
 		//rollback is not implemented yet, but works by removing ticklikes added after the rollback's timestamp.
@@ -77,7 +73,6 @@ public:
 		UE_LOG(LogTemp, Display, TEXT("Artillery: Booting StateTrees thread."));
 		running = true;
 		return true;
-		
 	}
 	
 	virtual uint32 Run() override
@@ -85,7 +80,6 @@ public:
 		int SeqNumber = 0;
 		DispatchOwner->ThreadSetup();
 		while(running) {
-
 			DispatchOwner->RunEnemySim(SeqNumber);
 			RunAheadStateTrees->Wait();
 			RunAheadStateTrees->Reset(); // we can run long on sim, not on apply.
@@ -107,18 +101,17 @@ public:
 
 	virtual void Stop() override
 	{
-		
 		running = false;
 		UE_LOG(LogTemp, Display, TEXT("Artillery:AIWorker: Stopping Artillery AI thread."));
 		Cleanup();
 	}
 
-	
 private:
 	void Cleanup()
 	{
 		running = false;
 	};
+	
 	bool running;
 };
 

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "ThistleDispatch.h"
 
 #include "ArtilleryBPLibs.h"
@@ -21,13 +19,11 @@ void UThistleDispatch::OnWorldBeginPlay(UWorld& InWorld)
 {
 	if ([[maybe_unused]] const UWorld* World = InWorld.GetWorld()) {
 		UE_LOG(LogTemp, Warning, TEXT("ThistleDispatch:Subsystem: World beginning play"));
-	
 	}
 }
 
 void UThistleDispatch::Deinitialize()
 {
-
 	Super::Deinitialize();
 }
 
@@ -37,8 +33,8 @@ void UThistleDispatch::ArtilleryTick(uint64_t TicksSoFar)
 	if (TicksSoFar % 32 && ActorToAILocomotionMapping)
 	{
 		QuadTreeMaintenance = true;
-		auto HoldOpen = QuadTreeForDistance; // retain the ref to the old map until our tick is finished.
-		TSharedPtr<TQuadTree< TPair<ActorKey, FVector2d>>> QuadTreeCandidate = MakeShareable(new TQuadTree< TPair<ActorKey, FVector2d>>(FBox2d(FVector2d::ZeroVector - 200000, FVector2d::ZeroVector + 200000)));  //swap now.
+		TSharedPtr<TQuadTree<TPair<ActorKey, FVector2d>>> HoldOpen = QuadTreeForDistance; // retain the ref to the old map until our tick is finished.
+		TSharedPtr<TQuadTree<TPair<ActorKey, FVector2d>>> QuadTreeCandidate = MakeShareable(new TQuadTree<TPair<ActorKey, FVector2d>>(FBox2d(FVector2d::ZeroVector - 200000, FVector2d::ZeroVector + 200000)));  //swap now.
 		for(TTuple<ActorKey, TObjectPtr<AThistleInject>>& Enemy : *ActorToAILocomotionMapping)
 		{
 			bool YouAliveInThere = false;

@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Kines.h"
@@ -9,16 +11,14 @@ class PlayerKine : public ActorKine
 public:
 	TWeakObjectPtr<AActor> MySelf;
 	
-	explicit PlayerKine(const TWeakObjectPtr<AActor>& MySelf, const ActorKey& Target)
-		: ActorKine(MySelf, Target), MySelf(MySelf)
+	explicit PlayerKine(const TWeakObjectPtr<AActor>& MySelf, const ActorKey& Target) : ActorKine(MySelf, Target), MySelf(MySelf)
 	{
 		MyKey = Target;
 	}
 
 	virtual void SetLocationAndRotation(FVector3d Loc, FQuat4d Rot) override
 	{
-		TObjectPtr<AActor> Pin;
-		Pin = MySelf.Get();
+		TObjectPtr<AActor> Pin = MySelf.Get();
 		if(Pin && !Loc.ContainsNaN())
 		{
 			Pin->SetActorLocationAndRotation(Loc, Rot);
@@ -27,8 +27,7 @@ public:
 
 	virtual void SetLocation(FVector3d Location) override
 	{
-		TObjectPtr<AActor> Pin;
-		Pin = MySelf.Get();
+		TObjectPtr<AActor> Pin = MySelf.Get();
 		if(Pin && !Location.ContainsNaN())
 		{
 			Pin->SetActorLocation(Location, false, nullptr, ETeleportType::None);
@@ -37,8 +36,7 @@ public:
 
 	virtual void SetRotation(FQuat4d Rotation) override
 	{
-		TObjectPtr<AActor> Pin;
-		Pin = MySelf.Get();
+		TObjectPtr<AActor> Pin = MySelf.Get();
 		if(Pin && !Rotation.ContainsNaN())
 		{
 			Pin->SetActorRotation(Rotation, ETeleportType::None);

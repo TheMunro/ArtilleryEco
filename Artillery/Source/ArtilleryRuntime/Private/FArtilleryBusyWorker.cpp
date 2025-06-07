@@ -21,7 +21,6 @@ FArtilleryBusyWorker::~FArtilleryBusyWorker()
 bool FArtilleryBusyWorker::Init()
 {
 	//you cannot reorder these. it is a magic ordering put in place for a hack. 
-
 	UE_LOG(LogTemp, Display, TEXT("Artillery:BusyWorker: Initializing Artillery thread"));
 	running = true;
 	return true;
@@ -185,13 +184,10 @@ void FArtilleryBusyWorker::ProcessRequestRouterBusyWorkerThread()
 						UE_LOG(
 							LogTemp,
 							Fatal,
-							TEXT(
-								"ArtilleryDispatch::ProcessRequestRouterGameThread: Received Request Router request for unimplemented request type: [%d]"
-							),
+							TEXT("ArtilleryDispatch::ProcessRequestRouterGameThread: Received Request Router request for unimplemented request type: [%d]"),
 							Request.GetType());
 						throw;
 					}
-						
 				}
 			}
 		}
@@ -227,7 +223,7 @@ void FArtilleryBusyWorker::RunFrameProcessingLoop(bool missedPrior, uint64_t cur
 			ProcessRequestRouterBusyWorkerThread();
 			//tag container save-off currently happens before player and player-like locomotion.
 			//this SHOULD be the right place, by my limited reasoning, but I could be wrong.
-			for (auto TagSet : TagRollbackManagement)
+			for (FConservedTags& TagSet : TagRollbackManagement)
 			{
 				if (TagSet)
 				{
@@ -321,10 +317,10 @@ uint32 FArtilleryBusyWorker::Run()
 	PowerThrottling.StateMask = 0;
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
-	// SetProcessInformation(GetCurrentProcess(), 
-	// 					  ProcessPowerThrottling, 
-	// 					  &PowerThrottling,
-	// 					  sizeof(PowerThrottling));
+	SetProcessInformation(GetCurrentProcess(), 
+						  ProcessPowerThrottling, 
+						  &PowerThrottling,
+						  sizeof(PowerThrottling));
 	
 	//we can now start the sim. we latch only on the apply step.
 	StartTicklitesSim->Trigger();

@@ -136,7 +136,6 @@ void UArtilleryDispatch::OnWorldBeginPlay(UWorld& InWorld)
 
 void UArtilleryDispatch::Deinitialize()
 {
-	
 	IsReady = false;
 	SelfPtr = nullptr;
 	if (__LIVE__)
@@ -175,9 +174,7 @@ void UArtilleryDispatch::Deinitialize()
 		WorldSim_Thread.Reset();
 	}
 	
-	AttributeSetToDataMapping = nullptr;
 	GameplayTagContainerToDataMapping->Empty();
-	IdentSetToDataMapping->Empty();
 	KeyToControlliteMapping->Empty();
 	VectorSetToDataMapping->Empty();
 	GunByKey->Empty();
@@ -186,22 +183,21 @@ void UArtilleryDispatch::Deinitialize()
 	Super::Deinitialize();
 }
 
-AttrMapPtr UArtilleryDispatch::GetAttribSetShadowByObjectKey(const FSkeletonKey& Target,
-                                                             ArtilleryTime Now) const
+AttrMapPtr UArtilleryDispatch::GetAttribSetShadowByObjectKey(const FSkeletonKey& Target, ArtilleryTime Now) const
 {
 	AttrMapPtr In;
 	AttributeSetToDataMapping->find(Target, In);
 	return In ? In : nullptr;
 }
 
-IdMapPtr UArtilleryDispatch::GetIdSetShadowByObjectKey(const FSkeletonKey& Target,
-                                                       ArtilleryTime Now) const
+IdMapPtr UArtilleryDispatch::GetIdSetShadowByObjectKey(const FSkeletonKey& Target, ArtilleryTime Now) const
 {
-	return IdentSetToDataMapping->FindChecked(Target);
+	IdMapPtr In;
+	IdentSetToDataMapping->find(Target, In);
+	return In ? In : nullptr;
 }
 
-Attr3MapPtr UArtilleryDispatch::GetVectorSetShadowByObjectKey(const FSkeletonKey& Target,
-                                                              ArtilleryTime Now) const
+Attr3MapPtr UArtilleryDispatch::GetVectorSetShadowByObjectKey(const FSkeletonKey& Target, ArtilleryTime Now) const
 {
 	return VectorSetToDataMapping->FindChecked(Target);
 }
@@ -227,13 +223,14 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 					case ArtilleryRequestType::FireAGun:
 						{
 							TSharedPtr<FArtilleryGun> GunHoldOpen = GunByKey->FindRef(Request.Gun);
-							TDelegate<void(TSharedPtr<FArtilleryGun>, bool, ArtIPMKey)>* FireFunction =
+							TDelegate<void(TSharedPtr<FArtilleryGun>, bool, EventBufferInfo)>* FireFunction =
 								GunToFiringFunctionMapping->Find(Request.Gun);
 
 							if (FireFunction != nullptr && GunHoldOpen)
 							{
-								TotalFirings += FireFunction->ExecuteIfBound(
-									GunHoldOpen, false, ArtIPMKey::InternallyStateless);
+								EventBufferInfo def = EventBufferInfo::Default();
+								def.Action = ArtIPMKey::InternallyStateless;
+								TotalFirings += FireFunction->ExecuteIfBound(GunHoldOpen, false, def);
 							}
 							else
 							{
@@ -242,9 +239,7 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 								UE_LOG(
 									LogTemp,
 									Error,
-									TEXT(
-										"ArtilleryDispatch::ProcessRequestRouterGameThread: Error processing FireGun request with gun key [id: %llu, name: %s]"
-									),
+									TEXT("ArtilleryDispatch::ProcessRequestRouterGameThread: Error processing FireGun request with gun key [id: %llu, name: %s]"),
 									Request.Gun.GunInstanceID.Obj,
 									*Request.Gun.GunDefinitionID);
 							}
@@ -285,7 +280,6 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 										UTransformDispatch>();
 									TransformDispatch->RegisterSceneCompToShadowTransform(
 										AttachToAsBoneKey, SceneComp.Get());
-
 									AttachToKey = AttachToAsBoneKey;
 								}
 							}
@@ -301,12 +295,12 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 						break;
 					case ArtilleryRequestType::GetAnUnboundGun:
 						{
-							IdMapPtr* WordsOfPower = GetRelationships(Request.SourceOrSelf);
+							IdMapPtr WordsOfPower = GetRelationships(Request.SourceOrSelf);
 							FGunKey Gun = GetGun(Request.Gun.GunDefinitionID, ActorKey(Request.SourceOrSelf));
 							FGunInstanceKey BANG = Gun.GunInstanceID;
 							if (WordsOfPower)
 							{
-								TSharedPtr<FConservedAttributeKey> MaterialComponent = WordsOfPower->Get()->FindOrAdd(
+								TSharedPtr<FConservedAttributeKey> MaterialComponent = WordsOfPower.Get()->FindOrAdd(
 									Request.Relationship);
 								if (MaterialComponent)
 								{
@@ -314,11 +308,10 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 								}
 								else
 								{
-									TSharedPtr<FConservedAttributeKey> PowerWordGun = MakeShareable(
-										new FConservedAttributeKey);
+									TSharedPtr<FConservedAttributeKey> PowerWordGun = MakeShareable(new FConservedAttributeKey);
 									PowerWordGun->SetBaseValue(BANG);
 									PowerWordGun->SetCurrentValue(BANG);
-									WordsOfPower->Get()->Add(Request.Relationship, PowerWordGun);
+									WordsOfPower.Get()->Add(Request.Relationship, PowerWordGun);
 								}
 							}
 							else
@@ -374,9 +367,7 @@ void UArtilleryDispatch::ProcessRequestRouterGameThread()
 						UE_LOG(
 							LogTemp,
 							Fatal,
-							TEXT(
-								"ArtilleryDispatch::ProcessRequestRouterGameThread: Received Request Router request for unimplemented request type: [%d]"
-							),
+							TEXT("ArtilleryDispatch::ProcessRequestRouterGameThread: Received Request Router request for unimplemented request type: [%d]"),
 							Request.GetType());
 						throw;
 					}
@@ -396,8 +387,7 @@ void UArtilleryDispatch::Tick(float DeltaTime)
 	if (UTransformDispatch::SelfPtr && BarrageDispatch && PlayerKP != nullptr)
 	{
 		//oh i place a hex on you
-		UTransformDispatch::SelfPtr->ApplyTransformUpdates<TSharedPtr<TransformUpdatesForGameThread>>(
-			BarrageDispatch->GameTransformPump);
+		UTransformDispatch::SelfPtr->ApplyTransformUpdates<TSharedPtr<TransformUpdatesForGameThread>>(BarrageDispatch->GameTransformPump);
 	}
 	//dumbfire it with the ol' skibidi
 
@@ -473,12 +463,10 @@ bool UArtilleryDispatch::IsGunLive(FSkeletonKey Key)
 	if (__LIVE__)
 	{
 		TSharedPtr<TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>> HoldOpenGuns = GunByKey;
-
-		if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns.IsValid() && GunByKey && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
+		if (UArtilleryDispatch::SelfPtr != nullptr && HoldOpenGuns && HoldOpenGuns.IsValid() && HoldOpenGuns->Num() > 0 && HoldOpenGuns.Get() && IsReady)
 		{
 			return HoldOpenGuns->IsEmpty() ? false : HoldOpenGuns->Contains(Key);
 		}
-		return false;
 	}
 	return false;
 }
@@ -527,8 +515,24 @@ void UArtilleryDispatch::QueueResim(FGunKey Key, ArtilleryTime Time) const
 AttrMapPtr UArtilleryDispatch::GetAttribMap(const FSkeletonKey Owner) const
 {
 	AttrMapPtr result;
-	bool found = AttributeSetToDataMapping->find(Owner, result);
-	return found ? result : nullptr;
+	return AttributeSetToDataMapping->find(Owner, result) ? result : nullptr;
+}
+
+AttrPtr UArtilleryDispatch::AddAttrib(const FSkeletonKey Owner, AttribKey Attrib, float AttribValue)
+{
+	// For now this will overwrite the value of any existing attribute.
+	if (AttributeSetToDataMapping != nullptr)
+	{
+		AttrMapPtr AttributeMap;
+		if (AttributeSetToDataMapping->find(Owner, AttributeMap) && AttributeMap != nullptr)
+		{
+			AttrPtr& NewAttrPtr = AttributeMap->Add(Attrib, MakeShareable(new FConservedAttributeData()));
+			NewAttrPtr->SetBaseValue(AttribValue);
+			NewAttrPtr->SetCurrentValue(AttribValue);
+			return NewAttrPtr;
+		}
+	}
+	return nullptr;
 }
 
 //Do not swap this to a ref, because a ref is a ref. If you want a no copy op, first off,
@@ -567,54 +571,58 @@ AttrPtr inline UArtilleryDispatch::GetAttribRequired(const FSkeletonKey& Owner, 
 	return nullptr;
 }
 
-IdentPtr UArtilleryDispatch::GetIdent(const FSkeletonKey& Owner, Ident Attrib) const
+IdentPtr UArtilleryDispatch::GetIdent(const FSkeletonKey Owner, Ident Attrib) const
 {
 	if (IdentSetToDataMapping && Owner != 0)
 	{
-		IdMapPtr* IDMap = IdentSetToDataMapping->Find(Owner);
-		if (IDMap != nullptr)
+		IdMapPtr In;
+		IdentSetToDataMapping->find(Owner, In);
+		if (In != nullptr)
 		{
-			IdentPtr* Identity = IDMap->Get()->Find(Attrib);
+			IdentPtr* Identity = In.Get()->Find(Attrib);
 			return Identity != nullptr ? *Identity : nullptr;
 		}
 	}
 	return nullptr;
 }
 
-IdentPtr UArtilleryDispatch::GetOrAddIdent(const FSkeletonKey& Owner, Ident Attrib) const
+IdentPtr UArtilleryDispatch::GetOrAddIdent(const FSkeletonKey Owner, Ident Attrib) const
 {
 	if (IdentSetToDataMapping && Owner != 0)
 	{
-		IdMapPtr* IDMap = IdentSetToDataMapping->Find(Owner);
-		if (IDMap != nullptr)
+		IdMapPtr In;
+		IdentSetToDataMapping->find(Owner, In);
+		if (In != nullptr)
 		{
-			IdentPtr* Identity = IDMap->Get()->Find(Attrib);
+			IdentPtr* Identity = In.Get()->Find(Attrib);
 			return Identity != nullptr ? *Identity : nullptr;
 		}
-		else
-		{
-			return IDMap->Get()->Add(Attrib, MakeShareable(new FConservedAttributeKey()));
-		}
+		IdMapPtr NewIDMap = MakeShareable(new IdentityMap());
+		IdentSetToDataMapping->insert_or_assign(Owner, NewIDMap);
+		return NewIDMap->Add(Attrib);
+
 	}
 	return nullptr;
 }
 
 //MUTABLE ACCESS TO THE RELATIONSHIPS OF A KEY.
 //Necessary, but be like me: demure. looking respectfully. creating a god damn mess.
-IdMapPtr* UArtilleryDispatch::GetRelationships(const FSkeletonKey& Owner) const
+IdMapPtr UArtilleryDispatch::GetRelationships(const FSkeletonKey Owner) const
 {
 	if (IdentSetToDataMapping && Owner != 0)
 	{
-		IdMapPtr* IDMap = IdentSetToDataMapping->Find(Owner);
-		if (IDMap != nullptr)
+		
+		IdMapPtr In;
+		IdentSetToDataMapping->find(Owner, In);
+		if (In != nullptr)
 		{
-			return IDMap;
+			return In;
 		}
 	}
 	return nullptr;
 }
 
-Attr3Ptr UArtilleryDispatch::GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib) const
+Attr3Ptr UArtilleryDispatch::GetVecAttr(const FSkeletonKey Owner, Attr3 Attrib) const
 {
 	Attr3MapPtr* IDMap = VectorSetToDataMapping->Find(Owner);
 	if (IDMap != nullptr)
@@ -628,9 +636,8 @@ Attr3Ptr UArtilleryDispatch::GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib)
 
 UArtilleryDispatch::~UArtilleryDispatch()
 {
-		
-	auto holdopen = GameplayTagContainerToDataMapping;
-	if (auto mandius = MyWorldState.lock()) //despair lol
+	TSharedPtr<AtomicTagArray> holdopen = GameplayTagContainerToDataMapping;
+	if (std::shared_ptr<WorldRecord> mandius = MyWorldState.lock()) //despair lol
 	{
 		mandius->IsReady = false;
 		mandius->IsReady = true;
@@ -666,13 +673,11 @@ UArtilleryDispatch::~UArtilleryDispatch()
 void UArtilleryDispatch::AddTagToEntity(const FSkeletonKey Owner, const FGameplayTag& TagToAdd) const
 {
 	GameplayTagContainerToDataMapping->Add(Owner, TagToAdd);
-
 }
 
 void UArtilleryDispatch::RemoveTagFromEntity(const FSkeletonKey Owner, const FGameplayTag& TagToRemove) const
 {
 	GameplayTagContainerToDataMapping->Remove(Owner, TagToRemove);
-
 }
 
 bool UArtilleryDispatch::DoesEntityHaveTag(const FSkeletonKey Owner, const FGameplayTag& TagToCheck) const
@@ -704,7 +709,7 @@ void UArtilleryDispatch::RegisterAttributes(FSkeletonKey in, AttrMapPtr Attribut
 {
 	if (__LIVE__)
 	{
-		if (auto hold = AttributeSetToDataMapping)
+		if (TSharedPtr<AttrCuckoo> hold = AttributeSetToDataMapping)
 		{
 			AttributeSetToDataMapping->insert_or_assign(in, Attributes);
 		}
@@ -715,7 +720,7 @@ void UArtilleryDispatch::RegisterRelationships(FSkeletonKey in, IdMapPtr Relatio
 {
 	if (__LIVE__ && IsReady)
 	{
-		IdentSetToDataMapping->Add(in, Relationships);
+		IdentSetToDataMapping->insert_or_assign(in, Relationships);
 	}
 }
 
@@ -726,10 +731,10 @@ void UArtilleryDispatch::RegisterVecAttribs(FSkeletonKey in, Attr3MapPtr Vectors
 
 FConservedTags UArtilleryDispatch::RegisterGameplayTags(FSkeletonKey in, GameplayTagContainerPtrInternal GameplayTags)
 {
-	auto TerrorModuleOnline = GameplayTagContainerToDataMapping->NewTagContainer(in);
+	FConservedTags TerrorModuleOnline = GameplayTagContainerToDataMapping->NewTagContainer(in);
 	if (__LIVE__ && this && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid() && GameplayTags)
 	{
-		for (auto tag : GameplayTags->GetGameplayTagArray())
+		for (const FGameplayTag& tag : GameplayTags->GetGameplayTagArray())
 		{
 			GameplayTagContainerToDataMapping->Add(in, tag);
 		}
@@ -740,12 +745,9 @@ FConservedTags UArtilleryDispatch::RegisterGameplayTags(FSkeletonKey in, Gamepla
 
 FConservedTags UArtilleryDispatch::GetExistingConservedTags(FSkeletonKey in)
 {
-	if (__LIVE__)
+	if (__LIVE__ && GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
 	{
-		if (GameplayTagContainerToDataMapping && GameplayTagContainerToDataMapping.IsValid())
-		{
 			return GameplayTagContainerToDataMapping->GetReference(in);
-		}
 	}
 	return nullptr;
 }
@@ -754,35 +756,25 @@ FConservedTags UArtilleryDispatch::GetOrRegisterConservedTags(FSkeletonKey in)
 {
 	if (__LIVE__)
 	{
-		auto GetExistingConservedTagsResult = GetExistingConservedTags(in);
-		if (GetExistingConservedTagsResult != nullptr)
-		{
-			return GetExistingConservedTagsResult;
-		}
-		else
-		{
-			return RegisterGameplayTags(in, nullptr);
-		}
+		FConservedTags GetExistingConservedTagsResult = GetExistingConservedTags(in);
+		return GetExistingConservedTagsResult != nullptr ? GetExistingConservedTagsResult : RegisterGameplayTags(in, nullptr);
 	}
 	return nullptr;
 }
 
 void UArtilleryDispatch::DeregisterGameplayTags(FSkeletonKey in)
 {
-	TSharedPtr<AtomicTagArray> GTCHOpen;
-
-	
 	if (__LIVE__ && IsReady && GameplayTagContainerToDataMapping
 		&& GameplayTagContainerToDataMapping.IsValid()
 		&& GameplayTagContainerToDataMapping.Get())// note the assign.
 	{
-		GTCHOpen = GameplayTagContainerToDataMapping;
+		TSharedPtr<AtomicTagArray> GTCHOpen = GameplayTagContainerToDataMapping;
 		if (GTCHOpen && IsReady)
 		{
 			GTCHOpen->Erase(in);
 		}
 	}
-	RequestRouter->NoTagReferenceModel(in,  GetShadowNow());
+	RequestRouter->NoTagReferenceModel(in,GetShadowNow());
 }
 
 void UArtilleryDispatch::DeregisterAttributes(FSkeletonKey in)
@@ -796,10 +788,10 @@ void UArtilleryDispatch::DeregisterAttributes(FSkeletonKey in)
 
 void UArtilleryDispatch::DeregisterRelationships(FSkeletonKey in)
 {
-	TSharedPtr<TMap<FSkeletonKey, IdMapPtr>> hold;
+	TSharedPtr<IdentCuckoo> hold;
 	if (__LIVE__ && IsReady && IdentSetToDataMapping && ((hold = IdentSetToDataMapping)))
 	{
-		IdentSetToDataMapping->Remove(in);
+		IdentSetToDataMapping->erase(in);
 	}
 }
 
@@ -823,7 +815,7 @@ void UArtilleryDispatch::RunGuns() const
 			TotalFirings += GunToFiringFunctionMapping->Find(GunToRun.Value.GunKey)->ExecuteIfBound(
 				GunByKey->FindRef(GunToRun.Value.GunKey),
 				false,
-				GunToRun.Value.Action);
+				GunToRun.Value);
 		}
 		RequestorQueue_Abilities_TripleBuffer->Read().Reset();
 	}

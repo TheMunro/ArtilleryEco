@@ -9,6 +9,7 @@
 #include "Containers/CircularBuffer.h"
 
 #include "ConservedVector.generated.h"
+
 /**
  * Conserved attributes record their last 128 changes.
  * Currently, this is for debug purposes, but we can use it with some additional features to provide a really expressive

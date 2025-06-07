@@ -49,7 +49,6 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controls)
 	UCurveVector* AimModulator;
-
 	
 	IArtilleryLocomotionInterface* BindablePawn;
 	//TODO: Refactor these to a more righteous place. AMEN.
@@ -148,10 +147,8 @@ protected:
 	{
 		if (MyDispatch)
 		{
-			
 		}
 		Super::FinishDestroy();
-		
 	}
 
 	//if you want to handle the case where we get a key carry other than a player key carry, override this.
@@ -159,9 +156,9 @@ protected:
 	virtual void OnPossessNonPlayer(APawn* aPawn) 
 	{
 		UE_LOG(
-LogTemp,
-Error,
-TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!!"));
+			LogTemp,
+			Error,
+			TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!!"));
 	}
 
 	//if you want to handle the case where we get a key carry other than a player key carry, override this.
@@ -169,9 +166,9 @@ TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!
 	virtual void OnUnPossessNonPlayer(APawn* aPawn) 
 	{
 		UE_LOG(
-LogTemp,
-Error,
-TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!!"));
+			LogTemp,
+			Error,
+			TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!!"));
 	}
 	
 	
@@ -181,22 +178,19 @@ TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!
 		Super::OnPossess(aPawn);
 		if (aPawn)
 		{
-			auto PossiblePlayerKeyCarry = aPawn->GetComponentByClass<UPlayerKeyCarry>();
-			auto AnyKeyCarry = aPawn->GetComponentByClass<UKeyCarry>();
+			UPlayerKeyCarry* PossiblePlayerKeyCarry = aPawn->GetComponentByClass<UPlayerKeyCarry>();
+			UKeyCarry* AnyKeyCarry = aPawn->GetComponentByClass<UKeyCarry>();
 			
 			if  (PossiblePlayerKeyCarry && AnyKeyCarry && AnyKeyCarry == PossiblePlayerKeyCarry)
 			{
-
 				if (aPawn->Implements<UArtilleryLocomotionInterface>())
 				{
-					
-					auto PossibleBindablePawn = static_cast<IArtilleryLocomotionInterface*>(aPawn->GetInterfaceAddress(UArtilleryLocomotionInterface::StaticClass()));
+					IArtilleryLocomotionInterface* PossibleBindablePawn = static_cast<IArtilleryLocomotionInterface*>(aPawn->GetInterfaceAddress(UArtilleryLocomotionInterface::StaticClass()));
 					if (PossibleBindablePawn)
 					{
-						
 						BindablePawn = PossibleBindablePawn;
 						RegisterWithDispatch(BindablePawn->GetMyKey());
-						auto TheirControllerAttrib = MyDispatch->GetIdent(BindablePawn->GetMyKey(), Ident::CurrentController);
+						IdentPtr TheirControllerAttrib = MyDispatch->GetIdent(BindablePawn->GetMyKey(), Ident::CurrentController);
 						if(TheirControllerAttrib && TheirControllerAttrib->CurrentValue != GetMyKey())
 						{
 							TheirControllerAttrib->SetCurrentValue(GetMyKey());
@@ -223,12 +217,12 @@ TEXT("UIArtilleryLocomotionDefault: OnPossessNonPlayer is not yet implemented!!!
 		APawn* CurrentPawn = GetPawn();
 		if (MyDispatch && CurrentPawn)
 		{
-			auto PossiblePlayerKeyCarry = CurrentPawn->GetComponentByClass<UPlayerKeyCarry>();
-			auto AnyKeyCarry = CurrentPawn->GetComponentByClass<UKeyCarry>();
+			UPlayerKeyCarry* PossiblePlayerKeyCarry = CurrentPawn->GetComponentByClass<UPlayerKeyCarry>();
+			UKeyCarry* AnyKeyCarry = CurrentPawn->GetComponentByClass<UKeyCarry>();
 			
 			if  (PossiblePlayerKeyCarry && AnyKeyCarry && AnyKeyCarry == PossiblePlayerKeyCarry)
 			{
-				auto TheirControllerAttrib = MyDispatch->GetIdent(AnyKeyCarry->GetMyKey(), Ident::CurrentController);
+				IdentPtr TheirControllerAttrib = MyDispatch->GetIdent(AnyKeyCarry->GetMyKey(), Ident::CurrentController);
 				if(TheirControllerAttrib && TheirControllerAttrib->CurrentValue != GetMyKey())
 				{
 					TheirControllerAttrib->SetCurrentValue(FSkeletonKey());
@@ -251,8 +245,7 @@ public:
 	virtual TObjectPtr<UCurveVector> GetAimCurves()
 	{
 		static ConstructorHelpers::FObjectFinder<UCurveVector> BaseAimModulation(TEXT("/Artillery/BaseAimModulation.BaseAimModulation"));
-		auto AM = BaseAimModulation.Object;
-		return AM ? AM : nullptr;
+		return BaseAimModulation.Object;
 	}
 
 	ABarragePlayerController(): TrueName(), MyDispatch(nullptr), AimModulator(nullptr), BindablePawn(nullptr)
@@ -315,7 +308,6 @@ public:
 	// ReSharper disable once CppRedundantEmptyDeclaration
 	//it's worth being able to SEE that we glass this.
 	{};
-
 	
 	/**
 	* Consumes the accumulated rotation records. Unlike the default player controller, we queue our rotations
@@ -323,7 +315,6 @@ public:
 	*/
 	virtual void UpdateRotation(float DeltaTime) override
 	{
-
 		//Like a machine of no knowing, we blindly accept as true the look vector from artillery.
 		//originally, we did all sorts of clever stuff. it sucked. don't do it. we can and should do SOME smoothing or interp' or slerp here but atm...
 		// let's get it working first. may god have mercy on our souls. happy new year --J
@@ -336,7 +327,6 @@ public:
 		}
 	}
 	
-
 	/* Curve order:
 	*	Result.X = VectorCurves[0].Eval(InTime);
 	*	Result.Y = VectorCurves[1].Eval(InTime);
@@ -349,12 +339,12 @@ public:
 		{
 			if (AimModulator)
 			{
-				auto& AimCurves =  AimModulator->FloatCurves;
+				auto& AimCurves = AimModulator->FloatCurves;
 				return AimCurves[0].Eval(abs( Val)) * Val;
 			}
 			else
 			{
-				auto absV = abs(Val);
+				float absV = abs(Val);
 				if (absV < PitchNarrowThreshold)
 				{
 					Val = Val * PitchNarrowScale;
@@ -415,14 +405,12 @@ public:
 	//if it does not, this will explode.
 	virtual FRotator ModulateRotation(FRotator NewRotationDelta)
 	{
-
-		auto TruePitch = ModulatePitch(NewRotationDelta.Pitch);
-		auto TrueYaw = ModulateYaw(NewRotationDelta.Yaw);
-		auto TrueRoll = ModulateRoll(NewRotationDelta.Roll);
+		float TruePitch = ModulatePitch(NewRotationDelta.Pitch);
+		float TrueYaw = ModulateYaw(NewRotationDelta.Yaw);
+		float TrueRoll = ModulateRoll(NewRotationDelta.Roll);
 		return FRotator(TruePitch, TrueYaw, TrueRoll);
 	}
-
-
+	
 	//**************************************************
 	//THIS COMPLETES OUR ICEPICK LOBOTOMY OF ENHANCED INPUT. AND MAY GOD HAVE MERCY ON OUR SOULS.
 	//Some work will be necessary to make this truly threadsafe.
@@ -446,8 +434,7 @@ public:
 	//if you don't, have fun with that.
 	virtual void ArtilleryTick(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear) override
 	{
-
-		auto BoundPawn = BindablePawn; // save a copy of the pointer.
+		IArtilleryLocomotionInterface* BoundPawn = BindablePawn; // save a copy of the pointer.
 		// because we use key refs, as long as the object exists long enough to invoke the function, we should be okay
 		// this EXACT problem is why delegates work how they do, but we don't need a general case solution, thank goodness
 		// we just gotta solve this case for this behavior. [famous last words]
@@ -458,10 +445,10 @@ public:
 				FRotator RotDeltaInStickMagnitudes = FRotator( Movement.GetStickRightY(), //up down, which controls PITCH 
 					Movement.GetStickRightX(), //left right, which controls YAW
 					0);
-				auto CurrentView = MyDispatch->GetVecAttr(GetMyKey(), E_VectorAttrib::TrueLookVector)->CurrentValue;
+				FVector3d CurrentView = MyDispatch->GetVecAttr(GetMyKey(), E_VectorAttrib::TrueLookVector)->CurrentValue;
 				FRotator RotDeltaInDegrees = ModulateRotation(RotDeltaInStickMagnitudes);
 				MyDispatch->GetVecAttr(GetMyKey(), E_VectorAttrib::ArtInputDeltaUnitVector)->SetCurrentValue(RotDeltaInDegrees.Vector());
-				auto CurrentChaosView = GetControlRotation();
+				FRotator CurrentChaosView = GetControlRotation();
 				//This should be used for error remediation and control resim only.
 				MyDispatch->GetVecAttr(GetMyKey(), E_VectorAttrib::ChaosControlVector)->SetCurrentValue(CurrentChaosView.Vector());
 				//not only might we face the problem of a stale pointer to nulled memory, we might also actually be operating on the _wrong_ pawn.
@@ -469,17 +456,16 @@ public:
 				//we can get no-ops, but no NPEs. a no-op is fine, and better than locking. We'll catch it on the resim <3
 				if (ShouldArtilleryTick && BoundPawn == BindablePawn)
 				{
-					auto DeltaForFrictionless = RotDeltaInDegrees;
+					FRotator DeltaForFrictionless = RotDeltaInDegrees;
 					BoundPawn->LookStateMachine(RotDeltaInDegrees);
 					FRotator CurrentViewRotator = CurrentView.Rotation();
-					auto CopyForFrictionless = CurrentViewRotator;
+					FRotator CopyForFrictionless = CurrentViewRotator;
 					//TODO: remove this once we have a good way to actually mimic this nicely..... It's a huge determinism hazard but
 					//The camera manager is the "orthodox" UE construct that understands how far we can allow a camera to move and when\why.
 					if (PlayerCameraManager)
 					{
 						PlayerCameraManager->ProcessViewRotation(1.0/ArtilleryTickHertz, CurrentViewRotator, RotDeltaInDegrees);
 						PlayerCameraManager->ProcessViewRotation(1.0/ArtilleryTickHertz, CopyForFrictionless, DeltaForFrictionless);
-						
 					}
 					MyDispatch->GetVecAttr(GetMyKey(), E_VectorAttrib::UControllerOnlyLookVector)->SetCurrentValue(CopyForFrictionless.Vector());
 					MyDispatch->GetVecAttr(GetMyKey(), E_VectorAttrib::TrueLookVector)->SetCurrentValue(CurrentViewRotator.Vector());
@@ -489,5 +475,4 @@ public:
 			}
 		}
 	}
-	
 };

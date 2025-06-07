@@ -17,7 +17,7 @@ public class LocomoCore : ModuleRules
 			new string[] {
 				Path.Combine(PluginDirectory,"Source/LocomoCore"),
 				Path.Combine(PluginDirectory,"Source/LocomoCore/Public"),
-
+				Path.Combine(PluginDirectory,"Source/LocomoCore/Public/Distances") //we only add this for back compat.
 
 			}
 		);
@@ -36,7 +36,7 @@ public class LocomoCore : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"ApplicationCore", "SkeletonKey", "GameplayTags"
+				"ApplicationCore", "SkeletonKey", "GameplayTags", "Eigen"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

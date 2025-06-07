@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "ConservedStates.h"
 #include "PlayerStates.generated.h"
 
@@ -15,30 +16,37 @@ struct ARTILLERYRUNTIME_API FPlayerStates : public FConservedStateData
 	constexpr static F DetailedWallClingState	= F::F4;
 	constexpr static F DetailedWallKickState	= F::F5;
 	constexpr static F DetailedDashState		= F::F6;
+	
 	unsigned long long Ground()
 	{
 		return GetField(DetailedGroundProxi);
 	}
+	
 	void Ground(char val)
 	{
 		SetField(DetailedGroundProxi, val);
 	}
+	
 	unsigned long long Wall()
 	{
 		return GetField(DetailedWallProxi);
 	}
+	
 	void Wall(char val)
 	{
 		SetField(DetailedWallProxi, val);
 	}
+	
 	unsigned long long WallCling()
 	{
 		return GetField(DetailedWallClingState);
 	}
+	
 	void WallCling(char val)
 	{
 		SetField(DetailedWallClingState, val);
 	}
+	
 	constexpr static char WallClingSpeedLimiting	= 1; //0001
 	constexpr static char WallClingDelayFling		= 2; //0010
 	constexpr static char WallClingGravityChanged	= 4; //0100

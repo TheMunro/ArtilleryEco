@@ -16,15 +16,17 @@
 #include "GameplayTagContainer.h"
 #include "KeyCarry.h"
 #include "TransformDispatch.h"
+
 THIRD_PARTY_INCLUDES_START
 PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
 #include "libcuckoo/cuckoohash_map.hh"
 typedef libcuckoo::cuckoohash_map<FSkeletonKey, AttrMapPtr> AttrCuckoo;
+
+typedef libcuckoo::cuckoohash_map<FSkeletonKey, IdMapPtr> IdentCuckoo;
 PRAGMA_POP_PLATFORM_DEFAULT_PACKING
 THIRD_PARTY_INCLUDES_END
+
 #include "ArtilleryDispatch.generated.h"
-
-
 
 /**
  * This is the backbone of artillery, and along with the ArtilleryGuns and UFireControlMachines, 
@@ -60,7 +62,7 @@ namespace Arty
 	DECLARE_DELEGATE_ThreeParams(FArtilleryFireGunFromDispatch,
 		TSharedPtr<FArtilleryGun> Gun,
 		bool InputAlreadyUsedOnce,
-		ArtIPMKey FiringAction);
+		EventBufferInfo FiringAction);
 	
 	//returns true if-and-only-if the duration of the input intent was exhausted.
 	DECLARE_DELEGATE_RetVal_FourParams(bool,
@@ -92,7 +94,6 @@ class ARTILLERYRUNTIME_API UArtilleryDispatch : public UTickableWorldSubsystem, 
 	friend class FArtilleryTicklitesWorker<UArtilleryDispatch>;
 	friend class UCanonicalInputStreamECS;
 	friend class UArtilleryLibrary;
-protected:
 
 public:
 	static inline UArtilleryDispatch* SelfPtr = nullptr;
@@ -106,7 +107,7 @@ public:
 		RequestorQueue_Locomos = MakeShareable(new BufferedMoveEvents());
 		GunToFiringFunctionMapping = MakeShareable(new TMap<FGunKey, FArtilleryFireGunFromDispatch>());
 		AttributeSetToDataMapping = MakeShareable(new AttrCuckoo());
-		IdentSetToDataMapping = MakeShareable(new TMap<FSkeletonKey, IdMapPtr>());
+		IdentSetToDataMapping = MakeShareable(new IdentCuckoo());
 		KeyToControlliteMapping = MakeShareable(new TMap<FSkeletonKey, Machlet>());
 		VectorSetToDataMapping = MakeShareable(new TMap<FSkeletonKey, Attr3MapPtr>());
 		GunByKey = MakeShareable(new TMap<FSkeletonKey, TSharedPtr<FArtilleryGun>>());
@@ -169,7 +170,7 @@ protected:
 	//TODO: Figure out how to apply the learnings from the design of the controller with the defaulting.
 	//It'll be necessary, I'm afraid. This can't use raw pointers safely. Likely we can use defaulting + the fblet design.
 	TSharedPtr<TMap<FSkeletonKey, Machlet>> KeyToControlliteMapping;
-	TSharedPtr<TMap<FSkeletonKey, IdMapPtr>> IdentSetToDataMapping;
+	TSharedPtr<IdentCuckoo> IdentSetToDataMapping;
 	TSharedPtr<TMap<FSkeletonKey, Attr3MapPtr>> VectorSetToDataMapping;
 	
 	/** skeleton key to map of gameplay tags */
@@ -179,8 +180,8 @@ protected:
 	
 public:
 	virtual void PostInitialize() override;
-
 	void RunEnemySim(uint64_t CurrentTick) const;
+	
 protected:
 	//todo: convert conserved attribute to use a timestamp for versioning to create a true temporal shadowstack.
 	AttrMapPtr GetAttribSetShadowByObjectKey(const FSkeletonKey& Target, ArtilleryTime Now) const;
@@ -191,12 +192,13 @@ protected:
 	void ProcessRequestRouterGameThread();
 
 	TSharedPtr<BufferedMoveEvents> RequestorQueue_Locomos;
-
 	static inline long long TotalFirings = 0; //2024 was rough.
+	
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
 	//you don't wanna look at this.
 	FGunKey GetGun(const FString& GunDefinitionID, const ActorKey& ProbableOwner) const;
+	
 	//fully specifying the type is necessary to prevent spurious warnings in some cases.
 	TSharedPtr<TCircularQueue<std::pair<FGunKey, ArtilleryTime>>> ActionsToOrder;
 	//These two are the backbone of the Artillery gun lifecycle.
@@ -297,23 +299,31 @@ public:
 	 * @return Pointer to hashmap containing Attributes for the given key
 	 */
 	AttrMapPtr GetAttribMap(const FSkeletonKey Owner) const;
+
+	/**
+	 * @param Owner Key to add an attribute for
+	 * @param Attrib Attribute we are adding to the map
+	 * @param AttribValue Base value to set for the attribute
+	 * @return The new attribute ptr. Returns nullptr if we failed to add the attribute for any reason.
+	 */
+	AttrPtr AddAttrib(const FSkeletonKey Owner, Attr Attrib, float AttribValue = 0.0f);
 	
 	//TODO: convert to object key to allow the grand dance of the mesh primitives.
 	AttrPtr GetAttrib(const FSkeletonKey Owner, Attr Attrib) const;
 	//DEPRECATED
 	AttrPtr GetAttribRequired(const FSkeletonKey& Owner, AttribKey Attrib) const;
+	
 	bool GetAttribAndApplyIf(FSkeletonKey Target, AttribKey Attr, const auto& lambda)
 	{
-		auto attrib = this->GetAttrib(Target, Attr);
-
+		AttrPtr attrib = this->GetAttrib(Target, Attr);
 		return attrib ? lambda(attrib) : false;
 	}
 
 	//TODO: ensure that the use of FSkeletonKey& is safe here.
-	IdentPtr GetIdent(const FSkeletonKey& Owner, Ident Attrib) const;
-	IdentPtr GetOrAddIdent(const FSkeletonKey& Owner, Ident Attrib) const;
-	IdMapPtr* GetRelationships(const FSkeletonKey& Owner) const;
-	Attr3Ptr GetVecAttr(const FSkeletonKey& Owner, Attr3 Attrib) const;
+	IdentPtr GetIdent(const FSkeletonKey Owner, Ident Attrib) const;
+	IdentPtr GetOrAddIdent(const FSkeletonKey Owner, Ident Attrib) const;
+	IdMapPtr GetRelationships(const FSkeletonKey Owner) const;
+	Attr3Ptr GetVecAttr(const FSkeletonKey Owner, Attr3 Attrib) const;
 	virtual ~UArtilleryDispatch() override;
 
 	//due to peculiarities in our object lifecycle, these should not be switched to reference parameters.
@@ -327,9 +337,14 @@ public:
 	void RemoveTagFromEntity(const FSkeletonKey Owner, const FGameplayTag& TagToRemove) const;
 	bool DoesEntityHaveTag(const FSkeletonKey Owner, const FGameplayTag& TagToCheck) const;
 	
-	void RegisterReady(const FGunKey& Key, const FArtilleryFireGunFromDispatch& Machine) const
+	void RegisterReady(const FGunKey Key, const FArtilleryFireGunFromDispatch& Machine) const
 	{
 		GunToFiringFunctionMapping->Add(Key, Machine);
+	}
+
+	bool IsGunRegistered(const FGunKey Key) const
+	{
+		return GunToFiringFunctionMapping->Contains(Key);
 	}
 
 	void RegisterEnemySubsystem(FArtilleryUpdateEnemyControllerSubsystem Update, FArtilleryAddEnemyToControllerSubsystem Register)
@@ -364,8 +379,7 @@ public:
 	void DeregisterRelationships(FSkeletonKey in);
 
 	void DeregisterVecAttribs(FSkeletonKey in);
-
-
+	
 	std::atomic_bool UseNetworkInput;
 	bool missedPrior = false;
 	bool burstDropDetected = false;

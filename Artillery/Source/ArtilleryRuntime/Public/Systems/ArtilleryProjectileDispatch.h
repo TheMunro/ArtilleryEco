@@ -45,19 +45,23 @@ class ARTILLERYRUNTIME_API UArtilleryProjectileDispatch : public UTickableWorldS
 	GENERATED_BODY()
 
 	using ICanReady = ITickHeavy;
+	
 public:
 	friend class UArtilleryLibrary;
 	static inline UArtilleryProjectileDispatch* SelfPtr = nullptr;
 	int DEFAULT_LIFE_OF_PROJECTILE = ArtilleryTickHertz * 20.0; //20 seconds.
-
 	constexpr static int OrdinateSeqKey = ORDIN::E_D_C::ProjectileSystem;
+	
 	virtual void ArtilleryTick() override;
-	virtual bool RegistrationImplementation() override; 
+	virtual bool RegistrationImplementation() override;
+	
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;
+	
 	int ExpirationCounter = 0;
+	
 public:
 	UArtilleryProjectileDispatch();
 
@@ -77,10 +81,11 @@ public:
 	{
 		RETURN_QUICK_DECLARE_CYCLE_STAT(UArtilleryProjectileDispatch, STATGROUP_Tickables);
 	}
+	
 	FProjectileDefinitionRow* GetProjectileDefinitionRow(const FName ProjectileDefinitionId);
 	// TODO - Add handling for IsSensor and IsDynamic. We do not currently have anything that uses these flags, so they are not handled by the request router
 	FSkeletonKey QueueProjectileInstance(const FName ProjectileDefinitionId, const FGunKey& Gun, const FVector3d& StartLocation, const FVector3d& MuzzleVelocity, const float Scale = 1.0f, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, TArray<FGameplayTag>* TagArray = nullptr);
-	bool KillInOneFrame(FSkeletonKey ProjectileKey);
+	//bool KillInOneFrame(FSkeletonKey ProjectileKey);
 	FSkeletonKey CreateProjectileInstance(FSkeletonKey ProjectileKey,  FGunKey Gun, const FName ProjectileDefinitionId, const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const float Scale = 1.0f, const bool IsSensor = true, const bool IsDynamic = false, Layers::EJoltPhysicsLayer Layer = Layers::PROJECTILE, const bool CanExpire = true, const int LifeInTicks = -1);
 	bool IsArtilleryProjectile(const FSkeletonKey MaybeProjectile);
 	void DeleteProjectile(const FSkeletonKey Target);
@@ -89,7 +94,6 @@ public:
 	TWeakObjectPtr<USceneComponent> GetSceneComponentForProjectile(const FSkeletonKey ProjectileKey);
 
 	void OnBarrageContactAdded(const BarrageContactEvent& ContactEvent);
-
 
 private:
 	UArtilleryDispatch* MyDispatch;

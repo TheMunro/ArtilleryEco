@@ -4,9 +4,10 @@
 
 ////////////////////////MOVE TO
 
-
-EStateTreeRunStatus FMoveOrder::AttemptMovePath(FStateTreeExecutionContext& Context, FVector location,
-                                                FVector HereIAm) const
+EStateTreeRunStatus FMoveOrder::AttemptMovePath(
+	FStateTreeExecutionContext& Context,
+	FVector location,
+	FVector HereIAm) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	auto AreWeBarraging = UBarrageDispatch::SelfPtr;
@@ -14,13 +15,12 @@ EStateTreeRunStatus FMoveOrder::AttemptMovePath(FStateTreeExecutionContext& Cont
 	if (AreWeBarraging != nullptr && UThistleBehavioralist::SelfPtr)
 	{
 		bool found = false;
-		auto tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
+		FConservedTags tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
 		if (found)
 		{
 			tagc->Remove(TAG_Orders_Move_Needed);
 		}
-		UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,
-		                                          UThistleBehavioralist::DelayBetweenMoveOrders);
+		UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf,TAG_Orders_Move_Needed,UThistleBehavioralist::DelayBetweenMoveOrders);
 
 		if ((HereIAm - location).Length() < FMath::Max(0.01f, Tolerance))
 		{
@@ -39,11 +39,7 @@ EStateTreeRunStatus FMoveOrder::AttemptMovePath(FStateTreeExecutionContext& Cont
 			}
 			return EStateTreeRunStatus::Failed;
 		}
-		// ReSharper disable once CppRedundantElseKeywordInsideCompoundStatement
-		else
-		{
-			return EStateTreeRunStatus::Succeeded;
-		}
+		return EStateTreeRunStatus::Succeeded;
 	}
 	return EStateTreeRunStatus::Failed;
 }
@@ -52,7 +48,7 @@ EStateTreeRunStatus FMoveOrder::Tick(FStateTreeExecutionContext& Context, const 
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool Shuck = false;
-	auto location = InstanceData.ShuckPoi(Shuck);
+	FVector location = InstanceData.ShuckPoi(Shuck);
 	if (!Shuck)
 	{
 		return EStateTreeRunStatus::Failed;
@@ -60,10 +56,6 @@ EStateTreeRunStatus FMoveOrder::Tick(FStateTreeExecutionContext& Context, const 
 	//run on cadence.
 
 	bool found = false;
-	auto HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
-	if (found && (HereIAm - location).Length() > Tolerance)
-	{
-		return AttemptMovePath(Context, location, HereIAm);
-	}
-	return EStateTreeRunStatus::Succeeded;
+	FVector HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
+	return found && (HereIAm - location).Length() > Tolerance ? AttemptMovePath(Context, location, HereIAm) : EStateTreeRunStatus::Succeeded;
 }

@@ -7,7 +7,6 @@
 #include "CoreMinimal.h"
 #include "SkeletonTypes.h"
 #include "FRelationshipMap.h"
-#include "ArtilleryActorControllerConcepts.h"
 #include "Constellation.generated.h"
 
 //Unlike almost all other designs, the constellation is a concept that has no formal equivalent in most ECS systems
@@ -21,16 +20,17 @@ class ARTILLERYRUNTIME_API UConstellation : public UInterface
 	GENERATED_UINTERFACE_BODY()
 };
 
-
-inline UConstellation::UConstellation(const FObjectInitializer& ObjectInitializer)
-: Super(ObjectInitializer)
+inline UConstellation::UConstellation(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
+
 class IConstellation: public IKeyedConstruct
 {
 	GENERATED_IINTERFACE_BODY()
+	
 public:
 	FRelationshipMap Entities;
 	FConstellationKey Self;
+	
 	virtual FSkeletonKey GetMyKey() const override { return FSkeletonKey(Self.Obj); }
 };

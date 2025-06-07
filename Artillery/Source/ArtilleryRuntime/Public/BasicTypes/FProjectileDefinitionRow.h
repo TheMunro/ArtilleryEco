@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "CoreMinimal.h"
 #include "CoreTypes.h"
 #include "Engine/DataTable.h"

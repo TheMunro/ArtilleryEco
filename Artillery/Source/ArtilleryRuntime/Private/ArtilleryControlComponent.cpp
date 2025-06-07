@@ -3,7 +3,6 @@
 #include "GameplayAbilitySpec.h"
 #include "GameplayAbilitySpecHandle.h"
 #include "FArtilleryGun.h"
-#include "AttributeSet.h"
 
 void UArtilleryFireControl::PushGunToFireMapping(const FGunKey& ToFire)
 {
@@ -13,21 +12,20 @@ void UArtilleryFireControl::PushGunToFireMapping(const FGunKey& ToFire)
 	MyGuns.Add(ToFire);
 }
 
-void UArtilleryFireControl::FireGun(TSharedPtr<FArtilleryGun> Gun, bool InputAlreadyUsedOnce, ArtIPMKey FireAction)
+void UArtilleryFireControl::FireGun(TSharedPtr<FArtilleryGun> Gun, bool InputAlreadyUsedOnce, EventBufferInfo BufferInfo)
 {
 	if (Gun->Prefire != nullptr)
 	{
 		FGameplayAbilitySpec BackboneFiring = BuildAbilitySpecFromClass(
 			(Gun->Prefire).GetClass(),
 			0,
-			-1
-		);
+			-1);
 		FGameplayAbilitySpecHandle FireHandle = BackboneFiring.Handle;
 		Gun->PreFireGun(
 			FireHandle,
 			AbilityActorInfo.Get(),
 			FGameplayAbilityActivationInfo(EGameplayAbilityActivationMode::Authority),
-			FireAction);
+			BufferInfo);
 	}
 }
 

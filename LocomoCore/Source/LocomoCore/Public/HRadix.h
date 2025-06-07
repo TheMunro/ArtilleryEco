@@ -10,6 +10,7 @@
 // ------------------------------------------------------------------------------------------------
 // ---- Basic types
 #include <xmmintrin.h>	// for prefetch
+#include "AtypicalDistances.h"
 #include "CoreMinimal.h"
 #include "HRadix.generated.h"
 
@@ -31,29 +32,7 @@ struct FHRadixSort
 		uint32 a;
 		uint32 b;
 	};
-	// ================================================================================================
-	// flip a float for sorting
-	//  finds SIGN of fp number.
-	//  if it's 1 (negative float), it flips all bits
-	//  if it's 0 (positive float), it flips the sign only
-	// ================================================================================================
-	static inline uint32 FloatFlip(uint32 f)
-	{
-		uint32 mask = -int32(f >> 31) | 0x80000000;
-		return f ^ mask;
-	}
 
-	// ================================================================================================
-	// flip a float back (invert FloatFlip)
-	//  signed was flipped from above, so:
-	//  if sign is 1 (negative), it flips the sign bit back
-	//  if sign is 0 (positive), it flips all bits back
-	// ================================================================================================
-	static inline uint32 IFloatFlip(uint32 f)
-	{
-		uint32 mask = ((f >> 31) - 1) | 0x80000000;
-		return f ^ mask;
-	}
 
 	// ---- utils for accessing 11-bit quantities
 	//OMNISLASHIN' THE DAY AWAY
@@ -94,7 +73,7 @@ struct FHRadixSort
 		for (i = 0; i < elements; i++)
 		{
 			__GRANDSLAM(farray);
-			farray[i].a = FloatFlip(farray[i].a); //hooboy.
+			farray[i].a = AtypicalDistances::FloatFlip(farray[i].a); //hooboy.
 			auto fi = array[i];
 			//OM
 			b0[__SLICEONE(fi)]++;

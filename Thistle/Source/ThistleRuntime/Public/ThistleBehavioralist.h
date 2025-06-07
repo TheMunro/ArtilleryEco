@@ -1,6 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
+
 #include "SkeletonTypes.h"
 
 #include "CoreMinimal.h"
@@ -14,9 +15,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "ThistleBehavioralist.generated.h"
 
-
 class UThistleStateTreeLease;
-
 
 DECLARE_DELEGATE_OneParam(AwakenTagQueryDecorator, TWeakObjectPtr<UBehaviorTreeComponent>)
 static constexpr int32 MAX_ENEMY_COUNT = 500;
@@ -38,8 +37,11 @@ class THISTLERUNTIME_API UThistleBehavioralist : public UTickableWorldSubsystem,
 	GENERATED_BODY()
 
 public:
-	UThistleBehavioralist();
 	friend class UThistleDispatch;
+	static constexpr uint8_t WIDE_CADENCE = 8;
+	
+	UThistleBehavioralist();
+	
 	//pool behavior trees?
 	using ActorToTreeMapping = TMap<ActorKey, TObjectPtr<UBehaviorTreeComponent>>;
 	using AwakenToTreeMapping = TMap<AwakenTagQueryDecorator*, TObjectPtr<UBehaviorTreeComponent>>;
@@ -53,8 +55,10 @@ public:
 	using Deadliner = TSortedMap<int, DeadlineArray>;
 	
 	static inline UThistleBehavioralist* SelfPtr = nullptr;
+	
 protected:
 	int DeadlinerTime = 0;
+	
 public:
 	//in ticks! in _TICKS_
 	//we'll eventually want this customizable. hoof.
@@ -65,6 +69,7 @@ public:
 	//REGISTRATION MACHINERY
 	constexpr static int CompletionOrdinationKey = ORDIN::E_D_C::EnemyTagState;
 	constexpr static int OrdinateSeqKey = UBarrageDispatch::OrdinateSeqKey  + ORDIN::Step;
+	
 	virtual bool RegistrationImplementation() override;
 	void BounceTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int BounceDuration) const;
 	void DelayedTag(FSkeletonKey Key, FNativeGameplayTag& Tag, int BounceTime);
@@ -75,7 +80,6 @@ public:
 	//approach though. I hope this remains only a curiosity and not a standard pattern.
 	struct THISTLERUNTIME_API FTagRegistration : public ISkeletonLord, public ICanReady
 	{
-	public:
 		FTagRegistration()
 		{
 		}
@@ -85,8 +89,8 @@ public:
 			if (UThistleBehavioralist::SelfPtr)
 			{
 				UThistleBehavioralist::SelfPtr->BehavioralistTagState->Initialize(
-				UThistleBehavioralist::SelfPtr->FalseActorKey,
-				UThistleBehavioralist::SelfPtr->MyDispatch);
+					UThistleBehavioralist::SelfPtr->FalseActorKey,
+					UThistleBehavioralist::SelfPtr->MyDispatch);
 				return true;
 			}
 			return false;
@@ -145,8 +149,8 @@ public:
 
 	//TODO: GENERALIZE THIS TO NOT REQUIRE A SPECIFIC THISTLE INJECT. RIGHT NOW, WE KINDA GOTTA DO IT THIS WAY
 	//OR WE'LL HAVE DELEGATE SOUP THAT CANNOT BE DEBUGGED. TBH, these could prolly be ticklites but I haven't brain for that.
-	TSharedPtr< TMap<ActorKey, TObjectPtr<AThistleInject>>> ActorToAILocomotionMapping;
-	TSharedPtr< TMap<FSkeletonKey, UThistleStateTreeLease*>> EntityToArtilleryBehavior;
+	TSharedPtr<TMap<ActorKey, TObjectPtr<AThistleInject>>> ActorToAILocomotionMapping;
+	TSharedPtr<TMap<FSkeletonKey, UThistleStateTreeLease*>> EntityToArtilleryBehavior;
 	void RunAILocomotions() const;
 	void RunStateTrees(uint64_t CurrentTck) const;
 	bool IsPlayerInCombat() const;
@@ -161,10 +165,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	TMap<FSkeletonKey, TObjectPtr<AActor>> ManagedPatrolZones;
 	ActorKeyArray DeadEnemies;
-	const static inline uint8_t WIDE_CADENCE = 8;
 	USmartObjectSubsystem* SmartObjectSubsystem;
 
-	
-	protected:
-		TSharedPtr<Deadliner> ExpirationDeadliner;
+protected:
+	TSharedPtr<Deadliner> ExpirationDeadliner;
 };

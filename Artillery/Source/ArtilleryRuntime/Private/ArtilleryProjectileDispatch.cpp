@@ -23,8 +23,7 @@ void UArtilleryProjectileDispatch::ArtilleryTick()
 bool UArtilleryProjectileDispatch::RegistrationImplementation()
 {
 	// TODO: Can we find and autoload the datatable, or do
-	ProjectileDefinitions = LoadObject<UDataTable>(
-		nullptr, TEXT("DataTable'/Game/DataTables/ProjectileDefinitions.ProjectileDefinitions'"));
+	ProjectileDefinitions = LoadObject<UDataTable>(nullptr, TEXT("DataTable'/Game/DataTables/ProjectileDefinitions.ProjectileDefinitions'"));
 
 	UE_LOG(LogTemp, Warning, TEXT("ArtilleryProjectileDispatch:Subsystem: Online"));
 	ProjectileDefinitions->ForeachRow<FProjectileDefinitionRow>(
@@ -35,17 +34,14 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 			check(NPD);
 			if (UStaticMesh* StaticMeshPtr = ProjectileDefinition.ProjectileMesh)
 			{
-				FString ProjectileName = ProjectileDefinition.ProjectileMesh.GetName();
-				TWeakObjectPtr<AInstancedMeshManager>* MeshManager = MeshAssetToMeshManagerMapping->Find(ProjectileName);
+				TWeakObjectPtr<AInstancedMeshManager>* MeshManager = MeshAssetToMeshManagerMapping->Find(ProjectileDefinition.ProjectileMesh.GetName());
 				if (!MeshManager)
 				{
 					AInstancedMeshManager* NewMeshManager = GetWorld()->SpawnActor<AInstancedMeshManager>();
 					if (NewMeshManager == nullptr)
 					{
 						UE_LOG(LogTemp, Error,
-						       TEXT(
-							       "Could not spawn mesh manager actor. If this is during editor load, it can be ignored. Otherwise..."
-						       ));
+						       TEXT("Could not spawn mesh manager actor. If this is during editor load, it can be ignored. Otherwise..."));
 					}
 					NewMeshManager->InitializeManager();
 					NewMeshManager->SetStaticMesh(StaticMeshPtr);
@@ -56,13 +52,13 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 					NewMeshManager->SwarmKineManager->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 					NewMeshManager->SwarmKineManager->SetInternalFlags(EInternalObjectFlags::Async);
 
+					FName ProjectileName(ProjectileDefinition.ProjectileDefinitionId);
 					ManagerKeyToMeshManagerMapping->Add(NewMeshManager->GetMyKey(), NewMeshManager);
-					ProjectileNameToMeshManagerMapping->Add(FName(ProjectileDefinition.ProjectileDefinitionId),
-					                                        NewMeshManager);
+					ProjectileNameToMeshManagerMapping->Add(ProjectileName, NewMeshManager);
 					MeshAssetToMeshManagerMapping->Add(*ProjectileDefinition.ProjectileMesh.GetName(), NewMeshManager);
 					if (ProjectileDefinition.ParticleEffectDataChannel)
 					{
-						NPD->AddNDCReference(*ProjectileDefinition.ProjectileDefinitionId, ProjectileDefinition.ParticleEffectDataChannel);
+						NPD->AddNDCReference(ProjectileName, ProjectileDefinition.ParticleEffectDataChannel);
 					}
 
 					//these are standing in for a pretty messy body of more specific work we could do instead.
@@ -86,8 +82,7 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 	MyDispatch = GetWorld()->GetSubsystem<UArtilleryDispatch>();
 	check(MyDispatch);
 	UBarrageDispatch* BarrageDispatch = GetWorld()->GetSubsystem<UBarrageDispatch>();
-	BarrageDispatch->OnBarrageContactAddedDelegate.AddUObject(
-		this, &UArtilleryProjectileDispatch::OnBarrageContactAdded);
+	BarrageDispatch->OnBarrageContactAddedDelegate.AddUObject(this, &UArtilleryProjectileDispatch::OnBarrageContactAdded);
 	UArtilleryDispatch::SelfPtr->SetProjectileDispatch(this);
 	SelfPtr = this;
 	return true;
@@ -130,6 +125,7 @@ void UArtilleryProjectileDispatch::Deinitialize()
 			}
 		}
 	}
+	
 	if (HoldOpenManagers)
 	{
 		// ReSharper disable once CppTemplateArgumentsCanBeDeduced - removing "redundant" template typing causes internal compiler error
@@ -169,9 +165,7 @@ FProjectileDefinitionRow* UArtilleryProjectileDispatch::GetProjectileDefinitionR
 {
 	if (ProjectileDefinitions != nullptr)
 	{
-		FProjectileDefinitionRow* FoundRow = ProjectileDefinitions->FindRow<FProjectileDefinitionRow>(
-			ProjectileDefinitionId, TEXT("ProjectileTableLibrary"));
-		return FoundRow;
+		return ProjectileDefinitions->FindRow<FProjectileDefinitionRow>(ProjectileDefinitionId, TEXT("ProjectileTableLibrary"));
 	}
 	return nullptr;
 }
@@ -183,8 +177,7 @@ FSkeletonKey UArtilleryProjectileDispatch::QueueProjectileInstance(const FName P
                                                                    TArray<FGameplayTag>* TagArray)
 {
 	if (IsReady){}
-	TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(
-		ProjectileDefinitionId);
+	TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(ProjectileDefinitionId);
 	if (MeshManagerPtr != nullptr && MeshManagerPtr->IsValid())
 	{
 		TWeakObjectPtr<AInstancedMeshManager> MeshManager = *MeshManagerPtr;
@@ -220,25 +213,24 @@ FSkeletonKey UArtilleryProjectileDispatch::CreateProjectileInstance(FSkeletonKey
 {
 	if (IsReady)
 	{
-		TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(
-			ProjectileDefinitionId);
+		TWeakObjectPtr<AInstancedMeshManager>* MeshManagerPtr = ProjectileNameToMeshManagerMapping->Find(ProjectileDefinitionId);
 		if (MeshManagerPtr && MeshManagerPtr->IsValid())
 		{
-			auto MeshManager = MeshManagerPtr->Pin();
+			TStrongObjectPtr<AInstancedMeshManager> MeshManager = MeshManagerPtr->Pin();
 			if (MeshManager.IsValid())
 			{
 				FSkeletonKey NewProjectileKey = MeshManager->CreateNewInstance(
 					WorldTransform, MuzzleVelocity, Layer, Scale, ProjectileKey, IsSensor, IsDynamic);
 				ProjectileKeyToMeshManagerMapping->insert_or_assign(NewProjectileKey, *MeshManagerPtr);
 				ProjectileToGunMapping->insert_or_assign(NewProjectileKey, Gun);
+				
 				UNiagaraParticleDispatch* NPD = GetWorld()->GetSubsystem<UNiagaraParticleDispatch>();
-				check(NPD);
-				TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr = NPD->GetNDCAssetForProjectileDefinition(
-					ProjectileDefinitionId.ToString());
+				TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr = NPD->GetNDCAssetForProjectileDefinition(ProjectileDefinitionId);
 				if (ProjectileNDCAssetPtr.IsValid())
 				{
-					NPD->RegisterKeyForProcessing(NewProjectileKey, ProjectileNDCAssetPtr);
+					NPD->RegisterKeyForProcessing(ProjectileDefinitionId, NewProjectileKey, ProjectileNDCAssetPtr);
 				}
+				
 				if (CanExpire)
 				{
 					//TODO: revisit to provide rollback support. it'll be exactly like tombstones.
@@ -316,10 +308,10 @@ void UArtilleryProjectileDispatch::OnBarrageContactAdded(const BarrageContactEve
 			// if both are bullets, if their layers allow it, we will collide them.
 			// this is actually how antimissile works.
 			//Oh and these are FBarrageKeys
-			auto ProjectileKey = Body1_IsBullet
+			FBarrageKey ProjectileKey = Body1_IsBullet
 				                     ? ContactEvent.ContactEntity1.ContactKey
 				                     : ContactEvent.ContactEntity2.ContactKey;
-			auto EntityHitKey = Body1_IsBullet
+			FBarrageKey EntityHitKey = Body1_IsBullet
 				                    ? ContactEvent.ContactEntity2.ContactKey
 				                    : ContactEvent.ContactEntity1.ContactKey;
 
@@ -343,8 +335,7 @@ void UArtilleryProjectileDispatch::OnBarrageContactAdded(const BarrageContactEve
 							auto hold = UBarrageDispatch::SelfPtr->GetShapeRef(EntityHitKey);
 							if (hold)
 							{
-								FSkeletonKey EntityKeyIntoArtillery = hold->
-									KeyOutOfBarrage;
+								FSkeletonKey EntityKeyIntoArtillery = hold->KeyOutOfBarrage;
 								if (EntityKeyIntoArtillery.IsValid())
 								{
 									ProjectileGun.Get()->ProjectileCollided(KeyIntoArtillery, EntityKeyIntoArtillery);
@@ -359,4 +350,3 @@ void UArtilleryProjectileDispatch::OnBarrageContactAdded(const BarrageContactEve
 		}
 	}
 }
-

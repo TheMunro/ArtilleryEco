@@ -1,13 +1,12 @@
-﻿#pragma once
-#include "MassStateTreeSchema.h"
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
+
 #include "StateTreeTaskBase.h"		//this defines the basic form of an actual tree task.
 #include "StateTreeExecutionContext.h"
 #include "ThistleBehavioralist.h"
-#include "ThistleDispatch.h"
-#include "ThistleStateTreeSchema.h"
 #include "ThistleTypes.h"
 #include "ThistleStateTreeCore.h"
-#include "Components/StateTreeComponent.h"
 #include "ThistleStateTreeScoot.generated.h"
 
 using namespace ThistleTypes;
@@ -16,13 +15,11 @@ using namespace ThistleTypes;
 USTRUCT()
 struct THISTLERUNTIME_API FScoot : public FTTaskBase
 {
-
 	GENERATED_BODY()
+	using FInstanceDataType = F_TPOIInstanceNavData;
 	
 	UPROPERTY(EditAnywhere)
 	float Tolerance = 200;
-
-	using FInstanceDataType = F_TPOIInstanceNavData;
 
 protected:
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
@@ -33,13 +30,11 @@ protected:
 USTRUCT()
 struct THISTLERUNTIME_API FBreakOff : public FTTaskBase
 {
-
 	GENERATED_BODY()
+	using FInstanceDataType = F_TPOIInstanceNavData;
 	
 	UPROPERTY(EditAnywhere)
 	float Tolerance = 200;
-
-	using FInstanceDataType = F_TPOIInstanceNavData;
 
 protected:
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;

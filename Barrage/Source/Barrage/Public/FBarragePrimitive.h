@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 #include "SkeletonTypes.h"
 #include "FBarrageKey.h"
@@ -15,9 +17,8 @@
 class BARRAGE_API FBarragePrimitive
 {
 	friend class UBarrageDispatch;
+	
 public:
-
-
 	enum FBGroundState
 	{
 		OnGround,						///< Character is on the ground and can move freely.
@@ -27,7 +28,7 @@ public:
 		NotFound,						///< There's no character
 	};
 
-	static inline FBGroundState FromJoltGroundState(JPH::CharacterBase::EGroundState JoltGroundState)
+	static FBGroundState FromJoltGroundState(JPH::CharacterBase::EGroundState JoltGroundState)
 	{
 		switch (JoltGroundState)
 		{
@@ -40,7 +41,6 @@ public:
 			case JPH::CharacterBase::EGroundState::InAir:
 				return FBGroundState::InAir;
 		}
-
 		return FBGroundState::NotFound;
 	}
 	
@@ -82,56 +82,57 @@ public:
 	//really want to ever encourage people to use those.
 	//-------------------------------
 
-		static void SetGravityFactor(float GravityFactor, FBLet Target);
-		//immediately sets the velocity of object to given velocity vector
-		static void SetVelocity(FVector3d Velocity, FBLet Target);
-		static void SetPosition(FVector Position, FBLet Target);
-		//transform forces transparently from UE world space to jolt world space
-		//then apply them directly to the "primitive"
-		static void ApplyForce(FVector3d Force, FBLet Target, PhysicsInputType Type = PhysicsInputType::OtherForce);
-		//transform the quaternion from the UE ref to the Jolt ref
-		//then apply it to the "primitive"
-		static void ApplyRotation(FQuat4d Rotator, FBLet Target);
-		//Applies any given quat as any given input to any given target. use of this is not recommended.
-		static void Apply_Unsafe(FQuat4d Any, FBLet Target, PhysicsInputType Type);
+	static void SetGravityFactor(float GravityFactor, FBLet Target);
+	//immediately sets the velocity of object to given velocity vector
+	static void SetVelocity(FVector3d Velocity, FBLet Target);
+	static void SetPosition(FVector Position, FBLet Target);
+	//transform forces transparently from UE world space to jolt world space
+	//then apply them directly to the "primitive"
+	static void ApplyForce(FVector3d Force, FBLet Target, PhysicsInputType Type = PhysicsInputType::OtherForce);
+	//transform the quaternion from the UE ref to the Jolt ref
+	//then apply it to the "primitive"
+	static void ApplyRotation(FQuat4d Rotator, FBLet Target);
+	//Applies any given quat as any given input to any given target. use of this is not recommended.
+	static void Apply_Unsafe(FQuat4d Any, FBLet Target, PhysicsInputType Type);
 
-		//My current thinking:
-		//This should be called from the gamethread, in the PULL model. it doesn't lock, but it will fail if the lock is held on that body
-		//because we should _never_ block the game thread. unfortunately, this means I can't provide the code to actually use
-		//this as part of jolt very easily at first, but I'll try to defactor whatever I built into a sample implementation for Barrage.
-		static bool TryUpdateTransformFromJolt(FBLet Target, uint64 Time);
-		static FVector3f GetCentroidPossiblyStale(FBLet Target);
-		static FVector3f GetPosition(FBLet Target);
-		static FVector3f GetVelocity(FBLet Target);
-		//tombstoned primitives are treated as null even by live references, because while the primitive is valid
-		//and operations against it can be performed safely, no new operations should be allowed to start.
-		//the tombstone period is effectively a grace period due to the fact that we have quite a lot of different
-		//timings in play. it should be largely unnecessary, but it's also a very useful semantic for any pooled
-		//data and allows us to batch disposal nicely.
-		//while it seems like a midframe tombstoning could lead to non-determinism,
-		//physics mods are actually effectively applied all on one thread right before update kicks off thanks to StackUp()
-		static bool IsNotNull(FBLet Target)
-		{
-			return Target != nullptr && Target->tombstone == 0;
-		};
+	//My current thinking:
+	//This should be called from the gamethread, in the PULL model. it doesn't lock, but it will fail if the lock is held on that body
+	//because we should _never_ block the game thread. unfortunately, this means I can't provide the code to actually use
+	//this as part of jolt very easily at first, but I'll try to defactor whatever I built into a sample implementation for Barrage.
+	static bool TryUpdateTransformFromJolt(FBLet Target, uint64 Time);
+	static FVector3f GetCentroidPossiblyStale(FBLet Target);
+	static FVector3f GetPosition(FBLet Target);
+	static FVector3f GetVelocity(FBLet Target);
+	//tombstoned primitives are treated as null even by live references, because while the primitive is valid
+	//and operations against it can be performed safely, no new operations should be allowed to start.
+	//the tombstone period is effectively a grace period due to the fact that we have quite a lot of different
+	//timings in play. it should be largely unnecessary, but it's also a very useful semantic for any pooled
+	//data and allows us to batch disposal nicely.
+	//while it seems like a midframe tombstoning could lead to non-determinism,
+	//physics mods are actually effectively applied all on one thread right before update kicks off thanks to StackUp()
+	static bool IsNotNull(FBLet Target)
+	{
+		return Target != nullptr && Target->tombstone == 0;
+	};
 
-		static FVector3d UpConvertFloatVector(FVector3f InVector)
-		{
-			return FVector3d(InVector.X, InVector.Y, InVector.Z);
-		}
+	static FVector3d UpConvertFloatVector(FVector3f InVector)
+	{
+		return FVector3d(InVector.X, InVector.Y, InVector.Z);
+	}
 
-		static FQuat4d UpConvertFloatQuat(FQuat4f InQuat)
-		{
-			return FQuat4d(InQuat.X, InQuat.Y, InQuat.Z, InQuat.W);
-		}
+	static FQuat4d UpConvertFloatQuat(FQuat4f InQuat)
+	{
+		return FQuat4d(InQuat.X, InQuat.Y, InQuat.Z, InQuat.W);
+	}
 
-		static void SpeedLimit(FBLet Target, float TargetSpeed);
-	
-		// If you call these with a non-character FBLet, they will always return false-y values.
-		static FBGroundState GetCharacterGroundState(FBLet Target);
-		static FVector3f GetCharacterGroundNormal(FBLet Target);
+	static void SpeedLimit(FBLet Target, float TargetSpeed);
+
+	// If you call these with a non-character FBLet, they will always return false-y values.
+	static FBGroundState GetCharacterGroundState(FBLet Target);
+	static FVector3f GetCharacterGroundNormal(FBLet Target);
 
 	static void SetCharacterGravity(FVector3d InVector, FBLet Target);
+	
 protected:
 	static inline UBarrageDispatch* GlobalBarrage = nullptr;
 };

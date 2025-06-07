@@ -20,23 +20,29 @@ public:
 	// Sets default values for this component's properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool isMovable = true;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float OffsetCenterToMatchBoundedShapeX = 0;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float OffsetCenterToMatchBoundedShapeY = 0;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float OffsetCenterToMatchBoundedShapeZ = 0;
-	UBarrageAutoBox(const FObjectInitializer& ObjectInitializer);
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector DiameterXYZ = FVector::ZeroVector;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite )
 	TEnumAsByte<EBWeightClasses::Type> Weight;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite )
 	EPhysicsLayer Layer;
 	FMassByCategory MyMassClass;
+
+	UBarrageAutoBox(const FObjectInitializer& ObjectInitializer);
+	
 	virtual void Register() override;
-	
-	
 };
 
 //CONSTRUCTORS
@@ -44,18 +50,16 @@ public:
 //do not invoke the default constructor unless you have a really good plan. in general, let UE initialize your components.
 
 // Sets default values for this component's properties
-inline UBarrageAutoBox::UBarrageAutoBox(const FObjectInitializer& ObjectInitializer) : Super(
-		ObjectInitializer), MyMassClass(Weights::NormalEnemy)
-
+inline UBarrageAutoBox::UBarrageAutoBox(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer), MyMassClass(Weights::NormalEnemy)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	switch (Weight)
 	{
-	case EBWeightClasses::NormalEnemy : MyMassClass = Weights::NormalEnemy;
-	case EBWeightClasses::BigEnemy : MyMassClass = Weights::BigEnemy;
-	case EBWeightClasses::HugeEnemy : MyMassClass = Weights::HugeEnemy;
-	default: MyMassClass = FMassByCategory(Weights::NormalEnemy);
+	case EBWeightClasses::NormalEnemy : MyMassClass = Weights::NormalEnemy; break;
+	case EBWeightClasses::BigEnemy : MyMassClass = Weights::BigEnemy; break;
+	case EBWeightClasses::HugeEnemy : MyMassClass = Weights::HugeEnemy; break;
+	default: MyMassClass = FMassByCategory(Weights::NormalEnemy); break;
 	}
 
 	bWantsInitializeComponent = true;
@@ -74,61 +78,63 @@ inline UBarrageAutoBox::UBarrageAutoBox(const FObjectInitializer& ObjectInitiali
 
 inline void UBarrageAutoBox::Register()
 {
-	if(MyObjectKey ==0 )
+	if (GetOwner())
 	{
-		if(GetOwner())
+		if(MyObjectKey ==0)
 		{
 			if(GetOwner()->GetComponentByClass<UKeyCarry>())
 			{
 				MyObjectKey = GetOwner()->GetComponentByClass<UKeyCarry>()->GetMyKey();
 			}
-			
+		
 			if(MyObjectKey == 0)
 			{
-				auto val = PointerHash(GetOwner());
-				ActorKey TopLevelActorKey = ActorKey(val);
-				MyObjectKey = TopLevelActorKey;
+				uint32 val = PointerHash(GetOwner());
+				MyObjectKey = ActorKey(val);
 			}
 		}
-	}
-	if(!IsReady && MyObjectKey != 0 && GetOwner()) // this could easily be just the !=, but it's better to have the whole idiom in the example
-	{
-		auto Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
-		auto TransformECS =  GetWorld()->GetSubsystem<UTransformDispatch>();
-		//BEHAVE DAMNIT
-		
-		UPrimitiveComponent* AnyMesh = GetOwner()->GetComponentByClass<UMeshComponent>(); 
-		AnyMesh = AnyMesh ? AnyMesh : GetOwner()->GetComponentByClass<UPrimitiveComponent>();
-		if(AnyMesh)
+	
+		if(!IsReady && MyObjectKey != 0) // this could easily be just the !=, but it's better to have the whole idiom in the example
 		{
-			auto extents = DiameterXYZ.IsNearlyZero() || DiameterXYZ.Length() <= 0.1 ? FVector::ZeroVector : DiameterXYZ;
-			if(extents.IsZero())
+			UPrimitiveComponent* AnyMesh = GetOwner()->GetComponentByClass<UMeshComponent>(); 
+			AnyMesh = AnyMesh ? AnyMesh : GetOwner()->GetComponentByClass<UPrimitiveComponent>();
+			if(AnyMesh)
 			{
-				auto Boxen = AnyMesh->GetLocalBounds();
-				if(Boxen.BoxExtent.GetMin() >= 0.01)
+				FVector extents = DiameterXYZ.IsNearlyZero() || DiameterXYZ.Length() <= 0.1 ? FVector::ZeroVector : DiameterXYZ;
+				if(extents.IsZero())
 				{
-					// Multiply by the scale factor, then multiply by 2 since mesh bounds is radius not diameter
-					extents = Boxen.BoxExtent * AnyMesh->GetComponentScale() * 2;				
+					FBoxSphereBounds Boxen = AnyMesh->GetLocalBounds();
+					if(Boxen.BoxExtent.GetMin() >= 0.01)
+					{
+						// Multiply by the scale factor, then multiply by 2 since mesh bounds is radius not diameter
+						extents = Boxen.BoxExtent * AnyMesh->GetComponentScale() * 2;				
+					}
+					else
+					{
+						//I SAID BEHAAAAAAAAAAAVE.
+						extents = FVector(1,1,1);
+					}
 				}
-				else
+
+				UBarrageDispatch* Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
+				FBBoxParams params = FBarrageBounder::GenerateBoxBounds(
+					GetOwner()->GetActorLocation(),
+					FMath::Max(extents.X, .1),
+					FMath::Max(extents.Y, 0.1),
+					FMath::Max( extents.Z, 0.1),
+					FVector3d(OffsetCenterToMatchBoundedShapeX, OffsetCenterToMatchBoundedShapeY, OffsetCenterToMatchBoundedShapeZ),
+					MyMassClass.Category);
+				MyBarrageBody = Physics->CreatePrimitive(params, MyObjectKey, static_cast<uint16>(Layer), false, false, isMovable);
+				if(MyBarrageBody)
 				{
-					//I SAID BEHAAAAAAAAAAAVE.
-					extents = FVector(1,1,1);
+					AnyMesh->WakeRigidBody(); 
+					IsReady = true;
+					AnyMesh->SetSimulatePhysics(false);
 				}
-				
-			}
-			auto params = FBarrageBounder::GenerateBoxBounds(GetOwner()->GetActorLocation(),FMath::Max(extents.X, .1), FMath::Max(extents.Y, 0.1), FMath::Max( extents.Z, 0.1),
-				FVector3d(OffsetCenterToMatchBoundedShapeX, OffsetCenterToMatchBoundedShapeY, OffsetCenterToMatchBoundedShapeZ), MyMassClass.Category);
-			MyBarrageBody = Physics->CreatePrimitive(params, MyObjectKey, static_cast<uint16>(Layer), false, false, isMovable);
-			//TransformECS->RegisterObjectToShadowTransform(MyObjectKey, const_cast<UE::Math::TTransform<double>*>(&GetOwner()->GetTransform()));
-			if(MyBarrageBody)
-			{
-				AnyMesh->WakeRigidBody(); 
-				IsReady = true;
-				AnyMesh->SetSimulatePhysics(false);
 			}
 		}
 	}
+	
 	if(IsReady)
 	{
 		PrimaryComponentTick.SetTickFunctionEnable(false);

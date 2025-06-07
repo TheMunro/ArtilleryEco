@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
 
@@ -10,7 +10,6 @@
 #include "KeyedConcept.h"
 #include "TransformDispatch.h"
 #include "UCablingWorldSubsystem.generated.h"
-
 
 //Goal: The Cabling Subsystem maintains the cabling thread and provides the output of
 //the control polling that it performs to the normal input system. Cabling is not
@@ -24,7 +23,7 @@ class  CABLING_API UCablingWorldSubsystem : public UTickableWorldSubsystem, publ
 public:
 	UCablingWorldSubsystem()
 	{
-	};
+	}
 
 	static inline UCablingWorldSubsystem* SelfPtr = nullptr;
 	
@@ -48,11 +47,9 @@ protected:
 	//ULTIMATELY, THESE SHOULD BE THE CURRENT MATCH ID AS BRISTLECONE
 	//SHOULD NOT BE RUNNING OUTSIDE OF A MATCH.
 
-  protected:
 	friend class UBristleconeWorldSubsystem;
 
 	// Receiver information
-
 	FCabling controller_runner;
 	Cabling::SendQueue GameThreadControlQueue;
 	Cabling::SendQueue CabledThreadControlQueue;

@@ -16,6 +16,7 @@ UCLASS(meta=(ScriptName="InputSystemLibrary"))
 class ARTILLERYRUNTIME_API UInputECSLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
+	
 public:
 	static void GetHistoricalInputs(TArray<FArtilleryShell>& Inputs, int Count)
 	{
@@ -147,10 +148,11 @@ public:
 		bFound = false;
 		if(UArtilleryDispatch::SelfPtr)
 		{
-			if(UArtilleryDispatch::SelfPtr->GetAttrib( Owner, Attrib))
+			AttrPtr AttributePtr = UArtilleryDispatch::SelfPtr->GetAttrib( Owner, Attrib);
+			if(AttributePtr != nullptr)
 			{
 				bFound = true;
-				return UArtilleryDispatch::SelfPtr->GetAttrib( Owner, Attrib)->GetCurrentValue();
+				return AttributePtr->GetCurrentValue();
 			}
 		}
 		return NAN;
@@ -298,19 +300,17 @@ public:
 		if (Tags.IsValid())
 		{
 			bFound = true;
-			 
-			auto TagRef = NewObject<UArtilleryGameplayTagContainer>();
+			UArtilleryGameplayTagContainer* TagRef = NewObject<UArtilleryGameplayTagContainer>();
 			TagRef->Initialize( Key, UArtilleryDispatch::SelfPtr, true);
 			return TagRef;
 		}
 		bFound = false;
 		return nullptr;
 	}
-
-
+	
 	static FConservedTags InternalTagsByKey(FSkeletonKey Key, bool& bFound)
 	{
-		auto ret = UArtilleryDispatch::SelfPtr->GetOrRegisterConservedTags(Key);
+		FConservedTags ret = UArtilleryDispatch::SelfPtr->GetOrRegisterConservedTags(Key);
 		bFound = ret.IsValid();
 		return ret;
 	}
@@ -374,8 +374,7 @@ public:
 			if (local != 0)
 			{
 				ActorKey playerkey = UCanonicalInputStreamECS::SelfPtr->ActorByStream(local);
-				AActor* SecretName = UTransformDispatch::SelfPtr->GetAActorByObjectKey(playerkey).Get();
-				return SecretName;
+				return UTransformDispatch::SelfPtr->GetAActorByObjectKey(playerkey).Get();
 			}
 		}
 		return nullptr;

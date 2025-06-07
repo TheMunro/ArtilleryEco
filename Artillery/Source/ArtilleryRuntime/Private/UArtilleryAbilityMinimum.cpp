@@ -3,12 +3,7 @@
 #include "Engine/Engine.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "GameplayCue_Types.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/Character.h"
-#include "Misc/DataValidation.h"
 #include "UObject/Package.h"
 #include "UFireControlMachine.h"
 
@@ -44,7 +39,6 @@ bool UGameplayAbility::K2_CommitAbilityCost(bool BroadcastCommitEvent)
 	return CommitAbilityCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
 }*/
 
-
 //This routes to K2_ActivateViaArtillery_Implementation for C++ or K2_ActivateViaArtillery for blueprint.
 // in event data, you can expect 
 //		Instigator(nullptr)
@@ -53,7 +47,6 @@ bool UGameplayAbility::K2_CommitAbilityCost(bool BroadcastCommitEvent)
 //If you need additional keys at the start of the ability, it may unfortunately be necessary to write your ability partially or fully as an artillery gun.
 void UArtilleryPerActorAbilityMinimum::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-
 	if (TriggerEventData)
 	{
 		K2_ActivateViaArtillery(*ActorInfo, *TriggerEventData, MyGunKey);
@@ -100,7 +93,6 @@ bool UArtilleryPerActorAbilityMinimum::CommitAbility(const FGameplayAbilitySpecH
 	
 	return Super::CommitAbility(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags);
 }
-
 
 FGameplayEffectContextHandle UArtilleryPerActorAbilityMinimum::GetContextFromOwner(FGameplayAbilityTargetDataHandle OptionalTargetData) const
 {

@@ -20,7 +20,7 @@ bool FTagStateRepresentation::Remove(uint16 Numerology)
 		if (Tags[i] == Numerology)
 		{
 			Tags[i] = 0;
-			auto A = snagged.fetch_and(0 << i, std::memory_order_acquire);
+			[[maybe_unused]] uint32_t A = snagged.fetch_and(0 << i, std::memory_order_acquire);
 			foundandremoved = true;
 		}
 	}
@@ -42,7 +42,7 @@ bool FTagStateRepresentation::Add(uint16 Numerology)
 		//to all line up to contend.
 		if (Tags[i] == 0 || Tags[i] == Numerology)
 		{
-			auto A = snagged.fetch_and(1 << i, std::memory_order_acquire);
+			uint32_t A = snagged.fetch_and(1 << i, std::memory_order_acquire);
 			if ((A & 1 << i) == 0) //was unset, is now set.
 			{
 				//we got it.
@@ -57,14 +57,14 @@ bool FTagStateRepresentation::Add(uint16 Numerology)
 
 void FConservedTagContainer::CacheLayer()
 {
-	auto index = CurrentHistory.GetNextIndex(CurrentWriteHead);
+	uint32 index = CurrentHistory.GetNextIndex(CurrentWriteHead);
 	CurrentHistory[index] = FTagLayer();
-	auto WornRing = DecoderRing.Pin();
+	TSharedPtr<UnderlyingTagReverse> WornRing = DecoderRing.Pin();
 	if (WornRing)
 	{
-		for (auto tagcode : Tags->Tags)
+		for (uint16_t tagcode : Tags->Tags)
 		{
-			auto ATag = WornRing->Find(tagcode);
+			FGameplayTag* ATag = WornRing->Find(tagcode);
 			if (ATag != nullptr)
 			{
 				CurrentHistory[index]->Add(*ATag);
@@ -78,13 +78,10 @@ FConservedTags FConservedTagContainer::GetReference()
 {
 	if (AccessRefController.IsValid())
 	{
-		auto scopeguard = AccessRefController.Pin();
+		TSharedPtr<FConservedTagContainer> scopeguard = AccessRefController.Pin();
 		return scopeguard;
 	}
-	else
-	{
-		return nullptr;
-	}
+	return nullptr;
 }
 
 //frame numbering starts at _1_
@@ -97,9 +94,9 @@ bool FConservedTagContainer::Find(FGameplayTag Bot)
 {
 	if (Tags)
 	{
-		if (auto search = SeenT->Find(Bot); search != nullptr)
+		if (uint16_t* search = SeenT->Find(Bot); search != nullptr)
 		{
-			auto Numerology = *search;
+			uint16_t Numerology = *search;
 			return Tags->Find(Numerology);
 		}
 	}
@@ -110,9 +107,9 @@ bool FConservedTagContainer::Remove(FGameplayTag Bot)
 {
 	if (Tags)
 	{
-		if (auto search = SeenT->Find(Bot); search != nullptr)
+		if (uint16_t* search = SeenT->Find(Bot); search != nullptr)
 		{
-			auto Numerology = *search;
+			uint16_t Numerology = *search;
 			return Tags->Remove(Numerology);
 		}
 	}
@@ -123,9 +120,9 @@ bool FConservedTagContainer::Add(FGameplayTag Bot)
 {
 	if (Tags)
 	{
-		if (auto search = SeenT->Find(Bot); search != nullptr)
+		if (uint16_t* search = SeenT->Find(Bot); search != nullptr)
 		{
-			auto Numerology = *search;
+			uint16_t Numerology = *search;
 			return Tags->Add(Numerology);
 		}
 	}
@@ -137,11 +134,11 @@ TSharedPtr<TArray<FGameplayTag>> FConservedTagContainer::GetAllTags()
 {
 	return CurrentHistory[CurrentHistory.GetPreviousIndex(CurrentWriteHead)];
 }
+
 //todo: again doublecheck my math here. can peek the FConservedAttrib. ATM, I gotta get this wired up.
 TSharedPtr<TArray<FGameplayTag>> FConservedTagContainer::GetAllTags(uint64_t FrameNumber)
 {
 	return CurrentHistory[CurrentHistory.GetPreviousIndex(FrameNumber)];
-	return nullptr;
 }
 
 bool RecordTags()
@@ -149,11 +146,9 @@ bool RecordTags()
 	return true;
 }
 
-
 AtomicTagArray::AtomicTagArray()
 {
 }
-
 
 void AtomicTagArray::Init()
 {
@@ -164,7 +159,7 @@ void AtomicTagArray::Init()
 	UGameplayTagsManager::Get().RequestAllGameplayTags(Container, false);
 	TArray<FGameplayTag> TagArray;
 	Container.GetGameplayTagArray(TagArray);
-	for (auto& Tag : TagArray)
+	for (FGameplayTag& Tag : TagArray)
 	{
 		SeenT->Emplace(Tag, ++Counter);
 		MasterDecoderRing->Emplace(Counter,Tag);
@@ -189,7 +184,7 @@ bool AtomicTagArray::Add(FSkeletonKey Top, FGameplayTag Bot)
 FConservedTags AtomicTagArray::NewTagContainer(FSkeletonKey Top)
 {
 	uint32_t Key = KeyToHash(Top);
-	auto HOpen = FastEntities;
+	TSharedPtr<Entities> HOpen = FastEntities;
 	if (FTagsPtr Tags; HOpen && !HOpen->find(Key, Tags))
 	{
 		Tags = MakeShareable<FTagStateRepresentation>(new FTagStateRepresentation());
@@ -212,35 +207,21 @@ uint32_t AtomicTagArray::KeyToHash(FSkeletonKey Top)
 bool AtomicTagArray::Find(FSkeletonKey Top, FGameplayTag Bot)
 {
 	uint32_t Key = KeyToHash(Top);
-	
-	auto HOpen = FastEntities;
-	if (auto search = SeenT->Find(Bot); HOpen && search != nullptr)
+	TSharedPtr<Entities> HOpen = FastEntities;
+	if (uint16_t* search = SeenT->Find(Bot); HOpen && search != nullptr)
 	{
-		auto Numerology = *search;
-		if (FTagsPtr Tags; !HOpen->find(Key, Tags))
-		{
-			return false;
-		}
-		else
-		{
-			 return Tags->Find(Numerology);
-		}
+		uint16_t Numerology = *search;
+		FTagsPtr Tags;
+		return !HOpen->find(Key, Tags) ? false : Tags->Find(Numerology);
 	}
 	return false;
 }
 
-
-
 bool AtomicTagArray::Erase(FSkeletonKey Top)
 {
 	uint32_t Key = KeyToHash(Top);
-	
-	auto HOpen = FastEntities;
-	if (HOpen)
-	{
-		return FastEntities->erase(Key);
-	}
-	return true;
+	TSharedPtr<Entities> HOpen = FastEntities;
+	return HOpen ? FastEntities->erase(Key) : true;
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
@@ -249,18 +230,16 @@ bool AtomicTagArray::Erase(FSkeletonKey Top)
 bool AtomicTagArray::Remove(FSkeletonKey Top, FGameplayTag Bot)
 {
 	uint32_t Key = KeyToHash(Top);
-	auto HOpen = FastEntities;
-	if (auto search = SeenT->Find(Bot); search != nullptr)
+	TSharedPtr<Entities> HOpen = FastEntities;
+	if (uint16_t* search = SeenT->Find(Bot); search != nullptr)
 	{
-		auto Numerology = *search;
-		if (FTagsPtr Tags; HOpen && !HOpen->find(Key, Tags))
+		FTagsPtr Tags;
+		uint16_t Numerology = *search;
+		if (HOpen && !HOpen->find(Key, Tags))
 		{
 			return true;
 		}
-		else
-		{
-			Tags->Remove(Numerology);
-		}
+		Tags->Remove(Numerology);
 	}
 	return false;
 }
@@ -268,35 +247,21 @@ bool AtomicTagArray::Remove(FSkeletonKey Top, FGameplayTag Bot)
 bool AtomicTagArray::SkeletonKeyExists(FSkeletonKey Top)
 {
 	uint32_t Key = KeyToHash(Top);
-	
-	auto HOpen = FastEntities;
-	if (HOpen)
-	{
-		return HOpen->contains(Key);
-	}
-	return false;
+	TSharedPtr<Entities> HOpen = FastEntities;
+	return HOpen ? HOpen->contains(Key) : false;
 }
 
 inline FConservedTags AtomicTagArray::GetReference(FSkeletonKey Top)
 {
 	FTagsPtr into = nullptr;
 	uint32_t Key = KeyToHash(Top);
-	
-	auto HOpen = FastEntities;
-	if (HOpen && HOpen->find(Key, into))
-	{
-		if (into.IsValid())
-		{
-			return into->AccessRefController.Pin();
-		}
-	}
-	return FConservedTags();
+	TSharedPtr<Entities> HOpen = FastEntities;
+	return HOpen && HOpen->find(Key, into) && into.IsValid() ? into->AccessRefController.Pin() : FConservedTags();
 }
 
 bool AtomicTagArray::Empty()
 {
-	
-	auto HOpen = FastEntities;
+	TSharedPtr<Entities> HOpen = FastEntities;
 	FastEntities.Reset();
 	SeenT.Reset(); // let it go, but don't blast it.
 	MasterDecoderRing.Reset();
@@ -305,20 +270,12 @@ bool AtomicTagArray::Empty()
 
 bool AtomicTagArray::AddImpl(uint32_t Key, FGameplayTag Bot)
 {
-	
-	auto HOpen = FastEntities;
-	if (auto search = SeenT->Find(Bot); HOpen && search != nullptr)
+	TSharedPtr<Entities> HOpen = FastEntities;
+	if (uint16_t* search = SeenT->Find(Bot); HOpen && search != nullptr)
 	{
-		auto Numerology = *search;
-		if (FTagsPtr Tags; !HOpen->find(Key, Tags))
-		{
-			return false;
-		}
-		else
-		{
-			return Tags->Add(Numerology);
-		}
+		FTagsPtr Tags;
+		uint16_t Numerology = *search;
+		return !HOpen->find(Key, Tags) ? false : Tags->Add(Numerology);
 	}
 	return false;
 }
-

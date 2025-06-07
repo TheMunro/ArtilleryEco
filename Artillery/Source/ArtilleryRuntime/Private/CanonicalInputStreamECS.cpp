@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "CanonicalInputStreamECS.h"
 
 void UCanonicalInputStreamECS::Initialize(FSubsystemCollectionBase& Collection)
@@ -12,7 +11,6 @@ void UCanonicalInputStreamECS::Initialize(FSubsystemCollectionBase& Collection)
 
 void UCanonicalInputStreamECS::OnWorldBeginPlay(UWorld& InWorld)
 {
-
 }
 
 void UCanonicalInputStreamECS::Deinitialize()
@@ -25,7 +23,6 @@ void UCanonicalInputStreamECS::Deinitialize()
 void UCanonicalInputStreamECS::PostInitialize()
 {
 	Super::PostInitialize();
-	
 }
 
 bool UCanonicalInputStreamECS::RegistrationImplementation()
@@ -61,9 +58,8 @@ TStatId UCanonicalInputStreamECS::GetStatId() const
 //constructs extant yet.
 TSharedPtr<UCanonicalInputStreamECS::FConservedInputStream> UCanonicalInputStreamECS::getNewStreamConstruct( PlayerKey ByPlayerConcept)
 {
-	
 	TSharedPtr<ArtilleryControlStream> ManagedStream = MakeShareable(
-	new FConservedInputStream(this, InputStreamKey(ByPlayerConcept)) //using++ vs ++would be wrong here. inc then ret.
+		new FConservedInputStream(this, InputStreamKey(ByPlayerConcept)) //using++ vs ++would be wrong here. inc then ret.
 	);
 	auto BifurcateOwnership = new TSharedPtr<ArtilleryControlStream>(ManagedStream);
 	//fun fucking story, this was working by ACCIDENT because we were somehow ZEROING OUT the pointers, causing things to JUST BARELY map.
@@ -72,7 +68,6 @@ TSharedPtr<UCanonicalInputStreamECS::FConservedInputStream> UCanonicalInputStrea
 	StreamKeyToStreamMapping->Add(ManagedStream->MyKey, *BifurcateOwnership);//This is the key driver for the ordering problem
 	return ManagedStream; 
 }
-
 
 InputStreamKey UCanonicalInputStreamECS::GetStreamForPlayer(PlayerKey ThisPlayer)
 {
@@ -86,31 +81,34 @@ TSharedPtr<UCanonicalInputStreamECS::FConservedInputStream> UCanonicalInputStrea
 	return SP; // creates a copy.
 }
 
-bool UCanonicalInputStreamECS::registerPattern( IPM::CanonPattern ToBind,
+bool UCanonicalInputStreamECS::registerPattern(IPM::CanonPattern ToBind,
                                                FActionPatternParams FCM_Owner_ActorParams)
 {
+	TSharedPtr<FConservedInputStream>* thisInputStreamPtr = StreamKeyToStreamMapping->Find(FCM_Owner_ActorParams.MyInputStream);
 	if (
 #ifndef LOCALISCODEDSPECIAL
 		InputStreamKey(APlayer::CABLE) == FCM_Owner_ActorParams.MyInputStream ||
 #endif // !LOCALISCODEDSPECIAL
-		StreamKeyToStreamMapping->Contains(FCM_Owner_ActorParams.MyInputStream))
+		thisInputStreamPtr != nullptr)
 	{
-		auto thisInputStream = StreamKeyToStreamMapping->Find(FCM_Owner_ActorParams.MyInputStream)->Get();
-		if (thisInputStream->MyPatternMatcher->AllPatternBinds.Contains(ToBind->getName()))
+		ArtIPMKey ToBindName = ToBind->getName();
+		FConservedInputStream* thisInputStream = thisInputStreamPtr->Get();
+		TSharedPtr<FConservedInputPatternMatcher> PatternMatcher = thisInputStream->MyPatternMatcher;
+		TMap<ArtIPMKey, TSharedPtr<TMap<FActionBitMask, FActionPatternParams>>>* PatternBinds = &PatternMatcher->AllPatternBinds;
+		TSharedPtr<TMap<FActionBitMask, FActionPatternParams>> ActionPatternForToBind = PatternBinds->FindRef(ToBindName);
+		if (ActionPatternForToBind.IsValid())
 		{
 			//names are never removed. sets are only added to or removed from.
-			thisInputStream->MyPatternMatcher->AllPatternBinds.Find(ToBind->getName())->Get()->Add(FCM_Owner_ActorParams);
-
+			ActionPatternForToBind.Get()->Add(FCM_Owner_ActorParams.ToSeek, FCM_Owner_ActorParams);
 		}
 		else
 		{
-			thisInputStream->MyPatternMatcher->Names.Add(ToBind->getName());
-			thisInputStream->MyPatternMatcher->AllPatternsByName.Add(ToBind->getName(), ToBind);
-			TSharedPtr<TSet<FActionPatternParams>> newSet = MakeShareable < TSet<FActionPatternParams>>(new TSet<FActionPatternParams>());
-			newSet.Get()->Add(FCM_Owner_ActorParams);
-			thisInputStream->MyPatternMatcher->AllPatternBinds.Add(ToBind->getName(), newSet);
+			PatternMatcher->Names.Add(ToBindName);
+			PatternMatcher->AllPatternsByName.Add(ToBindName, ToBind);
+			TSharedPtr<TMap<FActionBitMask, FActionPatternParams>> newMap = MakeShareable(new TMap<FActionBitMask, FActionPatternParams>());
+			newMap.Get()->Add(FCM_Owner_ActorParams.ToSeek, FCM_Owner_ActorParams);
+			thisInputStream->MyPatternMatcher->AllPatternBinds.Add(ToBind->getName(), newMap);
 		}
-
 		return true;
 	}
 	return false;
@@ -118,26 +116,20 @@ bool UCanonicalInputStreamECS::registerPattern( IPM::CanonPattern ToBind,
 
 bool UCanonicalInputStreamECS::removePattern(IPM::CanonPattern ToBind, FActionPatternParams FCM_Owner_ActorParams)
 {
+	TSharedPtr<FConservedInputStream>* thisInputStream = StreamKeyToStreamMapping->Find(FCM_Owner_ActorParams.MyInputStream);
 	if (
 #ifndef LOCALISCODEDSPECIAL
 		 FCM_Owner_ActorParams.MyInputStream == InputStreamKey(APlayer::CABLE) ||
 #endif // !LOCALISCODEDSPECIAL
-		StreamKeyToStreamMapping->Contains(FCM_Owner_ActorParams.MyInputStream))
+		thisInputStream != nullptr && thisInputStream->IsValid())
 	{
-		auto thisInputStream = StreamKeyToStreamMapping->Find(FCM_Owner_ActorParams.MyInputStream)->Get();
-		if (thisInputStream->MyPatternMatcher->AllPatternBinds.Contains(ToBind->getName()))
+		TSharedPtr<TMap<FActionBitMask, FActionPatternParams>> pinSharedPtr = thisInputStream->Get()->MyPatternMatcher->AllPatternBinds.FindRef(ToBind->getName());
+		if (pinSharedPtr.IsValid())
 		{
 			//names are never removed. sets are only added to or removed from.
-			auto pinSharedPtr = thisInputStream->MyPatternMatcher->AllPatternBinds.Find(ToBind->getName());
-
-			if (pinSharedPtr->Get()->Contains(FCM_Owner_ActorParams))
-			{
-				auto remId = pinSharedPtr->Get()->FindId(FCM_Owner_ActorParams);
-				pinSharedPtr->Get()->Remove(remId);
-				return true;
-			}
+			pinSharedPtr.Get()->Remove(FCM_Owner_ActorParams.ToSeek);
+			return true;
 		}
-		
 	}
 	return false;
 }
@@ -154,11 +146,5 @@ TPair<ActorKey, InputStreamKey> UCanonicalInputStreamECS::RegisterKeysToParentAc
 		ActorToStreamMapping->Add(ParentKey, LocalKey);
 		return TPair<ActorKey, InputStreamKey>(ParentKey, LocalKey);			
 	}
-	else
-	{
-		throw;
-	}
-
+	throw;
 }
-
-

@@ -22,10 +22,11 @@ class ARTILLERYRUNTIME_API UPlayerKeyCarry : public UKeyCarry
 	GENERATED_BODY()
 
 public:
-	
 	FSkeletonKey MyControllerIfAny;
+	
 	DECLARE_MULTICAST_DELEGATE(ActorKeyIsReady)
 	ActorKeyIsReady Retry_Notify;
+	
 	UPlayerKeyCarry(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 	{
 		// While we init, we do not tick more than once.. This is a "data only" component. gotta be a better way to do this.
@@ -53,19 +54,18 @@ public:
 	{
 		if(GetWorld())
 		{
-			if(auto xRef = GetWorld()->GetSubsystem<UTransformDispatch>())
+			if(UTransformDispatch* xRef = GetWorld()->GetSubsystem<UTransformDispatch>())
 			{
 				// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
 				// The function of the code becomes inobvious.
 				AActor* actorRef = GetOwner();
 				if(xRef != nullptr && actorRef !=nullptr)
 				{
-					
 					actorRef->UpdateComponentTransforms();
 					if(actorRef)
 					{
 						//I think this will end up diverging more than usual.
-						auto val = PointerHash(GetOwner());
+						uint32 val = PointerHash(GetOwner());
 						ActorKey TopLevelActorKey = ActorKey(val);
 						MyObjectKey = TopLevelActorKey;
 						if (MyObjectKey.IsValid())
@@ -87,16 +87,13 @@ public:
 	}
 	
 	//will return an invalid object key if it fails.
-	static inline FSkeletonKey KeyOfPlayer(AActor* That)
+	static FSkeletonKey KeyOfPlayer(AActor* That)
 	{
-	if(That)
-	{
-		if(That->GetComponentByClass<UPlayerKeyCarry>())
+		if(That)
 		{
-			return That->GetComponentByClass<UPlayerKeyCarry>()->MyObjectKey;
+			UPlayerKeyCarry* ThatKeyCarry = That->GetComponentByClass<UPlayerKeyCarry>();
+			return ThatKeyCarry ? ThatKeyCarry->MyObjectKey : FSkeletonKey();
 		}
+		return FSkeletonKey();
 	}
-	return FSkeletonKey();
-	}
-	
 };

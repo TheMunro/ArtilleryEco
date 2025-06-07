@@ -1,19 +1,13 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "ThistleStateTreeConditions.h"
 
 #include "ArtilleryBPLibs.h"
 #include "StateTreeExecutionContext.h"
-#include "UArtilleryGameplayTagContainer.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(ThistleStateTreeConditions)
 
 #if WITH_EDITOR
 #define LOCTEXT_NAMESPACE "StateTreeEditor"
-
-
 #endif// WITH_EDITOR
-
 
 //----------------------------------------------------------------------//
 //  GameplayTagMatchCondition
@@ -23,31 +17,23 @@ bool FArtilleryTagMatchCondition::TestCondition(FStateTreeExecutionContext& Cont
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool found = false;
-	auto Container = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found); //with the newer conserved tags, we COULD save this off..
-	if (found)
-	{
-		//TODO: add "has tag" support, not just has exact tag support.
-		//return (bExactMatch ?  Container->Find(InstanceData.Tag) : Container->HasTag(InstanceData.Tag)) ^ bInvert;
-		return Container->Find(InstanceData.Tag) ^ bInvert;
-	}
-	return false;
+	FConservedTags Container = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found); //with the newer conserved tags, we COULD save this off..
+	//TODO: add "has tag" support, not just has exact tag support.
+	//return (bExactMatch ?  Container->Find(InstanceData.Tag) : Container->HasTag(InstanceData.Tag)) ^ bInvert;
+	return found && Container->Find(InstanceData.Tag) ^ bInvert;
 }
 
 bool FArtilleryAttributeValueCondition::Test(float Value, float Target) const
 {
-		return TreeOperandTest(Value, Target, Operation);
+	return TreeOperandTest(Value, Target, Operation);
 }
 
 bool FArtilleryAttributeValueCondition::TestCondition(FStateTreeExecutionContext& Context) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool Found = false;
-	auto Value = UArtilleryLibrary::implK2_GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName, Found);
-	if (Found)
-	{
-		return Test(Value, TestValue);
-	}
-	return false;
+	float Value = UArtilleryLibrary::implK2_GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName, Found);
+	return Found && Test(Value, TestValue);
 }
 
 bool FArtilleryAttributeCompareCondition::TestCondition(FStateTreeExecutionContext& Context) const
@@ -55,15 +41,15 @@ bool FArtilleryAttributeCompareCondition::TestCondition(FStateTreeExecutionConte
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool Found = false;
 	bool TargetFound = false;
-	auto Value = UArtilleryLibrary::implK2_GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName, Found);
-	auto TestAttrib = UArtilleryLibrary::implK2_GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName, Found);
+	float Value = UArtilleryLibrary::implK2_GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName, Found);
+	float TestAttrib = UArtilleryLibrary::implK2_GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName, Found);
 	if (Found)
 	{
 		if (TargetFound)
 		{
 			return Test(Value, TestAttrib);
 		}
-		else if (bFallbackToTestValue)
+		if (bFallbackToTestValue)
 		{
 			return Test(Value, TestValue);
 		}

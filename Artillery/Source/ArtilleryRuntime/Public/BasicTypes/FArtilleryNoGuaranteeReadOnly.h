@@ -6,12 +6,8 @@
 #include "Templates/SubclassOf.h"
 #include "UObject/UnrealType.h"
 #include "Engine/DataTable.h"
-#include "AttributeSet.h"
-#include "ArtilleryCommonTypes.h"
-#include <bitset>
 #include "ArtilleryShell.h"
 #include "Containers/CircularBuffer.h"
-
 
 //See Desperate-thor.gif for more information.
 //Catch you in the next one, choom.

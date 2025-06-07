@@ -1,11 +1,11 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "AtomicTagArray.h"
 #include "EAttributes.h"
 #include "EPhysicsLayer.h"
 #include "GameFramework/Actor.h"
 #include "FGunKey.h"
+#include "MashFunctions.h"
 #include "RequestRouterTypes.h"
 #include "NiagaraParticleDispatch.h"
 
@@ -35,33 +35,17 @@ public:
 	using GameThreadRequestQ = TCircularQueue<FRequestGameThreadThing>;
 	using ThreadFeed = TCircularQueue<FRequestThing>;
 	
-	/// A 64 bit hash function by Thomas Wang, Jan 1997
-	/// See: http://web.archive.org/web/20071223173210/http://www.concentric.net/~Ttwang/tech/inthash.htm
-	/// @param inValue Value to hash
-	/// @return Hash
-	static inline uint64 FastHash64(uint64 inValue)
+	static uint32 HashDownTo32(uint64 inValue)
 	{
-		uint64 hash = inValue;
-		hash = (~hash) + (hash << 21); // hash = (hash << 21) - hash - 1;
-		hash = hash ^ (hash >> 24);
-		hash = (hash + (hash << 3)) + (hash << 8); // hash * 265
-		hash = hash ^ (hash >> 14);
-		hash = (hash + (hash << 2)) + (hash << 4); // hash * 21
-		hash = hash ^ (hash >> 28);
-		hash = hash + (hash << 31);
-		return hash;
+		return FMMM::FastHash6432( FMMM::FastHash64(inValue));
 	}
-	static inline uint32 HashDownTo32(uint64 inValue)
-	{
-		return GetTypeHash( FastHash64(inValue));
-	}
+	
 	F_INeedA()
 	{
 	}
 	
 	struct FeedMap
 	{
-
 		std::thread::id That = std::thread::id();
 		TSharedPtr<ThreadFeed> Queue = nullptr;
 
@@ -80,7 +64,6 @@ public:
 	
 	struct GameFeedMap
 	{
-
 		std::thread::id That = std::thread::id();
 		TSharedPtr<GameThreadRequestQ> Queue = nullptr;
 

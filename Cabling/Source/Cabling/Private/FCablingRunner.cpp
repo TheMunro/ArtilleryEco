@@ -4,37 +4,36 @@
 #include <bitset>
 #include <thread>
 
+#include "CablingCommonTypes.h"
 #include "FStatefulPatternMatcher.h"
 #include "MatchableTagTypes.h"
+#include "UnsignedNarrowTime.h"
 
 using std::bitset;
 
 FCabling::FCabling()
-	: running(false)
 {
+	running = false;
+	GuessedInputCount = 0;
 }
 
 FCabling::~FCabling()
 {
 }
 
-
 bool FCabling::Init()
 {
 	UE_LOG(LogTemp, Display, TEXT("FCabling: Initializing Control Intercept thread"));
-
 	running = true;
+	GuessedInputCount = 0;
 	return true;
 }
 
-
 bool FCabling::SendNew(bool sent, uint64_t priorReading, uint64_t currentRead)
 {
-	if (
-		(!sent) && (currentRead != priorReading)
-	)
+	if (!sent && currentRead != priorReading)
 	{
-		//push to both queues.
+		// push to both queues.
 		this->CabledThreadControlQueue.Get()->Enqueue(currentRead);
 		this->GameThreadControlQueue.Get()->Enqueue(currentRead);
 		WakeTransmitThread->Trigger();
@@ -43,15 +42,13 @@ bool FCabling::SendNew(bool sent, uint64_t priorReading, uint64_t currentRead)
 	return sent;
 }
 
-bool FCabling::SendIfWindowEdge(bool sent, int seqNumber, uint64_t currentRead,
-                                const uint32_t sendHertzFactor)
+bool FCabling::SendIfWindowEdge(bool sent, int seqNumber, uint64_t currentRead, const uint32_t sendHertzFactor)
 {
 	if (
 		//if we haven't sent, we do have a reading...
-		(!sent) && currentRead != 0 &&
+		!sent && currentRead != 0 &&
 		//and we're out of bloosy time.
-		((seqNumber % sendHertzFactor) != 0)
-	)
+		seqNumber % sendHertzFactor != 0)
 	{
 		//push to both queues.
 		this->CabledThreadControlQueue.Get()->Enqueue(currentRead);
@@ -205,7 +202,7 @@ uint32 FCabling::Run()
 	//Looks like PS4/PS5 won't be too bad, just gotta watch out for Fun Device ID changes.
 	while (running)
 	{
-		if ((lastPollTime + Period) <= lsbTime)
+		if (lastPollTime + Period <= lsbTime)
 		{
 			lastPollTime = lsbTime;
 			//if it's been blown up or if create failed.
@@ -217,6 +214,7 @@ uint32 FCabling::Run()
 			IGameInputDevice* keyboard = nullptr;
 			uint64_t KeyboardCurrentRead = BlankKeyboard;
 			uint64_t GamepadCurrentRead = BlankGamepad;
+			
 			//get the keeb...
 			if (g_gameInput &&
 				SUCCEEDED(g_gameInput->GetCurrentReading(GameInputKindKeyboard, keyboard, &reading)))
@@ -255,7 +253,7 @@ uint32 FCabling::Run()
 				Sent = SendIfWindowEdge(Sent, TickCounter, KeyboardCurrentRead, sendHertzFactor);
 			}
 			//this check isn't needed, but removing it creates an instant maintenance hazard.
-			else if (((TickCounter % sendHertzFactor) != 0))
+			else if (TickCounter % sendHertzFactor != 0)
 			{
 				Sent = SendIfWindowEdge(Sent, TickCounter, BlankGamepad, sendHertzFactor);
 			}
@@ -264,16 +262,18 @@ uint32 FCabling::Run()
 			//this is performed even if they're null data packets. Godspeed.
 			PriorReadingGamepad = GamepadCurrentRead;
 			PriorReadingKeyboard = KeyboardCurrentRead;
-
-
-			if ((TickCounter % sampleHertz) == 0)
+			
+			if (TickCounter % sampleHertz == 0)
 			{
 				long long now = std::chrono::steady_clock::now().time_since_epoch().count();
-				UE_LOG(LogTemp, Display, TEXT("Cabling hertz cycled: %lld against lsb %lld with last poll as %lld"),
-				       (now), lsbTime, lastPollTime);
+				UE_LOG(
+					LogTemp,
+					Display,
+					TEXT("Cabling hertz cycled: %lld against lsb %lld with last poll as %lld"),
+					now, static_cast<long long>(lsbTime), static_cast<long long>(lastPollTime));
 			}
 
-			if ((TickCounter % sendHertzFactor) == 0)
+			if (TickCounter % sendHertzFactor == 0)
 			{
 				Sent = false;
 			}

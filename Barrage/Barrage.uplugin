@@ -29,6 +29,10 @@
 		{
 			"Name": "SkeletonKey",
 			"Enabled": true
+		},
+		{
+			"Name": "Locomo",
+			"Enabled": true
 		}
 	]
 }

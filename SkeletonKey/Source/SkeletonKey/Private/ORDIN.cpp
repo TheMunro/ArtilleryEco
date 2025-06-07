@@ -30,6 +30,22 @@ UOrdinatePillar::UOrdinatePillar()
 		Data = ORDINATION_Fallback;
 		ORDINATION_Fallback = A;
 	}
+
+	if (MyWorld != nullptr)
+	{
+		MyWorld->IsForbidden = true;
+		MyWorld->IsReady = false;
+	}
+	//we clear on fire so this is a precaution.
+	for (ORDIN::InitSequence* Group : Data.GROUPS)
+	{
+		Group->Empty();
+	}
+	//we also fry the fallback.
+	for (ORDIN::InitSequence* Group : ORDINATION_Fallback.GROUPS)
+	{
+		Group->Empty();
+	}
 }
 
 UOrdinatePillar::~UOrdinatePillar()

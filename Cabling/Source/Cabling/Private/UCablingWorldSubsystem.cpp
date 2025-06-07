@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "UCablingWorldSubsystem.h"
 
 //THIS IS A GENERALLY UNDESIRABLE INCLUDE PATTERN
@@ -40,7 +37,6 @@ bool UCablingWorldSubsystem::RegistrationImplementation()
 }
 
 void UCablingWorldSubsystem::OnWorldBeginPlay(UWorld& InWorld) {
-
 }
 
 void UCablingWorldSubsystem::Deinitialize() {
@@ -54,7 +50,6 @@ void UCablingWorldSubsystem::Deinitialize() {
 
 void UCablingWorldSubsystem::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
-	//UE_LOG(LogTemp, Warning, TEXT("Bristlecone:Subsystem: Subsystem world ticked"));
 }
 
 TStatId UCablingWorldSubsystem::GetStatId() const {

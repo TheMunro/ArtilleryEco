@@ -6,22 +6,24 @@
 #include "ArtilleryActorControllerConcepts.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "NiagaraDataChannelAccessor.h"
-#include "NiagaraDataChannelHandler.h"
 #include "NiagaraDataChannelPublic.h"
 #include "NiagaraWorldManager.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "SkeletonTypes.h"
-#include "Niagara/Private/NiagaraDataChannelManager.h"
 #include "KeyedConcept.h"
 #include "ORDIN.h"
 #include "ParticleRecord.h"
+
 THIRD_PARTY_INCLUDES_START
 PRAGMA_PUSH_PLATFORM_DEFAULT_PACKING
 #include "libcuckoo/cuckoohash_map.hh"
-typedef libcuckoo::cuckoohash_map<FSkeletonKey, ParticleRecord> ParticleCuckoo;
+//typedef libcuckoo::cuckoohash_map<FSkeletonKey, ParticleRecord> ParticleCuckoo;
+typedef libcuckoo::cuckoohash_map<FSkeletonKey, ParticleRecord> KeyToRecordCuckoo;
+typedef TMap<FName, KeyToRecordCuckoo> ParticleCuckoo;
 PRAGMA_POP_PLATFORM_DEFAULT_PACKING
 THIRD_PARTY_INCLUDES_END
+
 #include "NiagaraParticleDispatch.generated.h"
 
 /**
@@ -51,7 +53,6 @@ struct NiagaraVariableParam
 	E_NiagaraVariableType Type;
 	FName VariableName;
 	FVector3d VariableValue;
-	//VariableType VariableValue;
 
 	static NiagaraVariableParam None()
 	{
@@ -64,15 +65,18 @@ USTRUCT(BlueprintType)
 struct ARTILLERYRUNTIME_API FParticleID
 {
 	GENERATED_BODY()
+	
 public:
 	FParticleID()
 	{
 		ParticleId = 0;
 	}
+	
 	FParticleID(uint32_t IdIn)
 	{
 		ParticleId = IdIn;
 	}
+	
 	//FUN STORY: BLUEPRINT CAN'T USE UINT32 EITHER.
 	uint32_t ParticleId;
 
@@ -106,9 +110,7 @@ public:
 		ComponentToParticleIDMapping = MakeShareable(new TMap<TWeakObjectPtr<UNiagaraComponent>, FParticleID>());
 		BoneKeyToParticleIDMapping = MakeShareable(new TMap<FBoneKey, FParticleID>());
 		KeyToParticleParamMapping = MakeShareable(new TMap<FBoneKey, TSharedPtr<TQueue<NiagaraVariableParam>>>());
-		ProjectileNameToNDCAsset = MakeShareable(new TMap<FString, ManagementPayload>());
-		NDCAssetTOProjectileName = MakeShareable(new TMap<TObjectPtr<UNiagaraDataChannelAsset>, FString>());
-		KeyToParticleRecordMapping = MakeShareable(new ParticleCuckoo());
+		ProjectileNameToNDCAsset = MakeShareable(new TMap<FName, ManagementPayload>());
 	}
 
 	static inline UNiagaraParticleDispatch* SelfPtr = nullptr;
@@ -122,9 +124,9 @@ public:
 	//Artillery machinery.
 	constexpr static int OrdinateSeqKey = ORDIN::E_D_C::ParticleSystem;
 	OnNiagaraParticlesActivated BindToNiagaraParticlesActivated;
+	
 	virtual bool RegistrationImplementation() override;
 	void ArtilleryTick() override;
-
 	void UpdateNDCChannels() const;
 	virtual void Tick(float DeltaTime) override;
 
@@ -145,15 +147,13 @@ protected:
 	// May want to make the value some kind of compacted iterable as we may have more than one particle
 	// system on a single component
 	TSharedPtr<TMap<FBoneKey, FParticleID>> BoneKeyToParticleIDMapping;
-
 	TSharedPtr<TMap<FBoneKey, TSharedPtr<TQueue<NiagaraVariableParam>>>> KeyToParticleParamMapping;
-	using ManagementPayload = TPair<TObjectPtr<UNiagaraDataChannelAsset>, TObjectPtr<UNiagaraDataChannelWriter>>;
-	TSharedPtr<TMap<FString, ManagementPayload>> ProjectileNameToNDCAsset;
-	TSharedPtr<TMap<TObjectPtr<UNiagaraDataChannelAsset>, FString>> NDCAssetTOProjectileName;
-	//just a reminder, should it be relevant. find throws by default.
-	//if this is a source of slowdown, you may consider debugging and using the dreadful KeySlink. it's not debugged tho..
-	//good luck I guess lol.
-	TSharedPtr<ParticleCuckoo> KeyToParticleRecordMapping;
+
+	// just a reminder, should it be relevant. libcuckoo::hashmap find throws by default.
+	// if this is a source of slowdown, you may consider debugging and using the dreadful KeySlink. it's not debugged tho..
+	// good luck I guess lol.
+	using ManagementPayload = TTuple<TObjectPtr<UNiagaraDataChannelAsset>, TObjectPtr<UNiagaraDataChannelWriter>, KeyToRecordCuckoo>;
+	TSharedPtr<TMap<FName, ManagementPayload>> ProjectileNameToNDCAsset;
 
 public:
 	virtual void PostInitialize() override;
@@ -205,45 +205,59 @@ public:
 
 	void QueueParticleSystemParameter(const FBoneKey& Key, const NiagaraVariableParam& Param) const;
 
-	void AddNDCReference(FString Name, TObjectPtr<UNiagaraDataChannelAsset> DataChannelAssetPtr) const;
+	void AddNDCReference(FName Name, TObjectPtr<UNiagaraDataChannelAsset> DataChannelAssetPtr) const;
 
-	bool AssetUsesNDCParticles(FString Name) const
+	bool AssetUsesNDCParticles(FName Name) const
 	{
 		return ProjectileNameToNDCAsset->Contains(Name);
 	}
 
-	TWeakObjectPtr<UNiagaraDataChannelAsset> GetNDCAssetForProjectileDefinition(FString ProjectileDefinitionID) const
+	TWeakObjectPtr<UNiagaraDataChannelAsset> GetNDCAssetForProjectileDefinition(FName ProjectileDefinitionID) const
 	{
-		auto Found = ProjectileNameToNDCAsset->Find(ProjectileDefinitionID);
+		ManagementPayload* Found = ProjectileNameToNDCAsset->Find(ProjectileDefinitionID);
 		if (Found == nullptr)
 		{
 			return nullptr;
 		}
-		TObjectPtr<UNiagaraDataChannelAsset> AssetPtr = ProjectileNameToNDCAsset->Find(ProjectileDefinitionID)->Key;
-		return AssetPtr != nullptr ? TWeakObjectPtr<UNiagaraDataChannelAsset>(AssetPtr) : nullptr;
+		TObjectPtr<UNiagaraDataChannelAsset> NDCAsset = Found->Get<0>();
+		return NDCAsset != nullptr ? TWeakObjectPtr<UNiagaraDataChannelAsset>(NDCAsset) : nullptr;
 	}
 
-	void RegisterKeyForProcessing(FSkeletonKey ProjectileKey, TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr) const
+	void RegisterKeyForProcessing(FName ProjectileName, FSkeletonKey ProjectileKey, TWeakObjectPtr<UNiagaraDataChannelAsset> ProjectileNDCAssetPtr) const
 	{
-		ParticleRecord NewPR;
-		NewPR.NDCAssetPtr = ProjectileNDCAssetPtr;
-		NewPR.NDCIndex = -1;
-		KeyToParticleRecordMapping->insert_or_assign(ProjectileKey, NewPR);
-		
+		ManagementPayload* KeyToRecordMap = ProjectileNameToNDCAsset->Find(ProjectileName);
+		if (KeyToRecordMap != nullptr)
+		{
+			ParticleRecord NewPR;
+			NewPR.NDCAssetPtr = ProjectileNDCAssetPtr;
+			NewPR.NDCIndex = -1;
+			KeyToRecordMap->Get<2>().insert_or_assign(ProjectileKey, NewPR);
+		}
 	}
 
-	void CleanupKey(const FSkeletonKey Key)
+	void CleanupKey(const FSkeletonKey Key, FName ProjectileName = "")
 	{
-		KeyToParticleRecordMapping->erase(Key);
+		ManagementPayload* KeyToRecordMap = ProjectileNameToNDCAsset->Find(ProjectileName);
+		if (KeyToRecordMap != nullptr)
+		{
+			KeyToRecordMap->Get<2>().erase(Key);
+		}
+		else
+		{
+			for (auto it = ProjectileNameToNDCAsset->CreateIterator(); it; ++it)
+			{
+				it.Value().Get<2>().erase(Key);
+			}
+		}
 	}
 };
 
 inline UNiagaraParticleDispatch::~UNiagaraParticleDispatch()
 {
-	auto Hold = ParticleIDToComponentMapping;
+	TSharedPtr<TMap<FParticleID, TWeakObjectPtr<UNiagaraComponent>>> Hold = ParticleIDToComponentMapping;
 	if(Hold)
 	{
-		for(auto x : *Hold.Get())
+		for(TPair<FParticleID, TWeakObjectPtr<UNiagaraComponent>>& x : *Hold.Get())
 		{
 			if(x.Value.Get())
 			{

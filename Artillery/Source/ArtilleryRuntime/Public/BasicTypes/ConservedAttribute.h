@@ -10,12 +10,12 @@
 #include "Containers/CircularBuffer.h"
 
 #include "ConservedAttribute.generated.h"
+
 /**
  * Conserved attributes record their last 128 changes.
  * Currently, this is for debug purposes, but we can use it with some additional features to provide a really expressive
  * model for rollback at a SUPER granular level if needed. 
  */
-
 //TODO: do we need to break the GAS dependency? It's forcing a lot of unneeded stuff.
 USTRUCT(BlueprintType)
 struct ARTILLERYRUNTIME_API FConservedAttributeData : public FGameplayAttributeData
@@ -58,18 +58,22 @@ struct ARTILLERYRUNTIME_API FConservedAttributeData : public FGameplayAttributeD
 		BaseValue = NewValue;
 		++BaseHead;
 	};
+	
 	double operator*(FConservedAttributeData const& rhs) 
 	{ 
 		return CurrentValue * rhs.CurrentValue; // this is a double op.
 	};
+	
 	double operator*(int const& rhs) 
 	{ 
 		return CurrentValue * rhs; // this is a double op.
 	}
+	
 	double operator*(uint64 const& rhs) 
 	{ 
 		return CurrentValue * rhs; // this is a double op.
 	}
+	
 protected:
 	uint64_t BaseHead = 0;
 	uint64_t CurrentHead = 0;

@@ -1,27 +1,21 @@
 ﻿#pragma once
+
 #include "StateTreeTaskBase.h"	
 #include "StateTreeExecutionContext.h"
 #include "ThistleBehavioralist.h"
 #include "ThistleStateTreeCore.h"
-#include "ThistleStateTreeSchema.h"
 #include "ThistleTypes.h"
-#include "Components/StateTreeComponent.h"
 
 #include "ThistleBaseMoveOrder.generated.h"
-
 
 USTRUCT()
 struct THISTLERUNTIME_API FMoveOrder : public FTTaskBase
 {
-
 	GENERATED_BODY()
-public:
+	
 	using FInstanceDataType = F_TPOIInstanceNavData;
 
-
-	
 protected:
-
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 
 	EStateTreeRunStatus AttemptMovePath(FStateTreeExecutionContext& Context, FVector location, FVector HereIAm) const;
@@ -35,8 +29,6 @@ protected:
 	 */
 	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 	
-
 	UPROPERTY(EditAnywhere)
 	float Tolerance = 0;
-
 };

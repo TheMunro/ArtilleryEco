@@ -6,50 +6,42 @@ EStateTreeRunStatus FScoot::Tick(FStateTreeExecutionContext& Context, const floa
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool Shuck = false;
-	auto location = InstanceData.ShuckPoi(Shuck);
+	FVector location = InstanceData.ShuckPoi(Shuck);
 	if (!Shuck)
 	{
 		return EStateTreeRunStatus::Failed;
 	}
-		//run on cadence.
+	
+	//run on cadence.
 	if (UArtilleryLibrary::GetTotalsTickCount() % ArtilleryTickHertz*3 == 0)
 	{
 		bool found = false;
-		auto HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
-
+		FVector HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
 		if (found && (HereIAm - location).Length() < Tolerance)
 		{
-
 			return AttemptScootPath(Context, location, HereIAm);
 		}
-		else
-		{
-			return EStateTreeRunStatus::Succeeded; //scoot not needed, is like succeeded.
-		}
+		return EStateTreeRunStatus::Succeeded; //scoot not needed, is like succeeded.
 	}
 	return EStateTreeRunStatus::Running;
 }
 
-
-EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context, FVector location,
-														   FVector HereIAm) const
+EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context, FVector location, FVector HereIAm) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
-	auto AreWeBarraging = UBarrageDispatch::SelfPtr;
-
+	UBarrageDispatch* AreWeBarraging = UBarrageDispatch::SelfPtr;
 	if (AreWeBarraging != nullptr && UThistleBehavioralist::SelfPtr)
 	{
 		bool found = false;
-		auto tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
+		FConservedTags tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
 		if (found)
 		{
 			tagc->Remove(TAG_Orders_Move_Needed);
 		}
 
-		UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,
-												  UThistleBehavioralist::DelayBetweenMoveOrders); 
+		UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,UThistleBehavioralist::DelayBetweenMoveOrders); 
 
-		if ((HereIAm - location).Length() > FMath::Max(0.01f, Tolerance)*5)
+		if ((HereIAm - location).Length() > FMath::Max(0.01f, Tolerance) * 5)
 		{
 			if (found)
 			{
@@ -58,10 +50,10 @@ EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context
 			return EStateTreeRunStatus::Succeeded;
 		}
 		
-		auto destination = ( HereIAm - location).GetSafeNormal();
+		FVector destination = (HereIAm - location).GetSafeNormal();
 		if (destination != FVector::ZeroVector && !UThistleBehavioralist::AttemptInvokePathingOnKey(InstanceData.KeyOf,
 		//move away to...
-		(HereIAm + (Tolerance*10)*destination)))
+		(HereIAm + (Tolerance*10) * destination)))
 		{
 			if (found)
 			{
@@ -69,11 +61,7 @@ EStateTreeRunStatus FScoot::AttemptScootPath(FStateTreeExecutionContext& Context
 			}
 			return EStateTreeRunStatus::Failed;
 		}
-		// ReSharper disable once CppRedundantElseKeywordInsideCompoundStatement
-		else
-		{
-			return EStateTreeRunStatus::Running;
-		}
+		return EStateTreeRunStatus::Running;
 	}
 	return EStateTreeRunStatus::Failed;
 }
@@ -82,41 +70,37 @@ EStateTreeRunStatus FBreakOff::Tick(FStateTreeExecutionContext& Context, const f
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	bool Shuck = false;
-	auto location = InstanceData.ShuckPoi(Shuck);
+	FVector location = InstanceData.ShuckPoi(Shuck);
 	if (!Shuck)
 	{
 		return EStateTreeRunStatus::Failed;
 	}
+	
 	//run on cadence.
 	if (UArtilleryLibrary::GetTotalsTickCount() % 4 == 0)
 	{
 		bool found = false;
-		auto HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
+		FVector HereIAm = UArtilleryLibrary::implK2_GetLocation(InstanceData.KeyOf, found);
 
 		if (found && (HereIAm - location).Length()  < Tolerance * 2)
 		{
-		auto AreWeBarraging = UBarrageDispatch::SelfPtr;
-
-		if (AreWeBarraging != nullptr && UThistleBehavioralist::SelfPtr)
-		{
-			auto tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
-			auto destination = ( HereIAm - location).GetSafeNormal();
-			if (destination != FVector::ZeroVector && (HereIAm - location).Length()  < Tolerance * 1.1)
+			UBarrageDispatch* AreWeBarraging = UBarrageDispatch::SelfPtr;
+			UThistleBehavioralist* Behavioralist = UThistleBehavioralist::SelfPtr;
+			if (AreWeBarraging != nullptr && UThistleBehavioralist::SelfPtr)
 			{
-				if (found)
+				FConservedTags tagc = UArtilleryLibrary::InternalTagsByKey(InstanceData.KeyOf, found);
+				FVector destination = ( HereIAm - location).GetSafeNormal();
+				if (destination != FVector::ZeroVector && (HereIAm - location).Length()  < Tolerance * 1.1)
 				{
-					UThistleBehavioralist::SelfPtr->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,
-										  UThistleBehavioralist::DelayBetweenMoveOrders);
-					UThistleBehavioralist::SelfPtr->ExpireTag(InstanceData.KeyOf, TAG_Orders_Move_Break,
-										  UThistleBehavioralist::DelayBetweenMoveOrders); 
-				}           
-				return EStateTreeRunStatus::Succeeded;
-			}
-			else
-			{
+					if (found)
+					{
+						Behavioralist->BounceTag(InstanceData.KeyOf, TAG_Orders_Move_Needed,UThistleBehavioralist::DelayBetweenMoveOrders);
+						Behavioralist->ExpireTag(InstanceData.KeyOf, TAG_Orders_Move_Break, UThistleBehavioralist::DelayBetweenMoveOrders); 
+					}           
+					return EStateTreeRunStatus::Succeeded;
+				}
 				return EStateTreeRunStatus::Running;
 			}
-		}
 		}
 		else
 		{

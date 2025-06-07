@@ -7,14 +7,9 @@
 #include <unordered_map>
 #include "FGunKey.h"
 #include "GameplayEffectTypes.h"
-#include "GameplayEffect.h"
-#include "Abilities/GameplayAbility.h"
 #include "UArtilleryAbilityMinimum.h"
 #include "FArtilleryGun.h"
 #include "FMockArtilleryGun.generated.h"
-
-
-
 
 /**
  * This class will be a data-driven instance of a gun that encapsulates a generic structured ability,
@@ -35,8 +30,6 @@ struct ARTILLERYRUNTIME_API FMockArtilleryGun : public FArtilleryGun
 	GENERATED_BODY()
 	
 public:
-	///static RegisterMyGun<FMockArtilleryGun> Identification;
-
 	// this can be handed into abilities.
 	friend class UArtilleryPerActorAbilityMinimum;
 
@@ -47,18 +40,17 @@ public:
 		MyGunKey = KeyFromDispatch;
 	};
 
-
 	virtual void PreFireGun(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo,
-		const ArtIPMKey FireAction = ArtIPMKey::InternallyStateless,
+		const EventBufferInfo FireAction = EventBufferInfo::Default(),
 		const FGameplayEventData* TriggerEventData = nullptr,
 		bool RerunDueToReconcile = false,
 		int DallyFramesToOmit = 0) 
 		override
 	{
-	};
+	}
 
 	virtual void FireGun(
 		FArtilleryStates OutcomeStates,
@@ -71,7 +63,7 @@ public:
 		override
 	{
 		throw;
-	};
+	}
 
 	virtual void PostFireGun(
 		FArtilleryStates OutcomeStates,
@@ -83,8 +75,8 @@ public:
 		FGameplayAbilitySpecHandle Handle) 
 		override
 	{
-			throw;
-	};
+		throw;
+	}
 	
 	virtual bool Initialize(
 		const FGunKey& KeyFromDispatch,
@@ -105,9 +97,8 @@ public:
 	{
 		MyGunKey = Default;
 	}
-	private:
+	
+private:
 	//Our debug value remains M6D.
 	static const inline FGunKey Default = FGunKey("M6D");
-
-
 };

@@ -1,5 +1,4 @@
-﻿
-#include "FArtilleryGun.h"
+﻿#include "FArtilleryGun.h"
 #include "ArtilleryBPLibs.h"
 
 FArtilleryGun::~FArtilleryGun()
@@ -24,7 +23,7 @@ FArtilleryGun::~FArtilleryGun()
 }
 
 void FArtilleryGun::PreFireGun(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-                               const FGameplayAbilityActivationInfo ActivationInfo, const ArtIPMKey FireAction,
+                               const FGameplayAbilityActivationInfo ActivationInfo, const EventBufferInfo FireAction,
                                const FGameplayEventData* TriggerEventData, bool RerunDueToReconcile, int DallyFramesToOmit)
 {
 	// Delegate type:

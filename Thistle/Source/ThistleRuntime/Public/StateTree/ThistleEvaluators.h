@@ -8,14 +8,11 @@
 #include "Blueprint/StateTreeEvaluatorBlueprintBase.h"
 #include "ThistleEvaluators.generated.h"
 
-
 USTRUCT(meta = (Hidden))
 struct THISTLERUNTIME_API FThistleMSEvaluator : public FStateTreeEvaluatorBase
 {
 	GENERATED_BODY()
-	
 };
-
 
 USTRUCT(meta = (DisplayName = "Get Player Key"))
 struct THISTLERUNTIME_API FThistleGetPlayerKey : public FThistleMSEvaluator
@@ -30,7 +27,6 @@ protected:
 	virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 };
 
-
 USTRUCT(meta = (DisplayName = "Get Related Artillery Key"))
 struct THISTLERUNTIME_API FThistleKeyToRelationship : public FThistleMSEvaluator
 {
@@ -43,7 +39,6 @@ protected:
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 	virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 };
-
 
 USTRUCT(meta = (DisplayName = "Zap! Fire a spherecast!"))
 struct THISTLERUNTIME_API FThistleSphereCast : public FThistleMSEvaluator

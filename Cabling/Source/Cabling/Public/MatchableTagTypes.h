@@ -1,9 +1,11 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
+
 #include <optional>
 
 #include "AtypicalDistances.h"
 #include "MatchableTagTypes.generated.h"
-
 
 USTRUCT(BlueprintType)
 struct CABLING_API FMatchableInputlike
@@ -18,11 +20,7 @@ struct CABLING_API FMatchableInputlike
 	virtual int32_t GetStickRightXAsACSN() { return 0; }
 	virtual float GetStickRightY() { return 0; }
 	virtual int32_t GetStickRightYAsACSN() { return 0; }
-
-	virtual uint32 GetButtonsAndEventsFlat()
-	{
-		return 0;
-	}
+	virtual uint32 GetButtonsAndEventsFlat() { return 0; }
 };
 
 class CABLING_API MatchingTools
@@ -51,8 +49,7 @@ public:
 	constexpr static int32_t DefaultFlickTickWidth = 16;
 
 	template <typename BindTo>
-	bool static FlickDetect(int32_t curX, int32_t curY, uint64_t frameToRunBackFrom, uint64_t FinishIndex,
-	                        BindTo Buffer)
+	bool static FlickDetect(int32_t curX, int32_t curY, uint64_t frameToRunBackFrom, uint64_t FinishIndex, BindTo Buffer)
 	{
 		using ATD = AtypicalDistances;
 		int BoxRange = FMath::Max(abs( curX), abs( curY));
@@ -63,8 +60,7 @@ public:
 				auto entry = Buffer->peek(index);
 				auto x = entry->GetStickLeftXAsACSN();
 				auto y = entry->GetStickLeftYAsACSN();
-				if (ATD::OctagonalApproximateDistance(	x, y, curX, curY)
-					>= ArtilleryMagicMinimumFlickDistanceRequired)
+				if (ATD::OctagonalApproximateDistance(	x, y, curX, curY) >= ArtilleryMagicMinimumFlickDistanceRequired)
 				{
 					return true;
 				}

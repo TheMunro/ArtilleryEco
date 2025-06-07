@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
 
@@ -21,12 +21,11 @@
 UCLASS()
 class THISTLERUNTIME_API UThistleDispatch : public UTickableWorldSubsystem, public ISkeletonLord, public ITickHeavy
 {
-	constexpr static int OrdinateSeqKey = ORDIN::E_D_C::SecondaryEnemyDispatch;
-	virtual bool RegistrationImplementation() override; 
-    GENERATED_BODY()
+	GENERATED_BODY()
+    
     UThistleDispatch()
     {
-    };
+    }
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -36,10 +35,13 @@ protected:
 	virtual TStatId GetStatId() const override;
 
 public:
-	TSharedPtr< TMap<ActorKey, TObjectPtr<AThistleInject>>> ActorToAILocomotionMapping;
-	TSharedPtr< TQuadTree<TPair< ActorKey, FVector2d>>> QuadTreeForDistance;
+	TSharedPtr<TMap<ActorKey, TObjectPtr<AThistleInject>>> ActorToAILocomotionMapping;
+	TSharedPtr<TQuadTree<TPair<ActorKey, FVector2d>>> QuadTreeForDistance;
 	bool QuadTreeMaintenance = false;
+	
 	virtual void ArtilleryTick(uint64_t TicksSoFar) override;
-private:
 
+private:
+	constexpr static int OrdinateSeqKey = ORDIN::E_D_C::SecondaryEnemyDispatch;
+	virtual bool RegistrationImplementation() override; 
 };

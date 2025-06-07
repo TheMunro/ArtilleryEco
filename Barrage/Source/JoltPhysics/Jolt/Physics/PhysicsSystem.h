@@ -76,6 +76,9 @@ public:
 	void						SetCombineFriction(ContactConstraintManager::CombineFunction inCombineFriction) { mContactManager.SetCombineFriction(inCombineFriction); }
 	ContactConstraintManager::CombineFunction GetCombineFriction() const					{ return mContactManager.GetCombineFriction(); }
 
+
+	/// The body manager keeps track which bodies are in the simulation
+	BodyManager					mBodyManager;
 	/// Set the function that combines the restitution of two bodies and returns it
 	/// Default method is max(restitution1, restitution1)
 	void						SetCombineRestitution(ContactConstraintManager::CombineFunction inCombineRestitution) { mContactManager.SetCombineRestitution(inCombineRestitution); }
@@ -315,8 +318,7 @@ private:
 	/// Object layer filter that decides if two objects can collide
 	const ObjectLayerPairFilter *mObjectLayerPairFilter = nullptr;
 
-	/// The body manager keeps track which bodies are in the simulation
-	BodyManager					mBodyManager;
+
 
 	/// Body locking interfaces
 	BodyLockInterfaceNoLock		mBodyLockInterfaceNoLock { mBodyManager };

@@ -31,10 +31,7 @@ JPH::BodyID FBCharacter::Create(JPH::CharacterVsCharacterCollision* CVCColliderS
 			//uncomment this when we update jolt and inner body management is simplified.
 			//mCharacterSettings.mInnerBodyShape = InnerStandingShape;
 			//mCharacterSettings.mInnerBodyLayer = Layers::MOVING;
-			
 			mCharacter = new CharacterVirtual(&mCharacterSettings, mInitialPosition, Quat::sIdentity(), 0, World.Get());
-			//mCharacter->SetListener(this);
-			
 			mCharacter->SetCharacterVsCharacterCollision(CVCColliderSystem); // see https://github.com/jrouwe/JoltPhysics/blob/e3ed3b1d33f3a0e7195fbac8b45b30f0a5c8a55b/UnitTests/Physics/CharacterVirtualTests.cpp#L759
 			mEffectiveVelocity = Vec3::sZero();
 			ret = mCharacter->GetInnerBodyID(); //I am going to regret this somehow. Update: I did.
@@ -45,7 +42,6 @@ JPH::BodyID FBCharacter::Create(JPH::CharacterVsCharacterCollision* CVCColliderS
 
 void FBCharacter::StepCharacter()
 {
-
 	// Determine new basic velocity
 	Vec3 MyVelo = mCharacter->GetLinearVelocity();
 	Vec3 current_vertical_velocity = Vec3(0, MyVelo.GetY(), 0);
@@ -88,23 +84,23 @@ void FBCharacter::StepCharacter()
 	RVec3 start_pos = GetPosition();
 	//allow single frame exccession
 	//TODO: factor this into a stupid constant.
-	auto SpeedLimit = min(new_velocity.Length(), (mMaxSpeed * 1.20f));
-	auto clamped = (new_velocity.Normalized() * SpeedLimit);
+	float SpeedLimit = min(new_velocity.Length(), (mMaxSpeed * 1.20f));
+	Vec3 clamped = (new_velocity.Normalized() * SpeedLimit);
 	
 	mCharacter->SetLinearVelocity(clamped);
-		// Update the character position. splitting this into two half-length updates allows you to get VERY
-		// fine grained control by moving them around with respect to the clamp and update.
-    	{
-    		TempAllocatorMalloc allocator;
-    		mCharacter->ExtendedUpdate(mDeltaTime,
-    								   mGravity,
-    								   mUpdateSettings,
-    								   World->GetDefaultBroadPhaseLayerFilter(Layers::MOVING),
-    								   World->GetDefaultLayerFilter(Layers::MOVING),
-    								   IgnoreSingleBodyFilter(mCharacter->GetInnerBodyID()),
-    								   {},
-    								   allocator);
-    	}
+	// Update the character position. splitting this into two half-length updates allows you to get VERY
+	// fine grained control by moving them around with respect to the clamp and update.
+    {
+    	TempAllocatorMalloc allocator;
+    	mCharacter->ExtendedUpdate(mDeltaTime,
+    							   mGravity,
+    							   mUpdateSettings,
+    							   World->GetDefaultBroadPhaseLayerFilter(Layers::MOVING),
+    							   World->GetDefaultLayerFilter(Layers::MOVING),
+    							   IgnoreSingleBodyFilter(mCharacter->GetInnerBodyID()),
+    							   {},
+    							   allocator);
+    }
 
 	// Update character velocity for carry over.
 	SpeedLimit = min(new_velocity.Length(), (mMaxSpeed));
@@ -140,6 +136,5 @@ void FBCharacter::IngestUpdate(FBPhysicsInput& input)
 		break;
 	default:
 		UE_LOG(LogTemp, Warning, TEXT("FBCharacter::IngestUpdate: Received unimplemented input.Action = [%d]"), input.Action);
-	};
-			
+	}
 }

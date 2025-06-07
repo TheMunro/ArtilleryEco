@@ -1,20 +1,15 @@
 ﻿#include "ThistleStateTreeCore.h"
+
 #include "StateTreeConditionBase.h"
 #include "ThistleBehavioralist.h"
-#include "ThistleStateTreeConditions.h"
-#include "ThistleEvaluators.h"
 #include "ThistleDispatch.h"
-#include "MassStateTreeSchema.h"
 #include "Components/StateTreeComponentSchema.h"
-#include "Public/GameplayTags.h"
 
-EStateTreeRunStatus FStoreRelationship::Tick(FStateTreeExecutionContext& Context,
-                                             const float DeltaTime) const
+EStateTreeRunStatus FStoreRelationship::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
-
-	if (const IdentPtr V = UArtilleryDispatch::SelfPtr->
-		GetOrAddIdent(InstanceData.SourceKey, InstanceData.Relationship))
+	const IdentPtr V = UArtilleryDispatch::SelfPtr->GetOrAddIdent(InstanceData.SourceKey, InstanceData.Relationship);
+	if (V)
 	{
 		V->SetCurrentValue(InstanceData.UpdateToRelatedKey);
 		return EStateTreeRunStatus::Succeeded;
@@ -25,7 +20,6 @@ EStateTreeRunStatus FStoreRelationship::Tick(FStateTreeExecutionContext& Context
 EStateTreeRunStatus FSetTagOfKey::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
-
 	//This seems unsafe.
 	UArtilleryDispatch::SelfPtr->AddTagToEntity(InstanceData.KeyOf, InstanceData.Tag);
 	return EStateTreeRunStatus::Succeeded;
@@ -34,7 +28,6 @@ EStateTreeRunStatus FSetTagOfKey::Tick(FStateTreeExecutionContext& Context, cons
 EStateTreeRunStatus FRemoveTagFromKey::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
-
 	//This seems unsafe.
 	UArtilleryDispatch::SelfPtr->RemoveTagFromEntity(InstanceData.KeyOf, InstanceData.Tag);
 	return EStateTreeRunStatus::Succeeded;
@@ -43,8 +36,7 @@ EStateTreeRunStatus FRemoveTagFromKey::Tick(FStateTreeExecutionContext& Context,
 EStateTreeRunStatus FStoreToAttribute::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
-
-	auto V = UArtilleryDispatch::SelfPtr->GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName);
+	AttrPtr V = UArtilleryDispatch::SelfPtr->GetAttrib(InstanceData.KeyOf, InstanceData.AttributeName);
 	if (V)
 	{
 		V->SetCurrentValue(InstanceData.Value);
@@ -53,11 +45,8 @@ EStateTreeRunStatus FStoreToAttribute::Tick(FStateTreeExecutionContext& Context,
 	return EStateTreeRunStatus::Running;
 }
 
-
-
 void UThistleStateTreeLease::BeginDestroy()
 {
-	
 	IsReady = false;
 	bIsRunning = false;
 	Super::BeginDestroy();
@@ -67,13 +56,11 @@ void UThistleStateTreeLease::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	IsReady = false;
 	bIsRunning = false;
-	
 	Super::EndPlay(EndPlayReason);
 }
 
 void UThistleStateTreeLease::OnUnregister()
 {
-	
 	IsReady = false;
 	bIsRunning = false;
 	Super::OnUnregister();
@@ -88,13 +75,9 @@ FString UThistleStateTreeLease::GetDebugInfoString() const
 		{
 			return FString("No StateTree to run.");
 		}
-		return FConstStateTreeExecutionContextView(*GetOwner(), *StateTreeRef.GetStateTree(), InstanceData).Get().
-			GetDebugInfoString();
+		return FConstStateTreeExecutionContextView(*GetOwner(), *StateTreeRef.GetStateTree(), InstanceData).Get().GetDebugInfoString();
 	}
-	else
-	{
-		return FString("No StateTree to run.");
-	}
+	return FString("No StateTree to run.");
 }
 #endif // WITH_GAMEPLAY_DEBUGGER
 
@@ -103,9 +86,11 @@ void UThistleStateTreeLease::InitializeComponent()
 	Super::InitializeComponent();
 }
 
-bool UThistleStateTreeLease::CollectExternalData(const FStateTreeExecutionContext& Context, const UStateTree* StateTree,
-                                                 TArrayView<const FStateTreeExternalDataDesc> Descs,
-                                                 TArrayView<FStateTreeDataView> OutDataViews) const
+bool UThistleStateTreeLease::CollectExternalData(
+	const FStateTreeExecutionContext& Context,
+	const UStateTree* StateTree,
+	TArrayView<const FStateTreeExternalDataDesc> Descs,
+	TArrayView<FStateTreeDataView> OutDataViews) const
 {
 	auto ErrantWays = const_cast<F_ArtilleryKeyInstanceData*>(&InstanceOwnerKey);
 	bool First = UThistleStateTreeSchema::CollectExternalData(Context, ErrantWays, Descs, OutDataViews);
@@ -120,16 +105,7 @@ void UThistleStateTreeLease::OnRegister()
 
 bool UThistleStateTreeLease::RegistrationImplementation()
 {
-	auto bind = GetWorld()->GetSubsystem<UThistleBehavioralist>();
-	if (bind)
-	{
-		//we are picked up during REGISTER ENEMY.
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	return GetWorld()->GetSubsystem<UThistleBehavioralist>() != nullptr;
 }
 
 void UThistleStateTreeLease::OnClusterMarkedAsPendingKill()
@@ -146,8 +122,7 @@ void UThistleStateTreeLease::OnComponentDestroyed(bool bDestroyingHierarchy)
 	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
-UThistleStateTreeLease::UThistleStateTreeLease(const FObjectInitializer& ObjectInitializer): Super(ObjectInitializer),
-                                                                                             CurrentRunStatus()
+UThistleStateTreeLease::UThistleStateTreeLease(const FObjectInitializer& ObjectInitializer): Super(ObjectInitializer), CurrentRunStatus()
 {
 	bWantsInitializeComponent = true;
 	bIsRunning = true;
@@ -164,16 +139,13 @@ void UThistleStateTreeLease::BeginPlay()
 {
 	Super::BeginPlay();
 
-	auto owner = GetOwner();
 	BindDel = FOnCollectStateTreeExternalData::CreateUObject(this, &UThistleStateTreeLease::CollectExternalData);
 	InstanceData = FStateTreeInstanceData();
-	FStateTreeExecutionContext Context(*owner, *StateTreeRef.GetStateTree(), InstanceData);
+	FStateTreeExecutionContext Context(*GetOwner(), *StateTreeRef.GetStateTree(), InstanceData);
 
 	Context.Start();
 	AttemptRegister();
 }
-
-
 
 FSkeletonKey UThistleStateTreeLease::GetMyKey() const
 {
@@ -184,9 +156,7 @@ FSkeletonKey UThistleStateTreeLease::GetMyKey() const
 UGameplayTasksComponent* UThistleStateTreeLease::GetGameplayTasksComponent(const UGameplayTask& Task) const
 {
 	UE_LOG(LogTemp, Error,
-	       TEXT(
-		       "UStateShrub runs in Artillery cadence and just tried to provide a gameplay tasks component from main thread. This could be real bad."
-	       ));
+	       TEXT("UStateShrub runs in Artillery cadence and just tried to provide a gameplay tasks component from main thread. This could be real bad."));
 	return Super::GetGameplayTasksComponent(Task);
 }
 
@@ -223,7 +193,6 @@ void UThistleStateTreeLease::ArtilleryTick(uint64_t TicksSoFar)
 			{
 				// create a copy of message in case MessagesToProcess is changed during loop
 				const FAIMessage MessageCopy(MessagesToProcess[Idx]);
-
 				for (int32 ObserverIndex = 0; ObserverIndex < MessageObservers.Num(); ObserverIndex++)
 				{
 					MessageObservers[ObserverIndex]->OnMessage(MessageCopy);
@@ -235,15 +204,11 @@ void UThistleStateTreeLease::ArtilleryTick(uint64_t TicksSoFar)
 		FStateTreeReference IncrementRefAsGuard = StateTreeRef; //Don't delete this. No, seriously. Don't you dare.
 		FStateTreeExecutionContext Context(*GetOwner(), *IncrementRefAsGuard.GetStateTree(), InstanceData);
 
-		if (!bIsRunning || bIsPaused)
+		if ((!bIsRunning || bIsPaused) || !StateTreeRef.IsValid())
 		{
 			return;
 		}
-
-		if (!StateTreeRef.IsValid())
-		{
-			return;
-		}
+		
 		if (SetContextRequirements(Context))
 		{
 			const EStateTreeRunStatus PreviousRunStatus = Context.GetStateTreeRunStatus();

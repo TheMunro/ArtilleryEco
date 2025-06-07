@@ -1,8 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "ThistleAIController.h"
-
+﻿#include "ThistleAIController.h"
 
 // Sets default values
 AThistleAIController::AThistleAIController()

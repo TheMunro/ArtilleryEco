@@ -45,13 +45,13 @@ struct AILocomotionParams
 //this creates a stable sub-ordering that ensures deterministic sequence of operations.
 static bool operator<(LocomotionParams const& lhs, LocomotionParams const& rhs)
 {
-	return lhs.time == rhs.time ? (lhs.time < rhs.time) : (lhs.parent < rhs.parent);
+	return lhs.time != rhs.time ? (lhs.time < rhs.time) : (lhs.parent < rhs.parent);
 }
 
 //this creates a stable sub-ordering that ensures deterministic sequence of operations.
 static bool operator<(AILocomotionParams const& lhs, AILocomotionParams const& rhs)
 {
-	return lhs.time == rhs.time ? (lhs.time < rhs.time) : (lhs.parent < rhs.parent);
+	return lhs.time != rhs.time ? (lhs.time < rhs.time) : (lhs.parent < rhs.parent);
 }
 
 namespace Arty

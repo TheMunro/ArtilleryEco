@@ -4,11 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
-
 #include "Templates/SubclassOf.h"
 #include "UObject/UnrealType.h"
 #include "Engine/DataTable.h"
-#include "AttributeSet.h"
 #include "Containers/CircularBuffer.h"
 #include "BristleconeCommonTypes.h"
 #include "UBristleconeWorldSubsystem.h"
@@ -20,9 +18,8 @@
 #include "FActionPattern.h"
 #include "KeyedConcept.h"
 #include "TransformDispatch.h"
-#include "UCablingWorldSubsystem.h"
-#include "CanonicalInputStreamECS.generated.h"
 
+#include "CanonicalInputStreamECS.generated.h"
 
 //TODO: finish adding the input streams, replace the local handling in Bristle54 character with references to the input stream ecs
 //TODO: begin work on the conceptual frame for reconciling and assessing what input does and does not exist.
@@ -44,7 +41,6 @@ Multiversus just relays input, it's all deterministic, and it records it.
 At the end of the game, if clients disagree, it spins up a simulation and replays the inputs,
 and uses that for the outcome (and presumably flags whoever disagreed for statistical detection).
 */
-
 
 class UFireControlMachine;
 
@@ -92,27 +88,25 @@ public:
 	InputStreamKey StreamByActor(ActorKey Stream);
 	static inline UCanonicalInputStreamECS* SelfPtr = nullptr;
 	static const uint32_t InputConservationWindow = 8192;
-	static const uint32_t AddressableInputConservationWindow = InputConservationWindow - (2 *
-		TheCone::LongboySendHertz);
+	static const uint32_t AddressableInputConservationWindow = InputConservationWindow - (2 * TheCone::LongboySendHertz);
 	InputStreamKey GetStreamForPlayer(PlayerKey);
 	bool registerPattern(IPM::CanonPattern ToBind, FActionPatternParams FCM_Owner_ActorParams);
 	bool removePattern(IPM::CanonPattern ToBind, FActionPatternParams FCM_Owner_ActorParams);
-	TPair<ActorKey, InputStreamKey> RegisterKeysToParentActorMapping( FireControlKey MachineKey,
-	                                                                 bool IsActorForLocalPlayer, const ActorKey ParentKey);
+	TPair<ActorKey, InputStreamKey> RegisterKeysToParentActorMapping(FireControlKey MachineKey, bool IsActorForLocalPlayer, const ActorKey ParentKey);
 
 	//this is the most portable way to do a folding region in C++.
 #ifndef ARTILLERYECS_CLASSES_REGION_MARKER
-
 public:
 	class ARTILLERYRUNTIME_API FConservedInputPatternMatcher
 	{
 		InputStreamKey MyStream; //and may god have mercy on my soul.
 		friend class FArtilleryBusyWorker;
 		UCanonicalInputStreamECS* ECS;
+		
 	public:
 		FConservedInputPatternMatcher(InputStreamKey StreamToLink, UCanonicalInputStreamECS* ParentECS)
 		{
-			AllPatternBinds = TMap<ArtIPMKey, TSharedPtr<TSet<FActionPatternParams>>>();
+			AllPatternBinds = TMap<ArtIPMKey, TSharedPtr<TMap<FActionBitMask, FActionPatternParams>>>();
 			AllPatternsByName = TMap<ArtIPMKey, IPM::CanonPattern>();
 			MyStream=StreamToLink;
 			ECS = ParentECS;
@@ -120,10 +114,9 @@ public:
 
 		//there's a bunch of reasons we use string_view here, but mostly, it's because we can make them constexprs!
 		//so this is... uh... pretty fast!
-		TMap<ArtIPMKey, TSharedPtr<TSet<FActionPatternParams>>> AllPatternBinds;
+		TMap<ArtIPMKey, TSharedPtr<TMap<FActionBitMask, FActionPatternParams>>> AllPatternBinds;
 		//broadly, at the moment, there is ONE pattern matcher running
-
-
+		
 		//this array is never made smaller.
 		//there should only ever be about 10 patterns max,
 		//and it's literally more expensive to remove them.
@@ -135,8 +128,7 @@ public:
 		//same with this set, actually. patterns are stateless, and few. it's inefficient to destroy them.
 		//instead we check binds.
 		TMap<ArtIPMKey, IPM::CanonPattern> AllPatternsByName;
-
-
+		
 		//***********************************************************
 		//
 		// THIS IS THE IMPORTANT FUNCTION.
@@ -169,54 +161,48 @@ public:
 			//In fact, it may get "swapped" and so we actually indirect through the ECS, grab the current stream whatever it is
 			//then pin it. at this point, we can be sure that we hold A STREAM that DOES exist.
 			//TODO: settle on a coherent error handling strategy here.
-			auto Stream = ECS->GetStream(MyStream);
-			
+			TSharedPtr<UCanonicalInputStreamECS::FConservedInputStream> Stream = ECS->GetStream(MyStream);
 			
 			//the lack of reference (&) here causes a _copy of the shared pointer._ This is not accidental.
-			for (auto SetTuple : AllPatternBinds)
+			for (TPair<ArtIPMKey, TSharedPtr<TMap<FActionBitMask, FActionPatternParams>>>& SetTuple : AllPatternBinds)
 			{
 				if (SetTuple.Value->Num() > 0)
 				{
 					IPM::CanonPattern currentPattern = AllPatternsByName[SetTuple.Key];
 					FActionBitMask Union;
-					auto currentSet = SetTuple.Value.Get();
+					TMap<FActionBitMask, FActionPatternParams>* currentSet = SetTuple.Value.Get();
 					//TODO: remove and replace with a version that uses all bits set.
 					//lot of refactoring to do that. let's get this working first.
-					for (FActionPatternParams& Elem : *currentSet)
+					//for (FActionPatternParams& Elem : *currentSet)
+					for (TPair<FActionBitMask, FActionPatternParams>& Elem : *currentSet)
 					{
 						//todo: replace with toFlat(). ffs.
-						Union.buttons |= Elem.ToSeek.buttons;
+						Union.buttons |= Elem.Value.ToSeek.buttons;
 					}
-					auto result = currentPattern->runPattern(InputCycleNumber, Union, Stream);
+					uint32_t result = currentPattern->runPattern(InputCycleNumber, Union, Stream);
 					if (result)
 					{
-						for (FActionPatternParams& Elem : *currentSet)
+						//for (FActionPatternParams& Elem : *currentSet)
+						for (TPair<FActionBitMask, FActionPatternParams>& Elem : *currentSet)
 						{
-							if (Elem.ToSeek.getFlat() != 0)
+							FActionBitMask& ToSeek = Elem.Value.ToSeek;
+							if (ToSeek.getFlat() != 0 && (ToSeek.getFlat() & result) == ToSeek.getFlat())
 							{
-								if ((Elem.ToSeek.getFlat() & result) == Elem.ToSeek.getFlat())
-								{
-									auto time = Stream->peek(InputCycleNumber)->SentAt;
-									//THIS IS NOT SUPER SAFE. HAHAHAH. YAY.
-									EventBufferInfo EventInfo;
-									EventInfo.GunKey = Elem.ToFire;
-									EventInfo.Action = currentPattern->getName();
-									IN_PARAM_REF_TRIPLEBUFFER_LIFECYLEMANAGED.Add(TPair<ArtilleryTime, EventBufferInfo>(
-											time,
-											EventInfo)
-									);
-								}
-							}
-							else
-							{
-								continue;
+								BristleTime time = Stream->peek(InputCycleNumber)->SentAt;
+								//THIS IS NOT SUPER SAFE. HAHAHAH. YAY.
+								EventBufferInfo EventInfo;
+								EventInfo.GunKey = Elem.Value.ToFire;
+								EventInfo.Action = currentPattern->getName();
+								EventInfo.ActionBitMask = ToSeek;
+								IN_PARAM_REF_TRIPLEBUFFER_LIFECYLEMANAGED.Add(TPair<ArtilleryTime, EventBufferInfo>(
+										time,
+										EventInfo));
 							}
 						}
 					}
 				}
 			}
-		};
-
+		}
 	};
 
 	class ARTILLERYRUNTIME_API FConservedInputStream : public FArtilleryNoGuaranteeReadOnly
@@ -233,9 +219,7 @@ public:
 		{
 			ECSParent = LF_ECSParent;
 			MyKey = ToBe;
-			MyPatternMatcher
-			= MakeShareable<UCanonicalInputStreamECS::FConservedInputPatternMatcher>(
-			new UCanonicalInputStreamECS::FConservedInputPatternMatcher(ToBe, ECSParent));
+			MyPatternMatcher = MakeShareable(new UCanonicalInputStreamECS::FConservedInputPatternMatcher(ToBe, ECSParent));
 		}
 
 		//Mom?
@@ -243,10 +227,8 @@ public:
 		//Dad?
 		friend class UCanonicalInputStreamECS;
 
-	public:
 		TCircularBuffer<FArtilleryShell> CurrentHistory = TCircularBuffer<FArtilleryShell>(InputConservationWindow);
 		InputStreamKey MyKey;
-
 
 		//Correct usage procedure is to null check then store a copy.
 		//Failure to follow this procedure will lead to eventual misery.
@@ -259,22 +241,16 @@ public:
 			//TODO: Refactor this to use an atomic int instead of this hubristic madness.
 			if (input >= highestInput || (highestInput - input) > AddressableInputConservationWindow)
 			{
-				return std::optional<FArtilleryShell>(
-					std::nullopt
-				);
+				return std::optional<FArtilleryShell>(std::nullopt);
 			}
-			else
-			{
-				CurrentHistory[input].RunAtLeastOnce = true;
-				//this is the only risky op in here from a threading perspective.
-				return std::optional<FArtilleryShell>(CurrentHistory[input]);
-			}
+			CurrentHistory[input].RunAtLeastOnce = true;
+			//this is the only risky op in here from a threading perspective.
+			return std::optional<FArtilleryShell>(CurrentHistory[input]);
 		};
 
 		//THE ONLY DIFFERENCE WITH PEEK IS THAT IT DOES NOT SET RUNATLEASTONCE.
 		//Peek is public out of necessity, but generally, you should use get.
-		std::optional<FArtilleryShell> peek(uint64_t input)
-		override
+		std::optional<FArtilleryShell> peek(uint64_t input) override
 		{
 			// the highest input is a reserved write-slot.
 			//the lower bound here ensures that there's always minimum two seconds worth of memory separating the readers
@@ -282,26 +258,21 @@ public:
 			//TODO: Refactor this to use an atomic int instead of this hubristic madness.
 			if (input >= highestInput || (highestInput - input) > AddressableInputConservationWindow)
 			{
-				return std::optional<FArtilleryShell>(
-					std::nullopt
-				);
+				return std::optional<FArtilleryShell>(std::nullopt);
 			}
-			else
-			{
-				return std::optional<FArtilleryShell>(CurrentHistory[input]);
-			}
+			return std::optional<FArtilleryShell>(CurrentHistory[input]);
 		};
-	public:
+
 		ActorKey GetActorByInputStream()
 		{
 			return ECSParent->ActorByStream(MyKey); // this lets us avoid exposing the key.
 		};
 		
-
 		uint64_t GetHighestGuaranteedInput()
 		{
 			return highestInput-1;
 		}
+		
 		uint64_t highestInput = 0; // volatile is utterly useless for its intended purpose. 
 		UCanonicalInputStreamECS* ECSParent;
 		TSharedPtr<UCanonicalInputStreamECS::FConservedInputPatternMatcher> MyPatternMatcher;
@@ -333,7 +304,7 @@ public:
 			CurrentHistory[highestInput].ReachedArtilleryAt = ECSParent->Now();
 			CurrentHistory[highestInput].SentAt = ECSParent->Now();
 			++highestInput;
-		};
+		}
 	};
 
 	//Used in the busyworker
@@ -351,21 +322,19 @@ public:
 	virtual TStatId GetStatId() const override;
 	TSharedPtr<FConservedInputStream> getNewStreamConstruct( PlayerKey ByPlayerConcept);
 	TSharedPtr<TMap<PlayerKey, InputStreamKey>> SessionPlayerToStreamMapping;
-	
-	
 
-public:
 	TSharedPtr<UCanonicalInputStreamECS::FConservedInputStream> GetStream(InputStreamKey StreamKey) const;
+	
 	TSharedPtr<TArray<FArtilleryShell>> Get15LocalHistoricalInputs()
 	{
-		auto streamkey = GetStreamForPlayer(PlayerKey::CABLE);
-		auto sptr = GetStream(streamkey);
+		InputStreamKey streamkey = GetStreamForPlayer(PlayerKey::CABLE);
+		TSharedPtr<UCanonicalInputStreamECS::FConservedInputStream> sptr = GetStream(streamkey);
 		TSharedPtr<TArray<FArtilleryShell>> Inputs = MakeShareable(new TArray<FArtilleryShell>);
 		if(sptr)
 		{
 			for(int i = 0; i <= 15; ++i)
 			{
-				auto input =  sptr.Get()->peek( sptr->GetHighestGuaranteedInput());
+				std::optional<FArtilleryShell> input = sptr.Get()->peek( sptr->GetHighestGuaranteedInput());
 				Inputs->Add(input.has_value() ? input.value() : FArtilleryShell());
 			}
 		}

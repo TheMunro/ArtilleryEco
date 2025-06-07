@@ -1,11 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "ThistleInject.h"
 
 #include "ArtilleryBPLibs.h"
 #include "ArtilleryDispatch.h"
 #include "UFireControlMachine.h"
-
 #include "NavigationSystem.h"
 #include "ThistleBehavioralist.h"
 #include "Public/GameplayTags.h"
@@ -33,7 +30,7 @@ inline bool AThistleInject::RegistrationImplementation()
 {
 	if(ArtilleryStateMachine->MyDispatch)
 	{
-		 LKeyCarry->AttemptRegister();
+		LKeyCarry->AttemptRegister();
 		// FArtilleryRunAILocomotionFromDispatch Inbound;
 		// Inbound.BindUObject(this, &AThistleInject::LocomotionStateMachine); // this looks like it's not used...
 		TMap<AttribKey, double> MyAttributes = TMap<AttribKey, double>();
@@ -63,6 +60,7 @@ inline bool AThistleInject::RegistrationImplementation()
 		ArtilleryStateMachine->MyTags->AddTag(TAG_Orders_Target_Needed);
 		ArtilleryStateMachine->MyTags->AddTag(TAG_Orders_Rally_PreferSquad);
 		ArtilleryStateMachine->MyTags->AddTag(TAG_Enemy);
+		ArtilleryStateMachine->MyTags->AddTag(FGameplayTag::RequestGameplayTag("Enemy"));
 		
 		return true;
 	}
@@ -84,8 +82,8 @@ AThistleInject::AThistleInject(const FObjectInitializer& ObjectInitializer) : Su
 	LKeyCarry = CreateDefaultSubobject<UKeyCarry>(TEXT("ActorKeyComponent"));
 	LKeyCarry->AttemptRegister();
 	this->DisableComponentsSimulatePhysics();
-	Attack=FGunKey();
-	auto Mesh = GetComponentByClass<UMeshComponent>();
+	Attack = FGunKey();
+	UMeshComponent* Mesh = GetComponentByClass<UMeshComponent>();
 	if (Mesh != nullptr)
 	{
 		Mesh ->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
@@ -96,7 +94,6 @@ const FNavAgentProperties& AThistleInject::GetNavAgentPropertiesRef() const
 {
 	return NavAgentProps;
 }
-
 
 // Called when the game starts or when spawned
 void AThistleInject::BeginPlay()
@@ -116,7 +113,7 @@ void AThistleInject::BeginPlay()
 		ArtilleryStateMachine->MyDispatch->REGISTER_ENTITY_FINAL_TICK_RESOLVER(GetMyKey());
 	}
 
-	auto Mesh = GetComponentByClass<UMeshComponent>();
+	UMeshComponent* Mesh = GetComponentByClass<UMeshComponent>();
 	if (Mesh != nullptr)
 	{
 		Mesh->AlwaysLoadOnClient = true;
@@ -161,9 +158,8 @@ bool AThistleInject::RotateMainGun(FRotator RotateTowards, ERelativeTransformSpa
 {
 	if(MyMainGun)
 	{
-			
 		bool find = false;
-		auto aim = UArtilleryLibrary::implK2_GetAttr3Ptr(GetMyKey(), Attr3::AimVector, find);
+		Attr3Ptr aim = UArtilleryLibrary::implK2_GetAttr3Ptr(GetMyKey(), Attr3::AimVector, find);
 		if (find)
 		{
 			aim->SetCurrentValue(RotateTowards.Vector());
@@ -176,10 +172,8 @@ bool AThistleInject::RotateMainGun(FRotator RotateTowards, ERelativeTransformSpa
 
 void AThistleInject::AddForce(FVector3f Force)
 {
-	if (disableZAxis)
-		FBarragePrimitive::ApplyForce(FVector3d(Force.X, Force.Y, 0), BarragePhysicsAgent->MyBarrageBody, AIMovement);
-	else
-		FBarragePrimitive::ApplyForce(FVector3d(Force.X, Force.Y, Force.Z), BarragePhysicsAgent->MyBarrageBody, AIMovement);
+	FVector3d FinalForce(Force.X, Force.Y, disableZAxis ? 0 : Force.Z);
+	FBarragePrimitive::ApplyForce(FinalForce, BarragePhysicsAgent->MyBarrageBody, AIMovement);
 }
 
 bool AThistleInject::MoveToPoint(FVector3f To)
@@ -229,20 +223,19 @@ bool AThistleInject::MoveToPoint(FVector3f To)
 void AThistleInject::LocomotionStateMachine()
 {
 	// I KNOW THIS LOOKS DUMB BUT ONE IS POINTER CHECK AND OTHER IS PATH VALIDITY CHECK (lol.)
-	auto selfpin = BarragePhysicsAgent->MyBarrageBody;
+	FBLet selfpin = BarragePhysicsAgent->MyBarrageBody;
 	if(this && this->MyKey != 0 && Path.IsValid() && selfpin)
 	{
-		
-		const auto Physics = UBarrageDispatch::SelfPtr;
+		UBarrageDispatch* Physics = UBarrageDispatch::SelfPtr;
 		// Perform a downwards cast towards ground to project the target location to the ground
-		const JPH::DefaultBroadPhaseLayerFilter BroadPhaseFilter = Physics->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY);
-		const auto ObjectLayerFilter = Physics->GetDefaultLayerFilter(Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY);
+		const JPH::DefaultBroadPhaseLayerFilter LevelGeoBroadPhaseFilter = Physics->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY);
+		const JPH::DefaultObjectLayerFilter LevelGeoObjectLayerFilter = Physics->GetDefaultLayerFilter(Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY);
 		const JPH::IgnoreSingleBodyFilter BodyFilter = Physics->GetFilterToIgnoreSingleBody(BarragePhysicsAgent->MyBarrageBody);
 		
 		TSharedPtr<FHitResult> HitResult = MakeShared<FHitResult>();
-		Physics->SphereCast(0.05f, 200.0f, static_cast<FVector3d>(BarragePhysicsAgent->MyBarrageBody->GetCentroidPossiblyStale(BarragePhysicsAgent->MyBarrageBody)), FVector::DownVector, HitResult, BroadPhaseFilter, ObjectLayerFilter, BodyFilter);
+		Physics->SphereCast(0.05f, 200.0f, static_cast<FVector3d>(BarragePhysicsAgent->MyBarrageBody->GetCentroidPossiblyStale(BarragePhysicsAgent->MyBarrageBody)), FVector::DownVector, HitResult, LevelGeoBroadPhaseFilter, LevelGeoObjectLayerFilter, BodyFilter);
 		bool groundful = HitResult && HitResult->Distance < 30;
-		if (EnemyType == Ground && groundful && !ArtilleryStateMachine->MyTags->HasTag(TAG_Orders_Move_Break))
+		if (EnemyType == Ground && groundful && !ArtilleryStateMachine->MyTags->HasTag(TAG_Orders_Move_Break) && Path && Path->IsReady())
 		{
 			FVector3f Destination = FVector3f(Path->GetDestinationLocation());
 			FVector3f NextWaypoint = FVector3f(Path->GetPathPoints()[NextPathIndex].Location);
@@ -252,9 +245,7 @@ void AThistleInject::LocomotionStateMachine()
 
 			FVector3f CurrentVelocity = FBarragePrimitive::GetVelocity(BarragePhysicsAgent->MyBarrageBody);
 			double EasingDistance = StoppingTime * CurrentVelocity.Length();
-		
-
-	
+			
 			if (FVector3f(CurrentPos.X, CurrentPos.Y, EnemyType == Ground ? 0 : CurrentPos.Z).Equals(FVector3f(Destination.X, Destination.Y, EnemyType == Ground ? 0 : Destination.Z), 10.0))
 			{
 				// Hard stop
@@ -279,8 +270,6 @@ void AThistleInject::LocomotionStateMachine()
 			Idle = false;
 		
 			FVector3f DirectionOfMovement = NextWaypoint - CurrentPos;
-			const float DistanceToNextWaypoint = DirectionOfMovement.Length();
-			auto VectDir = DirectionOfMovement.GetSafeNormal();
 			// 2D projected direction of movement (parallel to ground)
 			// Accelerate towards next waypoint if still at least 0.5 * StoppingTime (s) away from final destination or next waypoint is not final destination
 			if ((CurrentPos - Destination).Length() > EasingDistance)
@@ -299,12 +288,10 @@ void AThistleInject::LocomotionStateMachine()
 				FBarragePrimitive::ApplyRotation(FBarragePrimitive::UpConvertFloatQuat(NewVelocityAfterDeceleration.ToOrientationQuat()), BarragePhysicsAgent->MyBarrageBody);
 				FBarragePrimitive::SetVelocity(FBarragePrimitive::UpConvertFloatVector(NewVelocityAfterDeceleration), BarragePhysicsAgent->MyBarrageBody);
 			}
-			
-
 		}
-		else 			if (EnemyType == Ground)
+		else if (EnemyType == Ground)
 		{
-			FBarragePrimitive::ApplyForce({0, 0, -20000/HERTZ_OF_BARRAGE}, BarragePhysicsAgent->MyBarrageBody, PhysicsInputType::OtherForce);
+			FBarragePrimitive::ApplyForce({0, 0, -20000 / HERTZ_OF_BARRAGE}, BarragePhysicsAgent->MyBarrageBody, PhysicsInputType::OtherForce);
 		}
 	}
 }
@@ -315,11 +302,12 @@ void AThistleInject::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	bool find = false;
-	auto aim = UArtilleryLibrary::implK2_GetAttr3Ptr(GetMyKey(), Attr3::AimVector, find);
+	Attr3Ptr aim = UArtilleryLibrary::implK2_GetAttr3Ptr(GetMyKey(), Attr3::AimVector, find);
 	if (find)
 	{
 		MyMainGun->MoveComponent(FVector::ZeroVector, aim->CurrentValue.Rotation(), false);
 	}
+	
 	if(BarragePhysicsAgent->IsReady && !FBarragePrimitive::IsNotNull(BarragePhysicsAgent->MyBarrageBody))
 	{
 		this->OnDeath();
@@ -330,4 +318,3 @@ float AThistleInject::GetHealth()
 {
 	return ArtilleryStateMachine->MyDispatch->GetAttrib(GetMyKey(), HEALTH)->GetCurrentValue();
 }
-

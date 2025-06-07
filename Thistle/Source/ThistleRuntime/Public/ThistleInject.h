@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
 
@@ -8,12 +8,8 @@
 #include "GenericTeamAgentInterface.h"
 #include "ArtilleryRuntime/Public/Systems/ArtilleryDispatch.h"
 #include "FMockArtilleryGun.h"
-#include "Components/CapsuleComponent.h"
 #include "UEnemyMachine.h"
 #include "PhysicsTypes/BarrageAutoBox.h"
-#include "FBarragePrimitive.h"
-#include "NavigationData.h"
-#include "NavigationSystem.h"
 
 #include "ThistleInject.generated.h"
 
@@ -139,13 +135,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Thistle)
 	TEnumAsByte<EnemyCategory> EnemyType;
 	
-	virtual FGenericTeamId GetGenericTeamId() const override
-	{
-		return myTeam;
-	};
-
-
-
+	virtual FGenericTeamId GetGenericTeamId() const override { return myTeam; }
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGunKey Attack = DefaultGunKey;
@@ -169,9 +159,11 @@ public:
 
 	// runs physics calls
 	void LocomotionStateMachine();
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

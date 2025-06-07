@@ -8,6 +8,7 @@ USTRUCT(BlueprintType)
 struct FMassByCategory
 {
 	GENERATED_BODY()
+	
 public:
 	enum BMassCategories
 	{
@@ -19,11 +20,14 @@ public:
 		CharacterExternal = 100,
 		FunctionallyImmobile = 1000000
 	};
+	
 	BMassCategories Category;
+	
 	FMassByCategory(BMassCategories MassClass)
 	{
 		Category = MassClass;
 	}
+	
 	FMassByCategory()
 	{
 		Category = FunctionallyImmobile;

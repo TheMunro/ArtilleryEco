@@ -1,5 +1,7 @@
 #include "ArtilleryShell.h"
 
+#include "FCablePackedInput.h"
+
 float FArtilleryShell::GetStickLeftX()
 {
     return FCableInputPacker::UnpackStick(MyInputActions >> 53);
@@ -9,11 +11,11 @@ int32_t FArtilleryShell::GetStickLeftXAsACSN()
     return FCableInputPacker::DebiasStick(MyInputActions >> 53);
 }
 
-
 float FArtilleryShell::GetStickLeftY()
 {
     return FCableInputPacker::UnpackStick((MyInputActions >> 42) & 0b11111111111);
 }
+
 int32_t FArtilleryShell::GetStickLeftYAsACSN()
 {
     return FCableInputPacker::DebiasStick((MyInputActions >> 42) & 0b11111111111);

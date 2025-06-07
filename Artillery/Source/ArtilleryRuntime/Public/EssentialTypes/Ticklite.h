@@ -1,9 +1,9 @@
 ﻿#pragma once
+
 #include "ArtilleryCommonTypes.h"
 
 namespace Ticklites
 {
-
 	//conserved attributes mean that we always have a shadow copy ready.
 	// a successful Calculate function should reference the attribute not by most recent, but by exact index.
 	//good support for this isn't in yet, but during our early work, the conserved attributes will still
@@ -16,8 +16,8 @@ namespace Ticklites
 	{
 		using Ticklite_Impl = YourImplementation;
 		YourImplementation Core;
-		virtual void CalculateTickable()
-		override
+		
+		virtual void CalculateTickable() override
 		{
 			Core.TICKLITE_StateReset();
 			//as always, the use of keys over references will make rollback far far easier.
@@ -26,14 +26,12 @@ namespace Ticklites
 			Core.TICKLITE_Calculate();
 		}
 
-		virtual void ApplyTickable()
-		override
+		virtual void ApplyTickable() override
 		{
 			Core.TICKLITE_Apply();
 		}
 
-		virtual void ReturnToPool()
-		override
+		virtual void ReturnToPool() override
 		{
 			Core.TICKLITE_CoreReset();
 			Core.TICKLITE_StateReset();
@@ -48,14 +46,12 @@ namespace Ticklites
 
 		//expiration will likely get factored out into a delegate or pushed into the TL_Impl
 		//to help ensure that we don't end up with 20 million tickables, each of which expires in a slightly different way.
-		virtual void OnExpireTickable()
-		override
+		virtual void OnExpireTickable() override
 		{
 			return Core.TICKLITE_OnExpiration();
 		}
 
-		virtual ~Ticklite()
-		override
+		virtual ~Ticklite() override
 		{
 		}
 
@@ -70,6 +66,7 @@ namespace Ticklites
 		}
 	};
 }
+
 namespace Arty
 {
 	typedef TPair<TSharedPtr<TicklitePrototype>, TicklitePhase> StampLiteRequest;
@@ -77,4 +74,3 @@ namespace Arty
 	typedef TCircularQueue<StampLiteRequest> TickliteRequests;
 	typedef TSharedPtr<TCircularQueue<StampLiteRequest>> TickliteBuffer;
 }
-

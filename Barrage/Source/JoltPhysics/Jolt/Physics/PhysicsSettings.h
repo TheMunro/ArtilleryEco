@@ -7,13 +7,13 @@
 JPH_NAMESPACE_BEGIN
 
 /// If objects are closer than this distance, they are considered to be colliding (used for GJK) (unit: meter)
-constexpr float cDefaultCollisionTolerance = 1.0e-3f;
+constexpr float cDefaultCollisionTolerance = 1.0e-4f;
 
 /// A factor that determines the accuracy of the penetration depth calculation. If the change of the squared distance is less than tolerance * current_penetration_depth^2 the algorithm will terminate. (unit: dimensionless)
-constexpr float cDefaultPenetrationTolerance = 1.0e-3f; ///< Stop when there's =< 1% change
+constexpr float cDefaultPenetrationTolerance = 1.0e-4f; ///< Stop when there's less than 1% change
 
 /// How much padding to add around objects
-constexpr float cDefaultConvexRadius = 0.08f;
+constexpr float cDefaultConvexRadius = 0.05f;
 
 /// Used by (Tapered)CapsuleShape to determine when supporting face is an edge rather than a point (unit: meter)
 static constexpr float cCapsuleProjectionSlop = 0.02f;
@@ -44,7 +44,7 @@ struct PhysicsSettings
 	/// Radius around objects inside which speculative contact points will be detected. Note that if this is too big
 	/// you will get ghost collisions as speculative contacts are based on the closest points during the collision detection
 	/// step which may not be the actual closest points by the time the two objects hit (unit: meters)
-	float		mSpeculativeContactDistance = 0.002f;
+	float		mSpeculativeContactDistance = 0.02f;
 
 	/// How much bodies are allowed to sink into each other (unit: meters)
 	float		mPenetrationSlop = 0.02f;

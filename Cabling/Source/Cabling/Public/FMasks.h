@@ -1,33 +1,37 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
 #pragma once
 
-//there's a set of internal constexprs because UE doesn't allow anything other than uint8, doesn't let you namespace enums,
-//and is generally very weird about them. I'd originally wanted the enum to just be the bit patterns themselves,
-//but you can't fit those in a uint8! so that's fun! That's cool!
+// there's a set of internal constexprs because UE doesn't allow anything other than uint8, doesn't let you namespace enums,
+// and is generally very weird about them. I'd originally wanted the enum to just be the bit patterns themselves,
+// but you can't fit those in a uint8! so that's fun! That's cool!
 UENUM(Blueprintable) enum class  E_ArtilleryIntents : uint8
 {
-	MenuIndex = 0, ViewIndex = 1,
-	 AIndex = 2,
-	 BIndex = 3,
-	 XIndex = 4,
-	 YIndex = 5,
-	 DUpIndex = 6,
-	 DDownIndex = 7,
-	 DLeftIndex = 8,
-	 DRightIndex = 9,
-	 LShoulderIndex = 10,
-	 RShoulderIndex = 11,
-	 LTriggerIndex = 12,
-	 RTriggerIndex = 13,
-	 StickFlickSpecialIndex = 14,
+	MenuIndex = 0,
+	ViewIndex = 1,
+	AIndex = 2,
+	BIndex = 3,
+	XIndex = 4,
+	YIndex = 5,
+	DUpIndex = 6,
+	DDownIndex = 7,
+	DLeftIndex = 8,
+	DRightIndex = 9,
+	LShoulderIndex = 10,
+	RShoulderIndex = 11,
+	LTriggerIndex = 12,
+	RTriggerIndex = 13,
+	StickFlickSpecialIndex = 14,
+	
+	NoIntent = 15,
 };
+
 namespace Arty
 {
 	namespace Intents{	
-		//Buttons, please read:
-		//1 bit per button
-		//in LOWEST TO HIGHEST order
+		// Buttons, please read:
+		// 1 bit per button
+		// in LOWEST TO HIGHEST order
 		// Menu ,
 		// View 
 		// A,
@@ -43,7 +47,7 @@ namespace Arty
 		// LeftTrigger,
 		// RightTrigger,
 		typedef uint64 Intent;
-		constexpr const size_t TYPEBREAK_MAPPING_FROM_BC_BUTTONS = 20;
+		constexpr size_t TYPEBREAK_MAPPING_FROM_BC_BUTTONS = 20;
 		constexpr Intent Menu =			0b1;
 		constexpr Intent View =			0b10;
 		constexpr Intent A =			0b100;
@@ -75,9 +79,6 @@ namespace Arty
 		constexpr uint8 LTriggerIndex = 12;
 		constexpr uint8 RTriggerIndex = 13;
 		constexpr uint8 StickFlickSpecialIndex = 14;
-
-
-
 		//5 unused bits follow.
-	};
+	}
 }

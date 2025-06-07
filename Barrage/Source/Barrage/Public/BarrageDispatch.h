@@ -62,8 +62,6 @@ class BARRAGE_API UBarrageDispatch : public UTickableWorldSubsystem, public ISke
 	
 	friend class FWorldSimOwner;
 	friend class UArtilleryLibrary;
-	
-protected:
 
 public:
 	//minimize use of this outside of artillery blueprint library (UArtilleryLibrary)
@@ -171,7 +169,6 @@ public:
 	
 private:
 	TSharedPtr<KeyToFBLet> JoltBodyLifecycleMapping;
-	
 	TSharedPtr<KeyToKey> TranslationMapping;
 	FBLet ManagePointers(FSkeletonKey OutKey, FBarrageKey temp, FBShape form) const;
 	uint32 TombOffset = 0; //ticks up by one every world step.
@@ -188,11 +185,10 @@ private:
 		//free tomb at offset - TombstoneInitialMinimum, fulfilling our promised minimum.
 		TSharedPtr<TArray<FBLet>>* HoldOpen = Tombs;
 		TSharedPtr<TArray<FBLet>> Mausoleum = HoldOpen[(TombOffset) % (TombstoneInitialMinimum + 1)]; //think this math is wrong.
-		auto HoldOpenBMap = JoltBodyLifecycleMapping;
-		auto HoldOpenTMap = TranslationMapping;
+		TSharedPtr<KeyToFBLet> HoldOpenBMap = JoltBodyLifecycleMapping;
+		TSharedPtr<KeyToKey> HoldOpenTMap = TranslationMapping;
 		if(Mausoleum && !Mausoleum->IsEmpty() && HoldOpenBMap && HoldOpenTMap)
 		{
-
 			for (auto Tombstone : *Mausoleum)
 			{
 				if (Tombstone)
@@ -202,6 +198,7 @@ private:
 				}
 			}
 		}
+		
 		Mausoleum = HoldOpen[(TombOffset - TombstoneInitialMinimum) % (TombstoneInitialMinimum + 1)];
 		if (Mausoleum)
 		{
@@ -209,6 +206,4 @@ private:
 		}
 		TombOffset = (TombOffset + 1) % (TombstoneInitialMinimum + 1);
 	}
-	
 };
-

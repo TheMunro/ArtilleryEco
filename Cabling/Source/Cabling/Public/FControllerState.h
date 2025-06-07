@@ -1,9 +1,11 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 class FControllerState {
 public:
 	// this needs to be defactored but it isn't totally obvious how it SHOULD be set.
-	//this might be a good place to refactor the packing shim for, so that we can inject the type elegantly.
+	// this might be a good place to refactor the packing shim for, so that we can inject the type elegantly.
 	uint64_t controller_arr;
 	
 	FControllerState() {

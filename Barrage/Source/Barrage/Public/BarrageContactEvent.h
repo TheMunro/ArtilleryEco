@@ -1,26 +1,30 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
+
 #include "EPhysicsLayer.h"
 #include "IsolatedJoltIncludes.h"
 
 struct BarrageContactEntity
 {
-	BarrageContactEntity(): bIsProjectile(false), bIsStaticGeometry(false)
+	BarrageContactEntity()
 	{
 		ContactKey = FBarrageKey();
 		MyLayer = Layers::NUM_LAYERS;
 	}
-	BarrageContactEntity(const FBarrageKey ContactKeyIn): bIsProjectile(false), bIsStaticGeometry(false)
+	
+	BarrageContactEntity(const FBarrageKey ContactKeyIn)
 	{
 		ContactKey = ContactKeyIn;
 		MyLayer = Layers::NUM_LAYERS;
 	}
+	
 	BarrageContactEntity(const FBarrageKey ContactKeyIn, const JPH::Body& BodyIn)
 	{
 		ContactKey = ContactKeyIn;
-		bIsProjectile = (BodyIn.GetObjectLayer() == Layers::PROJECTILE || BodyIn.GetObjectLayer() ==
-			Layers::ENEMYPROJECTILE);
+		bIsProjectile = BodyIn.GetObjectLayer() == Layers::PROJECTILE || BodyIn.GetObjectLayer() == Layers::ENEMYPROJECTILE;
 		bIsStaticGeometry = BodyIn.GetObjectLayer() == Layers::NON_MOVING;
-		MyLayer = Layers::EJoltPhysicsLayer(BodyIn.GetObjectLayer());
+		MyLayer = static_cast<Layers::EJoltPhysicsLayer>(BodyIn.GetObjectLayer());
 	}
 
 	FBarrageKey ContactKey;
@@ -43,8 +47,7 @@ struct BarrageContactEvent
 	{
 		ContactEventType = EBarrageContactEventType::GHOST;
 	}
-
-
+	
 	BarrageContactEvent(EBarrageContactEventType EventType, const BarrageContactEntity& BarrageContactEntity,
 	                    const ::BarrageContactEntity& BarrageContactEntity1);
 	EBarrageContactEventType ContactEventType;
@@ -60,9 +63,8 @@ struct BarrageContactEvent
 inline BarrageContactEvent::BarrageContactEvent(EBarrageContactEventType EventType,
                                                 const BarrageContactEntity& BarrageContact1,
                                                 const BarrageContactEntity& BarrageContact2)
-	:
-	ContactEventType(EventType),
-	ContactEntity1(BarrageContact1),
-	ContactEntity2(BarrageContact2)
 {
+	ContactEventType = EventType;
+	ContactEntity1 = BarrageContact1;
+	ContactEntity2 = BarrageContact2;
 }

@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 // ReSharper disable once CppUnusedIncludeDirective
+#include "Memory/IntraTickThreadblindAlloc.h"
 #include "LocomoUtil.h"
 
 class FLocomoModuleAPI : public IModuleInterface

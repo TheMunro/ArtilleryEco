@@ -4,14 +4,13 @@
 #include "ThistleStateTreeConditions.h"
 #include "ThistleStateTreeCore.h"
 
-bool UThistleStateTreeSchema::SetContextRequirements(FSkeletonKey KeyToSet, FStateTreeExecutionContext& Context,
-                                                     bool bLogErrors)
+bool UThistleStateTreeSchema::SetContextRequirements(FSkeletonKey KeyToSet, FStateTreeExecutionContext& Context, bool bLogErrors)
 {
 	auto Instance = new F_ArtilleryKeyInstanceData(KeyToSet);
-	Context.SetContextDataByName(ThistleTypes::ContextKey, FStateTreeDataView(
-		                             F_ArtilleryKeyInstanceData::StaticStruct(),
-		                             reinterpret_cast<uint8*>(Instance)
-	                             ));
+	Context.SetContextDataByName(
+		ThistleTypes::ContextKey,
+		FStateTreeDataView(F_ArtilleryKeyInstanceData::StaticStruct(),
+		reinterpret_cast<uint8*>(Instance)));
 	
 	bool bResult = Context.AreContextDataViewsValid();
 	if (!bResult && bLogErrors)
@@ -21,26 +20,24 @@ bool UThistleStateTreeSchema::SetContextRequirements(FSkeletonKey KeyToSet, FSta
 	return true;
 }
 
-bool UThistleStateTreeSchema::CollectExternalData(const FStateTreeExecutionContext& Context, F_ArtilleryKeyInstanceData* KeySource, TArrayView<const FStateTreeExternalDataDesc> Descs,
+bool UThistleStateTreeSchema::CollectExternalData(
+	const FStateTreeExecutionContext& Context,
+	F_ArtilleryKeyInstanceData* KeySource,
+	TArrayView<const FStateTreeExternalDataDesc> Descs,
 	TArrayView<FStateTreeDataView> OutDataViews)
 {
-
 	IKeyedConstruct* Owner = Cast<IKeyedConstruct>(Context.GetOwner());
 	if (!Owner)
 	{
 		return false;
 	}
+	
 	for (int32 Index = 0; Index < Descs.Num(); Index++)
 	{
 		const FStateTreeExternalDataDesc& ItemDesc = Descs[Index];
-		if (ItemDesc.Struct != nullptr)
+		if (ItemDesc.Struct != nullptr && ItemDesc.Struct->IsChildOf(F_ArtilleryKeyInstanceData::StaticStruct()))
 		{
-			if (ItemDesc.Struct->IsChildOf(F_ArtilleryKeyInstanceData::StaticStruct()))
-			{
-				OutDataViews[Index] = FStateTreeDataView(F_ArtilleryKeyInstanceData::StaticStruct(),
-					reinterpret_cast<uint8*>(KeySource)
-					);
-			}
+			OutDataViews[Index] = FStateTreeDataView(F_ArtilleryKeyInstanceData::StaticStruct(), reinterpret_cast<uint8*>(KeySource));
 		}
 	}
 	return true;

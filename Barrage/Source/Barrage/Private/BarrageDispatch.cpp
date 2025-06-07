@@ -297,8 +297,7 @@ FBLet UBarrageDispatch::GetShapeRef(FSkeletonKey Existing) const
 			if (HoldMapping)
 			{
 				FBLet deref;
-				bool found = HoldMapping->find(key, deref);
-				if(found)
+				if(HoldMapping->find(key, deref))
 				{
 					if (FBarragePrimitive::IsNotNull(deref))//broken out to ease debug.
 					{
@@ -399,10 +398,10 @@ void UBarrageDispatch::StepWorld(uint64 Time, uint64_t TickCount)
 {
 	TSharedPtr<FWorldSimOwner> PinSim = JoltGameSim;
 			
-	//TRACE_CPUPROFILER_EVENT_SCOPE_STR("Step World");
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("Step World");
 	if (JoltGameSim)
 	{
-		if(TickCount % 512 == 0)
+		if(TickCount % 128 == 0)
 		{	
 			//TRACE_CPUPROFILER_EVENT_SCOPE_STR("Broadphase Optimize");
 			//we set a mutable for debug purposes, so we can check if the first optimization has occured in cases of perf
@@ -420,23 +419,20 @@ void UBarrageDispatch::StepWorld(uint64 Time, uint64_t TickCount)
 			{
 				if (CharacterKeyAndBase.Value->mCharacter)
 				{
-					if (!CharacterKeyAndBase.Value->mCharacter->GetPosition().IsNaN())
-					{
-						CharacterKeyAndBase.Value->StepCharacter();
-					}
-					else
+					if (CharacterKeyAndBase.Value->mCharacter->GetPosition().IsNaN())
 					{
 						CharacterKeyAndBase.Value->mCharacter->SetLinearVelocity(CharacterKeyAndBase.Value->World->GetGravity());
 						CharacterKeyAndBase.Value->mCharacter->SetPosition(CharacterKeyAndBase.Value->mInitialPosition);
 						CharacterKeyAndBase.Value->mForcesUpdate = CharacterKeyAndBase.Value->World->GetGravity();
-						CharacterKeyAndBase.Value->StepCharacter();
+						
 					}
+					CharacterKeyAndBase.Value->StepCharacter();
 				}
 			}
 		}
 		
 		{
-			//TRACE_CPUPROFILER_EVENT_SCOPE_STR("Jolt Body Lifecycle Update");
+			TRACE_CPUPROFILER_EVENT_SCOPE_STR("Jolt Body Lifecycle Update");
 			//maintain tombstones
 			TSharedPtr<KeyToFBLet> HoldCuckooLifecycle = JoltBodyLifecycleMapping;
 			TSharedPtr<KeyToKey> HoldCuckooTranslation = TranslationMapping;
@@ -472,7 +468,6 @@ bool UBarrageDispatch::BroadcastContactEvents() const
 	if(GetWorld())
 	{
 		TSharedPtr<TCircularQueue<BarrageContactEvent>> HoldOpen = ContactEventPump;
-
 		while(HoldOpen && !HoldOpen->IsEmpty())
 		{
 			const BarrageContactEvent* Update = HoldOpen->Peek();
@@ -482,16 +477,18 @@ bool UBarrageDispatch::BroadcastContactEvents() const
 				{
 					switch (Update->ContactEventType)
 					{
-						case EBarrageContactEventType::ADDED:
-							OnBarrageContactAddedDelegate.Broadcast(*Update);
-							break;
-						case EBarrageContactEventType::PERSISTED:
-							OnBarrageContactPersistedDelegate.Broadcast(*Update);
-							break;
-						case EBarrageContactEventType::REMOVED:
-							// REMOVE EVENTS REQUIRE ADDITIONAL SPECIAL HANDLING AS THEY DO NOT HAVE ALL DATA SET
-							OnBarrageContactRemovedDelegate.Broadcast(*Update);
-							break;
+					case EBarrageContactEventType::ADDED:
+						OnBarrageContactAddedDelegate.Broadcast(*Update);
+						break;
+					case EBarrageContactEventType::PERSISTED:
+						OnBarrageContactPersistedDelegate.Broadcast(*Update);
+						break;
+					case EBarrageContactEventType::REMOVED:
+						// REMOVE EVENTS REQUIRE ADDITIONAL SPECIAL HANDLING AS THEY DO NOT HAVE ALL DATA SET
+						OnBarrageContactRemovedDelegate.Broadcast(*Update);
+						break;
+					default:
+						break;
 					}
 					HoldOpen->Dequeue();
 				}

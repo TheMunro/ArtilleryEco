@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "CoreMinimal.h"
 #include "ArtilleryShell.h"
 #include "UObject/ObjectMacros.h"
@@ -49,7 +50,6 @@
 
 //This is not simple stuff, and I apologize, but it's less screwy than what we had.
 
-
 UINTERFACE()
 class UArtilleryLocomotionInterface : public UInterface
 {
@@ -57,46 +57,47 @@ class UArtilleryLocomotionInterface : public UInterface
 
 };
 
-inline UArtilleryLocomotionInterface::UArtilleryLocomotionInterface(const FObjectInitializer& ObjectInitializer)
-: Super(ObjectInitializer)
+inline UArtilleryLocomotionInterface::UArtilleryLocomotionInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
+
 class IArtilleryLocomotionInterface : public IKeyedConstruct
 {
 	GENERATED_IINTERFACE_BODY()
+	
 public:
 	/** Assigns Team Agent to given TeamID */
 	virtual bool LocomotionStateMachine(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear)
 	{
 		UE_LOG(
-LogTemp,
-Error,
-TEXT("Unexpected call to unimplemented Locomotion State Machine method. While not necessarily fatal, this is always worth checking."));
+			LogTemp,
+			Error,
+			TEXT("Unexpected call to unimplemented Locomotion State Machine method. While not necessarily fatal, this is always worth checking."));
 		return false; //looks like you called super? or lost an input.
 	}
 	virtual FSkeletonKey GetMyKey() const override
 	{
 		UE_LOG(
-LogTemp,
-Error,
-TEXT("Unexpected call to unimplemented GetMyKey method. While not necessarily fatal, this is always worth checking."));
+			LogTemp,
+			Error,
+			TEXT("Unexpected call to unimplemented GetMyKey method. While not necessarily fatal, this is always worth checking."));
 		return FSkeletonKey();
 	}
 
 	virtual void PrepareForPossess() 
 	{
 		UE_LOG(
-LogTemp,
-Warning,
-TEXT("Unexpected call to unimplemented PrepareForPossess method. Interesting, but less dangerous."));
+			LogTemp,
+			Warning,
+			TEXT("Unexpected call to unimplemented PrepareForPossess method. Interesting, but less dangerous."));
 	}
 
 	virtual void PrepareForUnPossess() 
 	{
 		UE_LOG(
-LogTemp,
-Warning,
-TEXT("Unexpected call to unimplemented PrepareForUnPossess method. Interesting, but less dangerous."));
+			LogTemp,
+			Warning,
+			TEXT("Unexpected call to unimplemented PrepareForUnPossess method. Interesting, but less dangerous."));
 	}	
 	//at minimum, this will be bound to the artillery tick of the controller
 	//right now, this is allowed to have side effects.
@@ -109,13 +110,14 @@ UCLASS()
 class UIArtilleryLocomotionDefault : public UObject, public IArtilleryLocomotionInterface
 {
 	GENERATED_BODY()
+	
 public:
 	virtual bool LocomotionStateMachine(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear) override
 	{
 		UE_LOG(
-	LogTemp,
-	Error,
-	TEXT("UIArtilleryLocomotionDefault: Unexpected call to a default's method. While not necessarily fatal, this is always worth checking."));
+			LogTemp,
+			Error,
+			TEXT("UIArtilleryLocomotionDefault: Unexpected call to a default's method. While not necessarily fatal, this is always worth checking."));
 		return false; //this means you lost an input, hit a concurrency bug, or did something exciting with inheritance.
 	}
 	
@@ -123,10 +125,9 @@ public:
 	virtual void LookStateMachine(FRotator& IN_OUT_LookAxisVector) override
 	{
 		UE_LOG(
-	LogTemp,
-	Error,
-	TEXT("UIArtilleryLocomotionDefault: Unexpected call to a default's method. While not necessarily fatal, this is always worth checking."));
-		
+			LogTemp,
+			Error,
+			TEXT("UIArtilleryLocomotionDefault: Unexpected call to a default's method. While not necessarily fatal, this is always worth checking."));
 	}
 };
 
@@ -134,18 +135,16 @@ UINTERFACE()
 class UTickHeavy : public UInterface
 {
 	GENERATED_UINTERFACE_BODY()
-
 };
 
-
-inline UTickHeavy::UTickHeavy(const FObjectInitializer& ObjectInitializer)
-: Super(ObjectInitializer)
+inline UTickHeavy::UTickHeavy(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
 
 class ITickHeavy : public IKeyedConstruct
 {
 	GENERATED_IINTERFACE_BODY()
+	
 public:
 	//=-=-=-= =-=-=-==-=-=-= =-=-=-==-=-=-==-=-=-==-=-=-==-=-=-= =-=-=-= =-=-=-=
 	//=-=-=-=\=-=-=-==-=-=-=\=-=-=-==-=-=-==-=-=-==-=-=-==-=-=-=\=-=-=-=\=-=-=-=|
@@ -171,12 +170,9 @@ UINTERFACE()
 class UArtilleryControllite : public UInterface
 {
 	GENERATED_UINTERFACE_BODY()
-
 };
 
-
-inline UArtilleryControllite::UArtilleryControllite(const FObjectInitializer& ObjectInitializer)
-: Super(ObjectInitializer)
+inline UArtilleryControllite::UArtilleryControllite(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
 
@@ -192,6 +188,7 @@ inline UArtilleryControllite::UArtilleryControllite(const FObjectInitializer& Ob
 class IArtilleryControllite: public ITickHeavy
 {
 	GENERATED_IINTERFACE_BODY()
+	
 public:
 	/** This is a special special special boy, a most special boy.
 	 *  Looks like you're about to make a TickHeavy. These are pretty hard to offer determinism over.
@@ -213,6 +210,7 @@ UCLASS()
 class UBrokenController : public UObject, public IArtilleryControllite
 {
 	GENERATED_BODY()
+	
 public:
 	virtual void ArtilleryTick(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear) override {}
 	

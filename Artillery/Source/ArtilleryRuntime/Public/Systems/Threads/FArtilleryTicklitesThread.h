@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
 #include <Ticklite.h>
@@ -58,9 +59,6 @@ class FArtilleryTicklitesWorker : public FRunnable
 	static const int GroupCount = 4;
 	TickliteGroup ExecutionGroups[GroupCount];
 
-
-	
-	
 protected:
 	TickliteBuffer QueuedAdds;
 	
@@ -96,9 +94,11 @@ protected:
 	FSharedEventRef StartTicklitesSim;
 	//Apply is necessary.
 	FSharedEventRef StartTicklitesApply;
+	
 public:
 	//Templating here is used to both make reparenting easier if needed later and to simplify our dependency tree
 	UDispatch* DispatchOwner;
+	
 	TOptional<FTransform> GetCopyOfShadowTransform(FSkeletonKey Target, ArtilleryTime Now)
 	{
 		return DispatchOwner->GetTransformShadowByObjectKey(Target,  Now);
@@ -108,6 +108,7 @@ public:
 	{
 		return DispatchOwner->GetFBLetByObjectKey(Target,  Now);
 	}
+	
 	FArtilleryTicklitesWorker(): LocalNow(0), DispatchOwner(nullptr), running(false)
 	{
 		QueuedAdds = MakeShareable(new TickliteRequests(8192));
@@ -118,8 +119,7 @@ public:
 		QueuedAdds->Enqueue(StampLiteRequest(ToAdd, Group));
 	}
 	
-	inline ArtilleryTime GetShadowNow()
-	const
+	ArtilleryTime GetShadowNow() const
 	{
 		return DispatchOwner->GetShadowNow();
 	}
@@ -133,12 +133,9 @@ public:
 	//https://en.cppreference.com/w/cpp/language/function_template#Abbreviated_function_template
 	bool GetAttribAndApplyIf(FSkeletonKey Target, AttribKey Attr, const auto& lambda)
 	{
-		auto attrib = DispatchOwner->GetAttrib(Target, Attr);
-
+		AttrPtr attrib = DispatchOwner->GetAttrib(Target, Attr);
 		return attrib ? lambda(attrib) : false;
 	}
-	
-	
 	
 	Attr3Ptr GetVecAttrib(FSkeletonKey Target, Attr3 Attr)
 	{
@@ -174,7 +171,8 @@ public:
 	virtual ~FArtilleryTicklitesWorker() override
 	{
 		UE_LOG(LogTemp, Display, TEXT("Artillery: Destructing SimTicklites thread."));
-	};
+	}
+	
 	virtual bool QueueRollback()
 	{
 		//rollback is not implemented yet, but works by removing ticklikes added after the rollback's timestamp.
@@ -191,10 +189,8 @@ public:
 		UE_LOG(LogTemp, Display, TEXT("Artillery: Booting SimTicklites thread."));
 		running = true;
 		return true;
-		
 	}
-
-
+	
 	//TODO: ADD NULL GUARDS OR COPY. PREFER GUARD.
 	void CalcINE(TSharedPtr<TicklitePrototype>& x)
 	{
@@ -216,13 +212,14 @@ public:
 		DispatchOwner->ThreadSetup();
 		while(running) {
 
-			for(auto& Group : ExecutionGroups)
+			for(TickliteGroup& Group : ExecutionGroups)
 			{
-				for(auto Tickable : Group)
+				for(TSharedPtr<TicklitePrototype> Tickable : Group)
 				{
 					CalcINE(Tickable);
 				}
 			}
+			
 			//if we have any ticklite requests, perform their calculations here and then
 			//add them.
 			//TODO: Reassess 12/10/24
@@ -232,19 +229,17 @@ public:
 			while(!QueuedAdds->IsEmpty())
 			{
 				const StampLiteRequest AddTup = *QueuedAdds->Peek();
-				auto ptr =  TickliteAdd(AddTup.Key, AddTup.Value);
+				TSharedPtr<TicklitePrototype> ptr =  TickliteAdd(AddTup.Key, AddTup.Value);
 				if(ptr)
 				{
 					CalcINE(ptr);
 				}
 				QueuedAdds->Dequeue();
 			}
+			
 			StartTicklitesApply->Wait();
 			StartTicklitesApply->Reset(); // we can run long on sim, not on apply.
 
-
-
-			
 			for (auto& Group : ExecutionGroups)
 			{
 				//this is just to make it clearer, 0 works just as well.
@@ -268,10 +263,7 @@ public:
 						index++;
 					}
 				}
-			}
-
-
-				
+			}	
 		}
 	
 		return 0;
@@ -290,23 +282,17 @@ public:
 		Cleanup();
 	}
 
-
-
 	//CURRENTLY ONLY SUPPORTS GUNS AND ACTORS
 	SKLiveness IsLiveKey(FSkeletonKey Test)
 	{
-		if (DispatchOwner)
-		{
-			return DispatchOwner->IsLiveKey(Test);
-		}
-		return SKLiveness::UNKNOWN;
+		return DispatchOwner ? DispatchOwner->IsLiveKey(Test) : SKLiveness::UNKNOWN;
 	}
-	
-	
+
 private:
 	void Cleanup()
 	{
 		running = false;
-	};
+	}
+	
 	bool running;
 };

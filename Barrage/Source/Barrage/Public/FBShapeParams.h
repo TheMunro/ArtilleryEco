@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
+
 #include "MassByCategory.h"
 
 //The immediate question is why not use type polymorphism? This looks like THE standard example!
@@ -40,7 +43,6 @@
 
 //don't change this unless you're sure it's safe. member size AND order alter packing.
 //remember to convert https://youtu.be/jhCupKFly_M?si=aoBCNbbAA9DzDPyy&t=438
-
 
 //REMINDER: these use UE type conventions and so are in UE space.
 //I bounced back and forth on this a bunch.

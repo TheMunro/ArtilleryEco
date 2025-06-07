@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 #include "IsolatedJoltIncludes.h"
 #include "FBPhysicsInputTypes.h"

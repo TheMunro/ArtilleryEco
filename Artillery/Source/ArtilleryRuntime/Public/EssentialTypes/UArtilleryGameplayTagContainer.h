@@ -30,8 +30,8 @@ UCLASS(BlueprintType)
 class ARTILLERYRUNTIME_API UArtilleryGameplayTagContainer : public UObject
 {
 	GENERATED_BODY()
+	
 public:
-
 	UPROPERTY(BlueprintReadOnly)
 	FSkeletonKey ParentKey;
 	TSharedPtr<FGameplayTagContainer> TagsToAddDuringInitialization;
@@ -39,11 +39,12 @@ public:
 	UArtilleryDispatch* MyDispatch = nullptr;
 	bool ReadyToUse = false;
 	bool ReferenceOnlyMode = true;
+	
 	// Don't use this default constructor, this is a bad
 	UArtilleryGameplayTagContainer()
 	{
 		TagsToAddDuringInitialization = MakeShareable(new FGameplayTagContainer());
-	};
+	}
 
 	//reference only mode changes the container to act more like you might expect in a blueprint, by not taking ownership of the
 	//underlying tag collection. Instead, it will bind to the existing tag collection, if any, and the tag collection will survive
@@ -56,18 +57,17 @@ public:
 	UArtilleryGameplayTagContainer(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn, bool ReferenceOnly = false)
 	{
 		Initialize(ParentKeyIn, MyDispatchIn, ReferenceOnly);
-	};
+	}
 
 	void Initialize(FSkeletonKey ParentKeyIn, UArtilleryDispatch* MyDispatchIn, bool ReferenceOnly = false)
 	{
-		
 		this->ParentKey = ParentKeyIn;
 		this->MyDispatch = MyDispatchIn;
 		auto reference = MyDispatch->GetOrRegisterConservedTags(ParentKeyIn);
 		ReferenceOnlyMode = ReferenceOnly;
 		MyTags = reference;
 		ReadyToUse = true;
-	};
+	}
 
 	UFUNCTION(BlueprintCallable, meta = (ScriptName = "ContainerAddTag", DisplayName = "Add tag to container"),  Category="Artillery|Tags")
 	void AddTag(const FGameplayTag& TagToAdd)
@@ -102,14 +102,13 @@ public:
 	}
 
 	// TODO: expose more of the gameplay tag container's functionality
-
-	~UArtilleryGameplayTagContainer()
+	virtual ~UArtilleryGameplayTagContainer() override
 	{
 		if (MyTags)
 		{
 			//this exploits a quirk of the GC collection sequencing for our mutual friend and allows us to detect
 			//a number of things we otherwise shouldn't know.
-			auto LiveCycle = MyTags->DecoderRing.Pin();
+			TSharedPtr<UnderlyingTagReverse> LiveCycle = MyTags->DecoderRing.Pin();
 			if (MyDispatch && !ReferenceOnlyMode && LiveCycle)
 			{
 				MyDispatch->DeregisterGameplayTags(ParentKey);

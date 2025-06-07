@@ -3,6 +3,8 @@
 #include "skeletonize.h"
 #include "Containers/CircularQueue.h"
 #include <thread>
+
+#include "MashFunctions.h"
 #include "SkeletonTypes.generated.h"
 
 using BristleTime = long; //this will become uint32. don't bitbash this.
@@ -52,8 +54,8 @@ public:
 	
 	friend uint32 GetTypeHash(const FSkeletonKey& Other)
 	{
-		//while it looks like typehash can return uint64, it's undocumented and doesn't appear to work right.
-		return GetTypeHash(Other.Obj);
+		//typehash is the devil. if you replace the below with a typehash, may god have mercy on your soul, because UE won't.
+		return FMMM::FastHash6432(Other.Obj);
 	}
 	
 	FSkeletonKey& operator=(const FSkeletonKey& rhs) {
@@ -90,7 +92,7 @@ struct std::hash<FSkeletonKey>
 {
 	std::size_t operator()(const FSkeletonKey& other) const noexcept
 	{
-		return GetTypeHash(other);
+		return FMMM::FastHash64(other.Obj);
 	}
 };
 
@@ -125,7 +127,7 @@ public:
 	friend uint32 GetTypeHash(const ActorKey& Other)
 	{
 		//it looks like get type hash can be a 64bit return? 
-		return GetTypeHash(Other.Obj);
+		return FMMM::FastHash6432(Other.Obj);
 	}
 	
 	ActorKey& operator=(const uint64 rhs) {
@@ -272,8 +274,7 @@ public:
 	
 	friend uint32 GetTypeHash(const FBoneKey& Other)
 	{
-		//while it looks like typehash can return uint64, it's undocumented and doesn't appear to work right.
-		return GetTypeHash(Other.Obj);
+		return FMMM::FastHash6432(Other.Obj);
 	}
 	
 	FBoneKey& operator=(const FBoneKey& rhs) {
@@ -333,8 +334,7 @@ public:
 	
 	friend uint32 GetTypeHash(const FConstellationKey& Other)
 	{
-		//while it looks like typehash can return uint64, it's undocumented and doesn't appear to work right.
-		return GetTypeHash(Other.Obj);
+		return FMMM::FastHash6432(Other.Obj);
 	}
 	
 	FConstellationKey& operator=(const FConstellationKey& rhs) {
@@ -385,7 +385,7 @@ public:
 	
 	explicit FGunInstanceKey(const unsigned int rhs) {
 		Obj = 0;
-		Obj |= GetTypeHash(rhs); //en-bloody-sure that's hashed
+		Obj |= FMMM::FastHash32(rhs); //en-bloody-sure that's hashed
 		Obj &= SKELLY::SFIX_KEYTOMETA; //notch the key. a true hash can lose any bit without losing validity.
 		Obj = FORGE_SKELETON_KEY(Obj, GunInstance_Infix);
 	}
@@ -410,7 +410,7 @@ public:
 	friend uint32 GetTypeHash(const FGunInstanceKey& Other)
 	{
 		//it looks like get type hash can be a 64bit return? 
-		return GetTypeHash(Other.Obj);
+		return FMMM::FastHash6432(Other.Obj);
 	}
 	
 	FGunInstanceKey& operator=(const uint64 rhs) {
@@ -514,7 +514,7 @@ public:
 
 	friend uint32 GetTypeHash(const FLordKey& Other)
 	{
-		return GetTypeHash(Other.Obj);
+		return FMMM::FastHash6432(Other.Obj);
 	}
 
 	//Lordly Keys are super picky and can really only be assigned like this.

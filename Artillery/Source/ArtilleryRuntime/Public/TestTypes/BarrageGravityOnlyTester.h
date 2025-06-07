@@ -10,33 +10,30 @@
 #include "Components/ActorComponent.h"
 #include "BarrageGravityOnlyTester.generated.h"
 
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UBarrageGravityOnlyTester : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
+	FBLet MyBarrageBody = nullptr;
+	FSkeletonKey MyObjectKey;
+	bool IsReady = false;
+	
 	// Sets default values for this component's properties
 	UBarrageGravityOnlyTester();
 	UBarrageGravityOnlyTester(const FObjectInitializer& ObjectInitializer);
-	FBLet MyBarrageBody = nullptr;
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-	FSkeletonKey MyObjectKey;
-	bool IsReady = false;
 	virtual void BeforeBeginPlay(FSkeletonKey TransformOwner);
 	void Register();
-
 	virtual void OnDestroyPhysicsState() override;
+	
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-		
 };
 
 //CONSTRUCTORS
@@ -47,16 +44,14 @@ inline UBarrageGravityOnlyTester::UBarrageGravityOnlyTester()
 	PrimaryComponentTick.bCanEverTick = true;
 	MyObjectKey = 0;
 }
+
 // Sets default values for this component's properties
-inline UBarrageGravityOnlyTester::UBarrageGravityOnlyTester(const FObjectInitializer& ObjectInitializer) : Super(
-	ObjectInitializer)
+inline UBarrageGravityOnlyTester::UBarrageGravityOnlyTester(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
-	
 	PrimaryComponentTick.bCanEverTick = true;
 	MyObjectKey = 0;
-	
 }
 //---------------------------------
 
@@ -71,41 +66,36 @@ inline void UBarrageGravityOnlyTester::BeforeBeginPlay(FSkeletonKey TransformOwn
 
 inline void UBarrageGravityOnlyTester::Register()
 {
-	if(MyObjectKey ==0 )
+	if(MyObjectKey ==0 && GetOwner())
 	{
-		if(GetOwner())
+		if(GetOwner()->GetComponentByClass<UKeyCarry>())
 		{
-			if(GetOwner()->GetComponentByClass<UKeyCarry>())
-			{
-				MyObjectKey = GetOwner()->GetComponentByClass<UKeyCarry>()->GetMyKey();
-			}
+			MyObjectKey = GetOwner()->GetComponentByClass<UKeyCarry>()->GetMyKey();
+		}
 
-			if(MyObjectKey == 0)
-			{
-				auto val = PointerHash(GetOwner());
-				ActorKey TopLevelActorKey = ActorKey(val);
-				MyObjectKey = TopLevelActorKey;
-			}
+		if(MyObjectKey == 0)
+		{
+			uint32 val = PointerHash(GetOwner());
+			MyObjectKey = ActorKey(val);
 		}
 	}
+	
 	if(!IsReady && MyObjectKey != 0) // this could easily be just the !=, but it's better to have the whole idiom in the example
 	{
-		auto Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
-		auto TransformECS =  GetWorld()->GetSubsystem<UTransformDispatch>();
-		auto params = FBarrageBounder::GenerateBoxBounds(GetOwner()->GetActorLocation(), 30, 30 ,20);
+		UBarrageDispatch* Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
+		FBBoxParams params = FBarrageBounder::GenerateBoxBounds(GetOwner()->GetActorLocation(), 30, 30 ,20);
 		MyBarrageBody = Physics->CreatePrimitive(params, MyObjectKey, Layers::MOVING);
-		//TransformECS->RegisterObjectToShadowTransform(MyObjectKey, const_cast<UE::Math::TTransform<double>*>(&GetOwner()->GetTransform()));
 		if(MyBarrageBody)
 		{
 			IsReady = true;
 		}
 	}
+	
 	if(IsReady)
 	{
 		PrimaryComponentTick.SetTickFunctionEnable(false);
 	}
 }
-
 
 inline void UBarrageGravityOnlyTester::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -127,7 +117,7 @@ inline void UBarrageGravityOnlyTester::OnDestroyPhysicsState()
 	Super::OnDestroyPhysicsState();
 	if(GetWorld())
 	{
-		auto Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
+		UBarrageDispatch* Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
 		if(Physics && MyBarrageBody)
 		{
 			Physics->SuggestTombstone(MyBarrageBody);
@@ -141,7 +131,7 @@ inline void UBarrageGravityOnlyTester::EndPlay(const EEndPlayReason::Type EndPla
 	Super::EndPlay(EndPlayReason);
 	if(GetWorld())
 	{
-		auto Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
+		UBarrageDispatch* Physics =  GetWorld()->GetSubsystem<UBarrageDispatch>();
 		if(Physics && MyBarrageBody)
 		{
 			Physics->SuggestTombstone(MyBarrageBody);

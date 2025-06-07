@@ -1,6 +1,6 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
 
-#include <chrono>
+#pragma once
 
 //this should have no effect, but we set it to ensure there's nothing... exciting.
 #pragma pack(push, 1)
@@ -10,6 +10,7 @@ struct SixteenByter {
 };
 typedef SixteenByter Bigby;
 #pragma pack (pop)
+
 /**
  * 
  * In the long term, we'll wish to support a flexible schema'd interchange. 
@@ -54,8 +55,6 @@ typedef SixteenByter Bigby;
  * 
  */
 
-
-
  // Direct Inheritance Contraindicated
  // You should not inherit directly from packable. I'm allowing it because it MIGHT be necessary
  // but it's not a good idea and you should consider it carefully.
@@ -71,29 +70,44 @@ class Packable8 : Packable {
 public:
 	char* Pack() override
 	{
-		return (char*)PackImpl();
-	};
+		return reinterpret_cast<char*>(PackImpl());
+	}
+	
 	int GetPackedSize() override
 	{
 		return 8;
 	}
 
 	virtual uint64_t PackImpl() = 0;
-
 };
-
-
 
 class Packable16: Packable {
 public:
 	char* Pack() override
 	{
-		return (char*)PackImpl();
-	};
+		return reinterpret_cast<char*>(PackImpl());
+	}
+	
 	int GetPackedSize() override
 	{
 		return 16;
 	}
 
 	virtual Bigby* PackImpl() = 0;
+};
+
+template <class T> class TagPack16 : Packable16
+{
+	virtual Bigby* PackImpl() override
+	{
+		return T.PackImpl();
+	}
+};
+
+template <class T> class TagPack8 :Packable8
+{
+	virtual uint64_t* PackImpl() override
+	{
+		return T.PackImpl();
+	}
 };

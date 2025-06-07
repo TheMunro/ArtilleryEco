@@ -25,6 +25,7 @@ enum class E_AttribKey : uint8
 	JumpHeight,
 	ProposedDamage,
 	IsLockedOn,
+	IsActive,
 	
 	// Gun Attributes
 	Ammo,
@@ -36,7 +37,7 @@ enum class E_AttribKey : uint8
 	Range,
 	TicksSinceLastFired,
 	LastFiredTimestamp,
-	TriggerPulled,
+	TriggerPulled
 };
 
 UENUM(BlueprintType, Blueprintable)
@@ -88,6 +89,7 @@ namespace Arty
 	namespace AttributesList{
 
 	}
+	
 	//MANA should always be granted in multiples of 10 since 10m/t is our standard recharge.
 	using AttribKey = E_AttribKey;
 	using Attr = AttribKey;
@@ -122,7 +124,6 @@ namespace Arty
 	typedef TSharedPtr<AttributeMap> AttrMapPtr;
 	typedef TSharedPtr<IdentityMap> IdMapPtr;
 	typedef TSharedPtr<Attr3Map> Attr3MapPtr;
-	
 }
 
 #if ENABLE_VISUAL_LOG

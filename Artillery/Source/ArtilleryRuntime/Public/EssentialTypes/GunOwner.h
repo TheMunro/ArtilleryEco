@@ -1,10 +1,9 @@
 ﻿#pragma once
+
 #include "CoreMinimal.h"
-#include "SkeletonTypes.h"
 #include "UObject/ObjectMacros.h"
 #include "UObject/Interface.h"
 #include "GunOwner.generated.h"
-
 
 class UFireControlMachine;
 

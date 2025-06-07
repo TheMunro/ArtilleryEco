@@ -27,9 +27,11 @@ class ARTILLERYRUNTIME_API AArtilleryController : public APlayerController, publ
 
 public:
 	bool ShouldArtilleryTick = false;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Identity)
 	//It's quite important that controllers don't have keycarries, as those set up a transform linkage we don't want.
 	FSkeletonKey MyObjectKey;
+	
 	virtual void ArtilleryTick(FArtilleryShell PreviousMovement, FArtilleryShell Movement, bool RunAtLeastOnce, bool Smear) override {}
 	virtual void RegisterWithDispatch(FSkeletonKey MyKey) override {} // we can't really implement this here without making the dependency tree delicate.
 
@@ -41,7 +43,7 @@ public:
 	
 	AArtilleryController()
 	{
-		auto val = PointerHash(GetOwner()); //this is the standard construction of the actor key. we'll need to revise it sooner or later.
+		uint32 val = PointerHash(GetOwner()); //this is the standard construction of the actor key. we'll need to revise it sooner or later.
 		ActorKey TopLevelActorKey = ActorKey(val);
 		MyObjectKey = TopLevelActorKey;
 	}

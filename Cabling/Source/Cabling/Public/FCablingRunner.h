@@ -1,22 +1,17 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 #include "CoreMinimal.h"
-#include "PackingSystemShim.h"
-#include "FCablePackedInput.h"
-#include "CablingCommonTypes.h"
-
-#include "AtypicalDistances.h"
-#include <chrono> 
 
 #include "FStatefulPatternMatcher.h"
 THIRD_PARTY_INCLUDES_START
 #include "Microsoft/AllowMicrosoftPlatformTypes.h"
+// ReSharper disable once CppUnusedIncludeDirective - Required for above include
 #include "Microsoft/HideMicrosoftPlatformTypes.h"
-#include <Winuser.h>
 #include <GameInput.h>
 THIRD_PARTY_INCLUDES_END
 #include "Containers/CircularQueue.h"
-
 
 //why do it this way?
 //well, unfortunately, input in UE runs through the event loop.
@@ -29,13 +24,13 @@ THIRD_PARTY_INCLUDES_END
 class FCabling : public FRunnable {
 public:
 	using FlickBuffer = TSimpleInputRing<90>;
+	
 	FCabling();
 	virtual ~FCabling() override;
 
 	virtual bool Init() override;
 	bool SendNew(bool sent,uint64_t priorReading, uint64_t currentRead);
-	bool SendIfWindowEdge(bool sent, int seqNumber, uint64_t currentRead,
-					   uint32_t sendHertzFactor);
+	bool SendIfWindowEdge(bool sent, int seqNumber, uint64_t currentRead, uint32_t sendHertzFactor);
 	static uint64_t FromKeyboardState(uint32_t keyCount, GameInputKeyState (&states)[16]);
 	uint64_t KeyboardState(IGameInputReading* reading, GameInputKeyState (&states)[16]);
 	uint64_t FromGamePadState(GameInputGamepadState state);
@@ -43,15 +38,14 @@ public:
 	virtual uint32 Run() override;
 	virtual void Exit() override;
 	virtual void Stop() override;
-
-
+	
 	bool running;//cabling will let anyone unplug it. cabling is inanimate. cabling has no opinions on this.
 	uint64_t GuessedInputCount;
 	FlickBuffer RingForGamepadKeybinds;
 	TSharedPtr<TCircularQueue<uint64_t>> GameThreadControlQueue;
 	TSharedPtr<TCircularQueue<uint64_t>> CabledThreadControlQueue;
 	FSharedEventRef WakeTransmitThread;
+	
 private:
 	void Cleanup();
-
-	};
+};

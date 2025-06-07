@@ -117,10 +117,10 @@ public:
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo,
-		const ArtIPMKey FireAction = ArtIPMKey::InternallyStateless,
+		const EventBufferInfo FireAction = EventBufferInfo::Default(),
 		const FGameplayEventData* TriggerEventData = nullptr,
 		bool RerunDueToReconcile = false,
-		int DallyFramesToOmit = 0);;
+		int DallyFramesToOmit = 0);
 
 	/**************************************
 	 *the following are delegates for Ability Minimum.

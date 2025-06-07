@@ -12,7 +12,10 @@
 #include "Components/ActorComponent.h"
 #include "States/PlayerStates.h"
 #include "FBPhysicsInputTypes.h"
-#include "GameplayTagsManager.h"
+#include "PhysicsFilters/FastBroadphaseLayerFilter.h"
+#include "PhysicsFilters/FastObjectLayerFilters.h"
+
+#include "BarragePlayerAgent.generated.h"
 
 namespace Hitmark
 {
@@ -20,10 +23,10 @@ namespace Hitmark
 	inline thread_local TSharedPtr<FHitResult> AimFriction = nullptr;
 }
 
-#include "BarragePlayerAgent.generated.h"
-
 static constexpr uint32 DEFAULT_DASH_DURATION = 18;
 static constexpr double DEFAULT_DASH_MULTIPLIER = 200.f;
+
+static const std::vector<EPhysicsLayer> ExclusionFilters = { EPhysicsLayer::ENEMYPROJECTILE, EPhysicsLayer::DEBRIS, EPhysicsLayer::HITBOX };
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ARTILLERYRUNTIME_API UBarragePlayerAgent : public UBarrageColliderBase
@@ -127,8 +130,8 @@ public:
 
 private:
 	void UpdateDetailedGroundState(FVector3d& ground);
-	
 	void UpdateDetailedWallState(FVector3d& WallNormal);
+	
 public:
 	//why not do this in the physics engine?
 	//well, it's quite a lot of spherecasts, and those are read ops
@@ -158,21 +161,13 @@ public:
 	UFUNCTION(BlueprintPure)
 	FVector3f GetVelocity() const
 	{
-		if(IsReady && MyBarrageBody != nullptr)
-		{
-			return FBarragePrimitive::GetVelocity(MyBarrageBody);
-		}
-		return FVector3f::ZeroVector;
+		return IsReady && MyBarrageBody != nullptr ? FBarragePrimitive::GetVelocity(MyBarrageBody) : FVector3f::ZeroVector;
 	}
 	
 	UFUNCTION(BlueprintCallable)
 	FVector3f GetGroundNormal()
 	{
-		if(IsReady && MyBarrageBody != nullptr)
-		{
-			return FBarragePrimitive::GetCharacterGroundNormal(MyBarrageBody);
-		}
-		return FVector3f::ZeroVector;
+		return IsReady && MyBarrageBody != nullptr ? FBarragePrimitive::GetCharacterGroundNormal(MyBarrageBody) : FVector3f::ZeroVector;
 	}
 	
 	FBarragePrimitive::FBGroundState GetGroundState() const;
@@ -201,6 +196,8 @@ private:
 	// Currently targeted object
 	FBLet TargetFiblet;
 	TWeakObjectPtr<AActor> TargetPtr;
+	FastExcludeBroadphaseLayerFilter BroadPhaseFilter;
+	FastExcludeObjectLayerFilter ObjectLayerFilter;
 };
 
 inline void UBarragePlayerAgent::UpdateDetailedGroundState(FVector3d& ground)
@@ -272,7 +269,8 @@ inline void UBarragePlayerAgent::UpdateDetailedWallState(FVector3d& WallNormal)
 //do not invoke the default constructor unless you have a really good plan. in general, let UE initialize your components.
 
 // Sets default values for this component's properties
-inline UBarragePlayerAgent::UBarragePlayerAgent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+inline UBarragePlayerAgent::UBarragePlayerAgent(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer), BroadPhaseFilter(ExclusionFilters), ObjectLayerFilter(ExclusionFilters)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -295,25 +293,23 @@ inline FBarragePrimitive::FBGroundState UBarragePlayerAgent::GetGroundState() co
 {
 	return FBarragePrimitive::GetCharacterGroundState(MyBarrageBody);
 }
+
 //KEY REGISTER, initializer, and failover.
 //----------------------------------
 
 inline void UBarragePlayerAgent::Register()
 {
-	if(MyObjectKey ==0 )
+	if(MyObjectKey ==0 && GetOwner())
 	{
-		if(GetOwner())
+		if(GetOwner()->GetComponentByClass<UKeyCarry>())
 		{
-			if(GetOwner()->GetComponentByClass<UKeyCarry>())
-			{
-				MyObjectKey = GetOwner()->GetComponentByClass<UKeyCarry>()->GetMyKey();
-			}
+			MyObjectKey = GetOwner()->GetComponentByClass<UKeyCarry>()->GetMyKey();
+		}
 
-			if(MyObjectKey == 0)
-			{
-				MyObjectKey = MAKE_ACTORKEY(GetOwner());
-				ThrottleModel = FQuat4d(1,1,1,1);
-			}
+		if(MyObjectKey == 0)
+		{
+			MyObjectKey = MAKE_ACTORKEY(GetOwner());
+			ThrottleModel = FQuat4d(1,1,1,1);
 		}
 	}
 	
@@ -355,10 +351,6 @@ inline float UBarragePlayerAgent::ShortCastTo(const FVector3d& Direction)
 	}
 	
 	//we shoot a lil pill. lmao.
-	const JPH::DefaultBroadPhaseLayerFilter default_broadphase_layer_filter = Physics->JoltGameSim->physics_system->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY);
-	
-	const JPH::DefaultObjectLayerFilter default_object_layer_filter = Physics->JoltGameSim->physics_system->GetDefaultLayerFilter(Layers::CAST_QUERY);
-
 	JPH::BodyID CastingBodyID;
 	Physics->JoltGameSim->GetBodyIDOrDefault(MyBarrageBody->KeyIntoBarrage, CastingBodyID);
 	const JPH::IgnoreSingleBodyFilter default_body_filter(CastingBodyID);
@@ -369,8 +361,8 @@ inline float UBarragePlayerAgent::ShortCastTo(const FVector3d& Direction)
 		FVector3d(MyPos.X, MyPos.Y, MyPos.Z),
 		Direction,
 		Hitmark::ShortCast,
-		default_broadphase_layer_filter,
-		default_object_layer_filter,
+		BroadPhaseFilter,
+		ObjectLayerFilter,
 		default_body_filter);
 	
 	const int32 TestVar = Hitmark::ShortCast->MyItem;
@@ -468,9 +460,6 @@ inline void UBarragePlayerAgent::ApplyAimFriction(
 		Hitmark::AimFriction = MakeShared<FHitResult>();
 	}
 
-	const JPH::DefaultBroadPhaseLayerFilter default_broadphase_layer_filter = Physics->JoltGameSim->physics_system->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY);
-	const JPH::DefaultObjectLayerFilter default_object_layer_filter = Physics->JoltGameSim->physics_system->GetDefaultLayerFilter(Layers::CAST_QUERY);
-
 	JPH::BodyID CastingBodyID;
 	Physics->JoltGameSim->GetBodyIDOrDefault(MyFiblet->KeyIntoBarrage, CastingBodyID);
 	const JPH::IgnoreSingleBodyFilter default_body_filter(CastingBodyID);
@@ -481,8 +470,8 @@ inline void UBarragePlayerAgent::ApplyAimFriction(
 		ActorLocation,
 		Direction,
 		Hitmark::AimFriction,
-		default_broadphase_layer_filter,
-		default_object_layer_filter,
+		BroadPhaseFilter,
+		ObjectLayerFilter,
 		default_body_filter);
 
 	FBarrageKey HitBarrageKey = Physics->GetBarrageKeyFromFHitResult(Hitmark::AimFriction);
@@ -562,8 +551,6 @@ inline bool UBarragePlayerAgent::CalculateAimVector(
 	FBLet MyFiblet = Physics->GetShapeRef(ActorsKey);
 	if(MyFiblet)
 	{
-		const JPH::DefaultBroadPhaseLayerFilter BroadPhaseFilter = Physics->GetDefaultBroadPhaseLayerFilter(Layers::CAST_QUERY);
-		const JPH::DefaultObjectLayerFilter ObjectLayerFilter = Physics->GetDefaultLayerFilter(Layers::CAST_QUERY);
 		const JPH::IgnoreSingleBodyFilter BodyFilter = Physics->GetFilterToIgnoreSingleBody(MyFiblet);
 		
 		TSharedPtr<FHitResult> HitObjectResult = MakeShared<FHitResult>();

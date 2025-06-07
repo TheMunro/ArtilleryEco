@@ -5,6 +5,7 @@
 #include "CoreTypes.h"
 #include "CoreMinimal.h"
 #include "Math/InterpCurve.h"
+#include "LCM_Config.h"
 #include <limits>
 
 struct LOCOMOCORE_API FFixedAngle
@@ -268,4 +269,32 @@ public:
       return maxValue;
    }
    
+};
+
+class SmallArrays
+{
+public:
+	template<class Iter, class Compare>
+static inline void insertion_sort(Iter begin, Iter end, Compare comp) {
+		using T = typename std::iterator_traits<Iter>::value_type;
+
+		for (Iter cur = begin + 1; cur < end; ++cur) {
+			Iter sift = cur;
+			Iter sift_1 = cur - 1;
+
+			// Compare first so we can avoid 2 moves for an element already positioned correctly.
+			if (comp(*sift, *sift_1)) {
+				T tmp = std::move(*sift);
+
+				do { *sift-- = std::move(*sift_1); }
+				while (sift != begin && comp(tmp, *--sift_1));
+
+				*sift = std::move(tmp);
+			}
+		}
+	}
+	template<class Iter>
+static	inline void insertion_sort(Iter begin, Iter end) {
+		insertion_sort(begin, end, std::less<std::decay_t<decltype(*begin)>>());
+	}
 };

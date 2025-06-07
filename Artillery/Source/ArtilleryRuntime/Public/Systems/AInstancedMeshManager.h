@@ -18,13 +18,14 @@ class ARTILLERYRUNTIME_API AInstancedMeshManager : public AActor
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Artillery, meta = (AllowPrivateAccess = "true"))
 	USwarmKineManager* SwarmKineManager;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Artillery, meta = (AllowPrivateAccess = "true"))
 	UArtilleryDispatch* MyDispatch;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Artillery, meta = (AllowPrivateAccess = "true"))
 	UTransformDispatch* TransformDispatch;
 
 	uint32 instances_generated;
+	bool Usable = false;
+	
 	virtual void BeginPlay() override
 	{
 		Super::BeginPlay();
@@ -34,9 +35,6 @@ public:
 			InitializeManager();
 		}
 	}
-
-public:
-	bool Usable = false;
 	
 	AInstancedMeshManager()
 	{
@@ -63,7 +61,7 @@ public:
 	ActorKey GetMyKey() const
 	{
 		return MyKey;
-	};
+	}
 
 	void SetStaticMesh(UStaticMesh* Mesh)
 	{
@@ -82,7 +80,7 @@ public:
 			SwarmKineManager->DestroyPhysicsState();
 
 			// Make a key yo
-			auto keyHash = PointerHash(this);
+			uint32 keyHash = PointerHash(this);
 			UE_LOG(LogTemp, Warning, TEXT("AInstancedMeshManager Parented: %d"), keyHash);
 			MyKey = ActorKey(keyHash);
 			Usable = true;
@@ -98,14 +96,11 @@ public:
 		//that'll let us use meta for ordering in some cases and verity in others.
 		std::hash<std::thread::id> hasher;
 		uint32 low = HashCombineFast(
-				HashCombineFast(GetTypeHash(SwarmKineManager), GetTypeHash(++instances_generated)),
-				F_INeedA::HashDownTo32( hasher(std::this_thread::get_id()))
-				);
+				HashCombineFast(GetTypeHash(SwarmKineManager),  FMMM::FastHash32(++instances_generated)),
+				F_INeedA::HashDownTo32( hasher(std::this_thread::get_id())));
 		uint64 combo = low;
 		combo = (combo << 32) + low;
-		return FProjectileInstanceKey(
-			combo
-			);
+		return FProjectileInstanceKey(combo);
 	}
 
 	UFUNCTION(BlueprintCallable, Category = Instance)
@@ -119,8 +114,7 @@ public:
 		// TODO: Does this make a good hash? Can we hash collide?
 		// TODO: Oh god this definitely birthday problems at some point but I don't know how else to get a unique hash since the instances rotate around and reuse the same memory
 		FSkeletonKey NewInstanceKey = (ExistingKey == FSkeletonKey::Invalid()) ? GenerateNewProjectileKey() : ExistingKey;
-
-		auto ScaledTransform = FTransform(FRotator::ZeroRotator,WorldTransform.GetLocation(), FVector3d(Scale, Scale, Scale));
+		FTransform ScaledTransform(FRotator::ZeroRotator,WorldTransform.GetLocation(), FVector3d(Scale, Scale, Scale));
 		FPrimitiveInstanceId NewInstanceId = SwarmKineManager->AddInstanceById(ScaledTransform, true);
 		SwarmKineManager->AddToMapDbg(NewInstanceId, NewInstanceKey);
 
@@ -139,7 +133,6 @@ public:
 	// This function will eventually become private. Do not call it directly from outside of Artillery itself.
 	void CleanupInstance(const FSkeletonKey Target)
 	{
-		auto Physics = GetWorld()->GetSubsystem<UBarrageDispatch>();
 		TransformDispatch->ReleaseKineByKey(Target);
 		SwarmKineManager->CleanupInstance(Target);
 	}
@@ -148,14 +141,13 @@ private:
 	void CreateNewInstanceWithKeyInternal(FSkeletonKey ProjectileKey, const FTransform& WorldTransform, const FVector3d& MuzzleVelocity, const uint16_t Layer, float Scale) const
 	{
 		// TODO: can't use the BarrageColliderBase set of types, so in-lining the barrage setup code. Is this what we want long-term?
-		auto Physics = GetWorld()->GetSubsystem<UBarrageDispatch>();
-		auto AnyMesh = SwarmKineManager->GetStaticMesh();
-		auto Boxen = AnyMesh->GetBoundingBox();
-		auto extents = Boxen.GetExtent() * 2 * Scale;
+		UBarrageDispatch* Physics = GetWorld()->GetSubsystem<UBarrageDispatch>();
+		TObjectPtr<UStaticMesh> AnyMesh = SwarmKineManager->GetStaticMesh();
+		FBox Boxen = AnyMesh->GetBoundingBox();
+		FVector extents = Boxen.GetExtent() * 2 * Scale;
 
-		auto params = FBarrageBounder::GenerateBoxBounds(WorldTransform.GetLocation(), extents.X, extents.Y, extents.Z,
+		FBBoxParams params = FBarrageBounder::GenerateBoxBounds(WorldTransform.GetLocation(), extents.X, extents.Y, extents.Z,
 			FVector3d(0, 0, extents.Z/2));
-		
 		FBLet MyBarrageBody = Physics->CreateProjectile(params, ProjectileKey, Layer);
 
 		TransformDispatch->RegisterObjectToShadowTransform(ProjectileKey, SwarmKineManager);

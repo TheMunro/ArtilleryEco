@@ -4,7 +4,6 @@
 #include "ArtilleryDispatch.h"
 #include "NiagaraDataChannel.h"
 
-
 bool UNiagaraParticleDispatch::RegistrationImplementation()
 {
 	UArtilleryDispatch::SelfPtr->SetParticleDispatch(this);
@@ -45,12 +44,13 @@ void UNiagaraParticleDispatch::Deinitialize()
 	auto Iter = ProjectileNameToNDCAsset.Get()->CreateIterator();
 	for (; Iter; ++Iter)
 	{
-		Iter.Value().Value->ClearInternalFlags(EInternalObjectFlags::Async);
-		Iter.Value().Key->ClearInternalFlags(EInternalObjectFlags::Async);
+		ManagementPayload& ParticlePayload = Iter.Value();
+		TObjectPtr<UNiagaraDataChannelAsset>& NDCAsset = ParticlePayload.Get<0>();
+		NDCAsset->ClearInternalFlags(EInternalObjectFlags::Async);
+		TObjectPtr<UNiagaraDataChannelWriter>& NDCWriter = ParticlePayload.Get<1>();
+		NDCWriter->ClearInternalFlags(EInternalObjectFlags::Async);
 	}
 	ProjectileNameToNDCAsset->Empty();
-	KeyToParticleRecordMapping->clear();
-	NDCAssetTOProjectileName->Empty();
 	MyDispatch = nullptr;
 }
 
@@ -65,7 +65,7 @@ UNiagaraSystem* UNiagaraParticleDispatch::GetOrLoadNiagaraSystem(FString Niagara
 	{
 		return *NameToNiagaraSystemMapping->Find(NiagaraSystemLocation);
 	}
-	auto LoadedSystem = LoadObject<UNiagaraSystem>(nullptr, *NiagaraSystemLocation, nullptr, LOAD_None, nullptr);
+	UNiagaraSystem* LoadedSystem = LoadObject<UNiagaraSystem>(nullptr, *NiagaraSystemLocation, nullptr, LOAD_None, nullptr);
 	NameToNiagaraSystemMapping->Add(NiagaraSystemLocation, LoadedSystem);
 	return LoadedSystem;
 }
@@ -114,55 +114,55 @@ FParticleID UNiagaraParticleDispatch::SpawnAttachedNiagaraSystem(FString Niagara
 	//it should be fine now that we're rolled to lbc.
 	TransformDispatch->ObjectToTransformMapping->find(AttachToComponentKey, SceneCompKinePtr);
 	if(SceneCompKinePtr)
-		{
-			TSharedPtr<BoneKine> Bone = StaticCastSharedPtr<BoneKine>(SceneCompKinePtr);
-			TWeakObjectPtr<USceneComponent> BoneSceneComp = Bone->MySelf.Get();
-	
-			UNiagaraSystem* NiagaraSystem = GetOrLoadNiagaraSystem(NiagaraSystemLocation);
-			UNiagaraComponent* NewNiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
-						NiagaraSystem,
-						BoneSceneComp.Get(),
-						AttachPointName,
-						Location,
-						Rotation,
-						Scale,
-						LocationType,
-						bAutoDestroy,
-						PoolingMethod,
-						bAutoActivate,
-						bPreCullCheck);
+	{
+		TSharedPtr<BoneKine> Bone = StaticCastSharedPtr<BoneKine>(SceneCompKinePtr);
+		TWeakObjectPtr<USceneComponent> BoneSceneComp = Bone->MySelf.Get();
 
-			if (NewNiagaraComponent != nullptr)
+		UNiagaraSystem* NiagaraSystem = GetOrLoadNiagaraSystem(NiagaraSystemLocation);
+		UNiagaraComponent* NewNiagaraComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+					NiagaraSystem,
+					BoneSceneComp.Get(),
+					AttachPointName,
+					Location,
+					Rotation,
+					Scale,
+					LocationType,
+					bAutoDestroy,
+					PoolingMethod,
+					bAutoActivate,
+					bPreCullCheck);
+
+		if (NewNiagaraComponent != nullptr)
+		{
+			TSharedPtr<TQueue<NiagaraVariableParam>>* ParamQueuePtr = KeyToParticleParamMapping->Find(FBoneKey(AttachToComponentKey));
+			if (ParamQueuePtr != nullptr && ParamQueuePtr->IsValid())
 			{
-				TSharedPtr<TQueue<NiagaraVariableParam>>* ParamQueuePtr = KeyToParticleParamMapping->Find(FBoneKey(AttachToComponentKey));
-				if (ParamQueuePtr != nullptr && ParamQueuePtr->IsValid())
+				TQueue<NiagaraVariableParam>* ParamQueue = ParamQueuePtr->Get();
+		
+				NiagaraVariableParam Param;
+				while (ParamQueue->Dequeue(Param))
 				{
-					TQueue<NiagaraVariableParam>* ParamQueue = ParamQueuePtr->Get();
-			
-					NiagaraVariableParam Param;
-					while (ParamQueue->Dequeue(Param))
+					switch (Param.Type)
 					{
-						switch (Param.Type)
-						{
-						case Position:
-							NewNiagaraComponent->SetVariablePosition(Param.VariableName, Param.VariableValue);
-							break;
-						default:
-							UE_LOG(LogTemp, Error, TEXT("UNiagaraParticleDispatch::SpawnAttachedNiagaraSystemInternal: Parameter type [%d] is not implemented, cannot proceed."), Param.Type);
-							throw;
-						}
+					case Position:
+						NewNiagaraComponent->SetVariablePosition(Param.VariableName, Param.VariableValue);
+						break;
+					default:
+						UE_LOG(LogTemp, Error, TEXT("UNiagaraParticleDispatch::SpawnAttachedNiagaraSystemInternal: Parameter type [%d] is not implemented, cannot proceed."), Param.Type);
+						throw;
 					}
 				}
+			}
 
-				BoneKeyToParticleIDMapping->Add(FBoneKey(AttachToComponentKey), NewParticleID);
-				ParticleIDToComponentMapping->Add(NewParticleID, NewNiagaraComponent);
-				ComponentToParticleIDMapping->Add(NewNiagaraComponent, NewParticleID);
-				if(GetWorld())
-				{
-					NewNiagaraComponent->OnSystemFinished.AddUniqueDynamic(this, &UNiagaraParticleDispatch::DeregisterNiagaraParticleComponent);
-				}
+			BoneKeyToParticleIDMapping->Add(FBoneKey(AttachToComponentKey), NewParticleID);
+			ParticleIDToComponentMapping->Add(NewParticleID, NewNiagaraComponent);
+			ComponentToParticleIDMapping->Add(NewNiagaraComponent, NewParticleID);
+			if(GetWorld())
+			{
+				NewNiagaraComponent->OnSystemFinished.AddUniqueDynamic(this, &UNiagaraParticleDispatch::DeregisterNiagaraParticleComponent);
 			}
 		}
+	}
 	return NewParticleID;
 }
 
@@ -214,8 +214,7 @@ void UNiagaraParticleDispatch::ActivateInternal(FParticleID PID) const
 	TWeakObjectPtr<UNiagaraComponent>* NiagaraComponentPtr = ParticleIDToComponentMapping->Find(PID);
 	if (NiagaraComponentPtr != nullptr)
 	{
-		auto NiagaraComponent = NiagaraComponentPtr->Get();
-		NiagaraComponent->Activate();
+		NiagaraComponentPtr->Get()->Activate();
 	}
 }
 
@@ -224,8 +223,7 @@ void UNiagaraParticleDispatch::DeactivateInternal(FParticleID PID) const
 	TWeakObjectPtr<UNiagaraComponent>* NiagaraComponentPtr = ParticleIDToComponentMapping->Find(PID);
 	if (NiagaraComponentPtr != nullptr)
 	{
-		auto NiagaraComponent = NiagaraComponentPtr->Get();
-		NiagaraComponent->Deactivate();
+		NiagaraComponentPtr->Get()->Deactivate();
 	}
 }
 
@@ -243,54 +241,33 @@ void UNiagaraParticleDispatch::QueueParticleSystemParameter(const FBoneKey& Key,
 	}
 }
 
-void UNiagaraParticleDispatch::AddNDCReference(FString Name, TObjectPtr<UNiagaraDataChannelAsset> DataChannelAssetPtr) const
+void UNiagaraParticleDispatch::AddNDCReference(FName Name, TObjectPtr<UNiagaraDataChannelAsset> DataChannelAssetPtr) const
 {
 	TObjectPtr<UNiagaraDataChannelWriter> MyWriter = UNiagaraDataChannelLibrary::CreateDataChannelWriter(GetWorld(), DataChannelAssetPtr->Get(), FNiagaraDataChannelSearchParameters(), 1, true, true, true, "Held Writer");
-	ProjectileNameToNDCAsset->Add(Name, ManagementPayload(DataChannelAssetPtr, MyWriter));
-	NDCAssetTOProjectileName->Add(DataChannelAssetPtr, Name);
+	ProjectileNameToNDCAsset->Add(Name, ManagementPayload(DataChannelAssetPtr, MyWriter, KeyToRecordCuckoo()));
 }
 
 void UNiagaraParticleDispatch::UpdateNDCChannels() const
 {
-	UWorld* World = GetWorld();
-	check(World);
-	UTransformDispatch* TD = World->GetSubsystem<UTransformDispatch>();
-	check(TD);
-		
-	for (auto KeyToNDCAssetIter : KeyToParticleRecordMapping->lock_table())
+	UTransformDispatch* TD = GetWorld()->GetSubsystem<UTransformDispatch>();
+	
+	for (auto it = ProjectileNameToNDCAsset->CreateIterator(); it; ++it)
 	{
-		FSkeletonKey Key = KeyToNDCAssetIter.first;
-		ParticleRecord& Record = KeyToNDCAssetIter.second;
-
-		TOptional<FTransform3d> KeyTransform = TD->CopyOfTransformByObjectKey(Key);
-		TWeakObjectPtr<UNiagaraDataChannelAsset> ParticleNDCAsset = Record.NDCAssetPtr;
-		if (KeyTransform.IsSet() && ParticleNDCAsset.IsValid())
+		UNiagaraDataChannelWriter* ChannelWriter = it.Value().Get<1>();
+		KeyToRecordCuckoo* KeyToRecordMap = &it.Value().Get<2>();
+		
+		if (KeyToRecordMap->size() > 0)
 		{
-			// TODO implement offset
-			UNiagaraDataChannelAsset* NDCAssetPtr = ParticleNDCAsset.Get();
-			FNiagaraDataChannelSearchParameters SearchParams(KeyTransform->GetLocation());
-			UNiagaraDataChannelWriter* ChannelWriter = UNiagaraDataChannelLibrary::WriteToNiagaraDataChannel(
-				World,
-				NDCAssetPtr,
-				SearchParams,
-				1,
-				true,
-				true,
-				true,
-				UNiagaraParticleDispatch::StaticClass()->GetName());
+			FNiagaraDataChannelSearchParameters SearchParams;
+			ChannelWriter->InitWrite(SearchParams, KeyToRecordMap->size(), true, true, true, UNiagaraParticleDispatch::StaticClass()->GetName());
 
-			if (ChannelWriter != nullptr)
+			for (auto& KeyToRecord : KeyToRecordMap->lock_table())
 			{
-				ChannelWriter->WritePosition(TEXT("Position"), 0, KeyTransform->GetLocation());
-			}
-			else
-			{
-				UE_LOG(
-					LogTemp,
-					Error,
-					TEXT("UNiagaraParticleDispatch::UpdateNDCChannels: Failed to get ChannelWriter for NDC Asset [%s] at location [%s]"),
-					*ParticleNDCAsset->GetName(),
-					*KeyTransform->GetLocation().ToString());
+				TOptional<FTransform3d> KeyTransform = TD->CopyOfTransformByObjectKey(KeyToRecord.first);
+				if (KeyTransform.IsSet())
+				{
+					ChannelWriter->WritePosition(TEXT("Position"), 0, KeyTransform->GetLocation());
+				}
 			}
 		}
 	}

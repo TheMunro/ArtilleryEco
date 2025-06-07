@@ -1,7 +1,8 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 #include "EPhysicsLayer.generated.h"
-
 
 namespace Layers
 {

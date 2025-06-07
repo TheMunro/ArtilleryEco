@@ -77,15 +77,11 @@ enum FArtilleryStates
 	Fired, Canceled, CanceledAfterCommit
 };
 
-
-
 DECLARE_DELEGATE_FourParams(FArtilleryAbilityStateAlert, FArtilleryStates, int, const FGameplayAbilityActorInfo*, const FGameplayAbilityActivationInfo);
-
 
 UCLASS(BlueprintType)
 class ARTILLERYRUNTIME_API UArtilleryPerActorAbilityMinimum : public UGameplayAbility
 {
-	
 	GENERATED_BODY()
 
 	friend struct FArtilleryGun;
@@ -106,7 +102,6 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Latency Hiding")
 	int AvailableDallyFrames = 0;
-
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gun")
 	FGunKey MyGunKey;
@@ -115,9 +110,7 @@ public:
 	virtual void ApplyAbilityTagsToGameplayEffectSpec(FGameplayEffectSpec& Spec, FGameplayAbilitySpec* AbilitySpec) const;
 		//this will likelybe where we set up how all artillery abilities behave regarding this.
 	*/
-
-
-
+	
 	/*/*
 	
 	The following should likely be overridden differently for cosmetic and non-cosmetic ability base-classes.
@@ -190,11 +183,10 @@ public:
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
 
 private:
-
-
 	//these have no function in the Artillery ability sequence.
 	void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override {};
 	void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override {};
+	
 	/** Called from AbilityTask_WaitConfirmCancel to handle input confirming */
 	void OnWaitingForConfirmInputBegin() override {};
 	void OnWaitingForConfirmInputEnd() override {};

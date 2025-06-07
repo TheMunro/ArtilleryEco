@@ -1,18 +1,18 @@
-﻿#pragma once
+﻿// Copyright 2025 Oversized Sun Inc. All Rights Reserved.
+
+#pragma once
 
 //unity build isn't fond of this, but we really want to completely contain these types and also prevent any collisions.
 //there's other ways to do this, but the correct way is a namespace so far as I know.
 // see: https://dev.epicgames.com/documentation/en-us/unreal-engine/epic-cplusplus-coding-standard-for-unreal-engine?application_version=5.4#namespaces
 
-
 #include "BarrageDispatch.h"
-#include "Containers/CircularQueue.h"
-#include "Chaos/TriangleMeshImplicitObject.h"
 #include "FBShapeParams.h"
 #include "FBarrageKey.h"
 #include "FBPhysicsInput.h"
 #include "SkeletonTypes.h"
 #include "EPhysicsLayer.h"
+#include "HungryBroadPhase.h"
 #include "IsolatedJoltIncludes.h"
 
 // All Jolt symbols are in the JPH namespace
@@ -28,18 +28,14 @@ static void TraceImpl(const char* inFMT, ...)
 	va_end(list);
 }
 
-
 // We're also using STL classes in this example
 #ifdef JPH_ENABLE_ASSERTS
-
 // Callback for asserts, connect this to your own assert handler if you have one
 static bool AssertFailedImpl(const char* inExpression, const char* inMessage, const char* inFile, JPH::uint inLine)
 {
 	// Breakpoint
 	return true;
 };
-
-
 #endif // JPH_ENABLE_ASSERTS
 
 class FBCharacterBase
@@ -77,10 +73,6 @@ protected:
 class BARRAGE_API FWorldSimOwner
 {
 	// If you want your code to compile using single or double precision write 0.0_r to get a Real value that compiles to double or float depending if JPH_DOUBLE_PRECISION is set or not.
-
-
-
-	
 public:
 	mutable bool Optimized = false;
 	//members are destructed first in, last out.
@@ -89,8 +81,9 @@ public:
 	TSharedPtr<KeyToBody> BarrageToJoltMapping;
 	TSharedPtr<BoundsToShape> BoxCache;
 	TSharedPtr<TMap<FBarrageKey, TSharedPtr<FBCharacterBase>>> CharacterToJoltMapping;
-
-	/**
+	std::shared_ptr<JPH::HungryBroadPhase> mTestBroadPhase;
+	
+	 /*
 	 * 
 	 * @return true if found a BodyID in the map, false if we did not find one and `result` is false
 	 */
@@ -116,8 +109,7 @@ public:
 	// You can have a 1-on-1 mapping between object layers and broadphase layers (like in this case) but if you have
 	// many object layers you'll be creating many broad phase trees, which is not efficient. If you want to fine tune
 	// your broadphase layers define JPH_TRACK_BROADPHASE_STATS and look at the stats reported on the TTY.
-
-
+	
 	/// Class that determines if two object layers can collide
 	class ObjectLayerPairFilterImpl : public JPH::ObjectLayerPairFilter
 	{
@@ -126,8 +118,8 @@ public:
 		{
 			switch (inObject1)
 			{
-				// TODO: in future if we want to enforce principle of hitbox vs. movement colliders being different,
-				// could force all entities to have both a moving physics shape + a hitbox physics shape and remove collision between MOVING and {PROJECTILE, CAST_QUERY}
+			// TODO: in future if we want to enforce principle of hitbox vs. movement colliders being different,
+			// could force all entities to have both a moving physics shape + a hitbox physics shape and remove collision between MOVING and {PROJECTILE, CAST_QUERY}
 			case Layers::NON_MOVING:
 				return inObject2 != Layers::NON_MOVING && inObject2 != Layers::HITBOX; // Non-moving collides with all moving stuff EXCEPT hitbox
 			case Layers::MOVING:
@@ -141,7 +133,7 @@ public:
 			case Layers::PROJECTILE:
 				return inObject2 == Layers::NON_MOVING || inObject2 == Layers::MOVING  || inObject2 == Layers::BONKFREEENEMY || inObject2 == Layers::ENEMY || inObject2 == Layers::HITBOX || inObject2 == Layers::CAST_QUERY;
 			case Layers::ENEMYPROJECTILE:
-				return inObject2 == Layers::NON_MOVING || inObject2 == Layers::MOVING || inObject2 == Layers::HITBOX || inObject2 == Layers::CAST_QUERY;
+				return (inObject2 != Layers::ENEMYPROJECTILE) && (inObject2 == Layers::NON_MOVING || inObject2 == Layers::MOVING || inObject2 == Layers::HITBOX || inObject2 == Layers::CAST_QUERY);
 			case Layers::CAST_QUERY:
 				return inObject2 == Layers::NON_MOVING || inObject2 == Layers::MOVING || inObject2 == Layers::ENEMY || inObject2 == Layers::BONKFREEENEMY || inObject2 == Layers::HITBOX || inObject2 == Layers::PROJECTILE  || inObject2 == Layers::ENEMYPROJECTILE;
 			case Layers::CAST_QUERY_LEVEL_GEOMETRY_ONLY:
@@ -237,8 +229,7 @@ public:
 			}
 		}
 	};
-
-
+	
 	// An example activation listener
 	class MyBodyActivationListener : public JPH::BodyActivationListener
 	{
@@ -252,7 +243,6 @@ public:
 		}
 	};
 
-public:
 	using FBInputFeed = FeedMap<FBPhysicsInput>;
 	FBOutputFeed WorkerAcc[ALLOWED_THREADS_FOR_BARRAGE_PHYSICS];
 	FBInputFeed ThreadAcc[ALLOWED_THREADS_FOR_BARRAGE_PHYSICS];
@@ -265,14 +255,11 @@ public:
 	// Create class that filters object vs broadphase layers
 	// Note: As this is an interface, PhysicsSystem will take a reference to this so this instance needs to stay alive!
 	ObjectVsBroadPhaseLayerFilterImpl object_vs_broadphase_layer_filter;
-
-
 	
 	using InitExitFunction = std::function<void(int)>;
 	// Create class that filters object vs object layers
 	// Note: As this is an interface, PhysicsSystem will take a reference to this so this instance needs to stay alive!
 	ObjectLayerPairFilterImpl object_vs_object_layer_filter;
-
 
 	// A contact listener gets notified when bodies (are about to) collide, and when they separate again.
 	// Note that this is called from a job so whatever you do here needs to be thread safe.
@@ -303,8 +290,7 @@ public:
 	// number then these contacts will be ignored and bodies will start interpenetrating / fall through the world.
 	// Note: This value is low because this is a simple test. For a real project use something in the order of 10240.
 	const unsigned int cMaxContactConstraints = 16384;
-
-
+	
 	//do not move this up. see C++ standard ~ 12.6.2
 	TSharedPtr<JPH::PhysicsSystem> physics_system;
 
@@ -357,15 +343,15 @@ public:
 	{
 		//TODO return owned Joltstuff to pool or dealloc
 		JPH::BodyID result;
-		auto bID = BarrageToJoltMapping->find(BarrageKey, result);
 		//as we add character handling, it'll be extremely difficult to do it here.
-		if (bID && !result.IsInvalid()) 
+		if (BarrageToJoltMapping->find(BarrageKey, result) && !result.IsInvalid()) 
 		{
 			body_interface->RemoveBody(result);
 			body_interface->DestroyBody(result);
 		}
 		BarrageToJoltMapping->erase(BarrageKey);
 	}
+	
 	FBarrageKey GenerateBarrageKeyFromBodyId(const JPH::BodyID& Input) const;
 	FBarrageKey GenerateBarrageKeyFromBodyId(const uint32 RawIndexAndSequenceNumberInput) const;
 	~FWorldSimOwner();
