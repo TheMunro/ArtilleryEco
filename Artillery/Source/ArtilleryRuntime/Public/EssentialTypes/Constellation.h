@@ -15,7 +15,7 @@
 //We really don't want these to proliferate wildly, but they're very nice for understanding things like player state without
 //breaking UE's expectations.
 UINTERFACE()
-class ARTILLERYRUNTIME_API UConstellation : public UInterface
+class ARTILLERYRUNTIME_API UConstellation : public UKeyedConstruct
 {
 	GENERATED_UINTERFACE_BODY()
 };

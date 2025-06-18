@@ -51,7 +51,7 @@
 //This is not simple stuff, and I apologize, but it's less screwy than what we had.
 
 UINTERFACE()
-class UArtilleryLocomotionInterface : public UInterface
+class UArtilleryLocomotionInterface : public UKeyedConstruct
 {
 	GENERATED_UINTERFACE_BODY()
 
@@ -132,7 +132,7 @@ public:
 };
 
 UINTERFACE()
-class UTickHeavy : public UInterface
+class UTickHeavy : public UKeyedConstruct
 {
 	GENERATED_UINTERFACE_BODY()
 };
@@ -167,7 +167,7 @@ class FTickHeavy : public ITickHeavy
 };
 
 UINTERFACE()
-class UArtilleryControllite : public UInterface
+class UArtilleryControllite : public UTickHeavy
 {
 	GENERATED_UINTERFACE_BODY()
 };
