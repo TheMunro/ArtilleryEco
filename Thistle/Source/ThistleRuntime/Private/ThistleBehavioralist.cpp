@@ -4,6 +4,7 @@
 #include "NativeGameplayTags.h"
 #include "SmartObjectComponent.h"
 #include "SmartObjectSubsystem.h"
+#include "SmartObjectRequestTypes.h"
 #include "ThistleDispatch.h"
 #include "TransformDispatch.h"
 #include "Public/GameplayTags.h"
