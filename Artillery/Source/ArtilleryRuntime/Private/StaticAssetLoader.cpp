@@ -8,6 +8,13 @@ void UStaticGunLoader::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	Definitions = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr,
 	                                                TEXT("DataTable'/Game/DataTables/GunDefinitions.GunDefinitions'")));
+
+	if (Definitions == nullptr)
+	{
+		UE_LOG(LogDataTable, Error, TEXT("UStaticGunLoader::Initialize : No data table found at /Game/DataTables/GunDefinitions.GunDefinitions"));
+		return;
+	}
+
 	Definitions->ForeachRow<FGunDefinitionRow>(
 		TEXT("UStaticGunLoader::Initialize"),
 		[this](const FName& Key, const FGunDefinitionRow& RowDefinition) mutable
