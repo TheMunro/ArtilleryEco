@@ -25,11 +25,13 @@ bool UArtilleryProjectileDispatch::RegistrationImplementation()
 	// TODO: Can we find and autoload the datatable, or do
 	ProjectileDefinitions = LoadObject<UDataTable>(nullptr, TEXT("DataTable'/Game/DataTables/ProjectileDefinitions.ProjectileDefinitions'"));
 
+	// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Added null check for non-existent data table
 	if (ProjectileDefinitions == nullptr)
 	{
 		UE_LOG(LogDataTable, Error, TEXT("UArtilleryProjectileDispatch::RegistrationImplementation : No data table found at /Game/DataTables/ProjectileDefinitions.ProjectileDefinitions"));
 		return false;
 	}
+	// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 
 	UE_LOG(LogTemp, Warning, TEXT("ArtilleryProjectileDispatch:Subsystem: Online"));
 	ProjectileDefinitions->ForeachRow<FProjectileDefinitionRow>(

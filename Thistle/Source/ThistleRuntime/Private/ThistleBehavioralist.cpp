@@ -4,7 +4,9 @@
 #include "NativeGameplayTags.h"
 #include "SmartObjectComponent.h"
 #include "SmartObjectSubsystem.h"
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Added missing include
 #include "SmartObjectRequestTypes.h"
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 #include "ThistleDispatch.h"
 #include "TransformDispatch.h"
 #include "Public/GameplayTags.h"

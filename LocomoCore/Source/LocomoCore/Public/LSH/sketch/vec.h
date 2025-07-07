@@ -1,10 +1,14 @@
 #pragma once
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Disabled define to enable build, approach confirmed by JKutzer
 //#define NOSVML
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 #include "LCM_Config.h"
 #if __has_include("sleef.h")
 #    include "sleef.h"
 #else
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Disabled define to enable build, approach confirmed by JKutzer
 //#    define NO_SLEEF
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 #endif
 #include "immintrin.h"
 #include <cmath>

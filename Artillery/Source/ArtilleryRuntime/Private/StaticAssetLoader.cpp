@@ -9,11 +9,13 @@ void UStaticGunLoader::Initialize(FSubsystemCollectionBase& Collection)
 	Definitions = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr,
 	                                                TEXT("DataTable'/Game/DataTables/GunDefinitions.GunDefinitions'")));
 
+	// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Added null check for non-existent data table
 	if (Definitions == nullptr)
 	{
 		UE_LOG(LogDataTable, Error, TEXT("UStaticGunLoader::Initialize : No data table found at /Game/DataTables/GunDefinitions.GunDefinitions"));
 		return;
 	}
+	// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 
 	Definitions->ForeachRow<FGunDefinitionRow>(
 		TEXT("UStaticGunLoader::Initialize"),

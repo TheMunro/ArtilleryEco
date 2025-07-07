@@ -317,10 +317,12 @@ uint32 FArtilleryBusyWorker::Run()
 	PowerThrottling.StateMask = 0;
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 
+	// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Bypassed compilation error, seems to mirror their solution in GitLab
 	//SetProcessInformation(GetCurrentProcess(), 
 	//					  ProcessPowerThrottling, 
 	//					  &PowerThrottling,
 	//					  sizeof(PowerThrottling));
+	// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 	
 	//we can now start the sim. we latch only on the apply step.
 	StartTicklitesSim->Trigger();

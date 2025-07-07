@@ -42,8 +42,10 @@
 #define X86_SIMD_SORT_INLINE_ONLY inline
 #define X86_SIMD_SORT_INLINE static inline
 #define X86_SIMD_SORT_FINLINE static __forceinline
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges BEGIN - Disabled define to enable build, approach confirmed by JKutzer
 //#define LIKELY(x) (x)
 //#define UNLIKELY(x) (x)
+// @BC_CHANGE [FIX] #ArtilleryBuildChanges END
 #elif defined(__CYGWIN__)
 /*
  * Force inline in cygwin to work around a compiler bug. See
